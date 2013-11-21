@@ -1,17 +1,54 @@
 Etherate
 ========
 
+
 What is it:
-
-
-ITU-T Y.1564 
-
-  A Linux CLI program for testing a layer 2 Ethernet connections.
 
   The original idea was to provide a simple speed testing program
   that with any modern day CPU could saturate a gigabit Ethernet link,
   with any typical off the shelf/on-board GigE NIC. Programs such as
   iPerf/jPerf (there are many others!) exist and are mostly excellent 
-  at this. They can saturate a link or connection to measure throughput or simulate congestion, but they operate at layer 4 of the OSI model, using either TCP or UDP for data transport. This is fine for WAN testings or testing over a layer 3 boundary, or across the Internet (Broadband diagnostics etc).
+  at this. They can saturate a link or connection to measure throughput
+  or simulate congestion, but they operate at layer 4 of the OSI model
+  using either TCP or UDP for data transport. This is fine for WAN
+  testings or testing over a layer 3 boundary, or across the Internet
+  (home broadband or tail circuit diagnostics etc).
 
-Hardware RFC2544 compliant testers can be used to test a layer 2 link end to end but these are typically very expensive and most techies are already carrying a laptop around. Its very likely that a peice of 100m Cat5e will run at 100Mbps/1Gbps between two switches within a building (and beyond to 115m~ if conditions permit). Etherate will work here but this was not the original design purpose. A layer 2 (Pseudowire/VPLS/EPLS) link from ISP XYZ between London and Berlin however, will pass over many devices, and likely over multiple layer 3 boarders, as layer 2 traffic is being tunneled across a network. This means that latency is an issue here. Also in hard-to-monitor situations such as Inter-AS MPLS where a Pseudowires cross the AS boarder, link congenstion and contention can be an issue (even with MPLS-TE). Etherate was desigend to work here.
+  Etherate is a Linux CLI program for testing layer 2 Ethernet circuits.
+
+  
+Why was it Made:  
+
+  Hardware RFC2544 compliant testers can be used to test a layer 2 link
+  end to end but these are typically very expensive and most techies are
+  already carrying a laptop around. After the initial alhpa release 
+  the goal for Etherate is to start to bring in RFC2544 and ITU-T Y.1564
+  measurement compliance testing. Free Ethernet testing for all!
+  
+
+Features:
+
+  In the initial alhpa stages it has basic features whilst the initial
+  code is created;
+  
+  - Speed test
+  - Delay measurement
+  - VLAN tag and QinQ tag testing
+  - VLAN (and QinQ) priority marking testing
+  
+  
+Technical details:
+
+  In the alpha stage Etherate is single threaded and only runs a single
+  test between a transmitting and receiving host. Later development
+  will see it turn to bidirectional testing.
+
+
+More info:
+
+  http://null.53bits.co.uk/index.php?page=etherate
+  
+ 
+Who made it:
+
+  James Bensley <jwbensley@gmail.com>
