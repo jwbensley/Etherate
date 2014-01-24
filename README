@@ -26,7 +26,7 @@ Why was it Made:
   these are typically very expensive and most techies are already
   carrying a laptop around. After the initial beta release the goal for
   Etherate is to start to bring in RFC2544 and ITU-T Y.1564 measurement
-  compliance testing, OAM testing and stress testing.
+  compliance testing, OAM testing, MPLS and VPLS testing and stress testing.
   
   Free Ethernet testing for all!
   
@@ -62,6 +62,7 @@ Development Plan
   - Add BPDU & keepalive generation shortcuts
   - Report throughput if additional headers (IPv4/6/TCP/UDP) were present
   - Add max MTU scanning/sweeping test
+  - Simulate large MPLS label stacks (8/9/10 labels etc)
   
   These are long term features I am still considering for development
   but further research is required;
