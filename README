@@ -11,37 +11,73 @@ What is it:
   at this. They can saturate a link or connection to measure throughput
   or simulate congestion, but they operate at layer 4 of the OSI model
   using either TCP or UDP for data transport. This is fine for WAN
-  testings or testing over a layer 3 boundary, or across the Internet
+  testing or testing over a layer 3 boundary, across the Internet
   (home broadband or tail circuit diagnostics etc).
 
   Etherate is a Linux CLI program for testing layer 2 Ethernet circuits.
+  The original design scope has been widened and improved upon to
+  create a CLI testing program for layer 2 connectivity that performs
+  a variety of tests and generates many more stats and metrics than speed.
 
   
 Why was it Made:  
 
-  Hardware RFC2544 compliant testers can be used to test a layer 2 link
-  end to end but these are typically very expensive and most techies are
-  already carrying a laptop around. After the initial alhpa release 
-  the goal for Etherate is to start to bring in RFC2544 and ITU-T Y.1564
-  measurement compliance testing. Free Ethernet testing for all!
+  Hardware testers can be used to test a layer 2 link end to end but
+  these are typically very expensive and most techies are already
+  carrying a laptop around. After the initial beta release the goal for
+  Etherate is to start to bring in RFC2544 and ITU-T Y.1564 measurement
+  compliance testing, OAM testing and stress testing.
+  
+  Free Ethernet testing for all!
   
 
-Features:
+Initial Features:
 
-  In the initial alhpa stages it has basic features whilst the initial
-  code is created;
+  In the initial alpha stages it has basic features whilst the initial
+  code is created. When the first beta is released (Q1 2014!) it will allow
+  the user to generate traffic with varying properties (this is the
+  current development list for the beta release);
   
-  - Speed test
-  - Delay measurement
-  - VLAN tag and QinQ tag testing
-  - VLAN (and QinQ) priority marking testing
+  - Any EtherType
+  - Any Source MAC and/or Destination MAC
+  - Any VLAN ID
+  - Any priority (PCP) value
+  - Supports double tagging (inner and outer VLAN ID and PCP)
+  - Toggle DFI bit
+  - Toggle frame acknowledgement
+  - Optional speed limit in Mbps or Frames/p/s
+  - Optional frame payload size
+  - Optional transfer limit in MBs/GBs
+  - Optional test duration
+  
+  
+Development Plan
+
+  These are features that will be in development after the beta 
+  is released;
+  
+  - Add continual “OWAMP” tests (currently just at the start)
+  - Add L2 storm testing (broadcast and multicast without no RX host)
+  - Add feature to load frame payload from a text file
+  - Add BPDU & keepalive generation shortcuts
+  - Report throughput if additional headers (IPv4/6/TCP/UDP) were present
+  - Add max MTU scanning/sweeping test
+  
+  These are long term features I am still considering for development
+  but further research is required;
+  
+  - Add RFC2544 & ITU Y.1564 compliance (still reading the documents!)
+  - Add BERT (still researching bit patterns!)
+  - Format CLI output to go into a storable DB, for stats gathering
+  - Add layer 1 / wire testing features like auto neg, duplex, speed etc
+  (still researching layer 1 coding possibilities)
   
   
 Technical details:
 
   In the alpha stage Etherate is single threaded and only runs a single
   test between a transmitting and receiving host. Later development
-  will see it turn to bidirectional testing.
+  will see it turn to bidirectional more complex testing.
 
 
 More info:
