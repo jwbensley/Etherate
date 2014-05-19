@@ -1,0 +1,43 @@
+-----Etherarte 0.4 Alpha - 2014-02-10
+
+[MINOR] Further clean up of code
+
+
+
+-----Etherate 0.3 Alpha - 2014-01-10
+
+[FEATURE] Add code for testing with VLAN tagging, priority codes, QinQ tagging and QinQ priorities, -v 25 -p 3 -q 2025 -o 4
+
+[MAJOR] Sometimes locking to the wrong interface such as "eth0" even though it was disabled or disconnected and specifically selecting another interface like "wlan0" (for example)
+
+[MAJOR] Promiscuous mode was not entering/exiting properly. Rather than XOR IFF_PROMISC on and off, copy interface flags to ifFlags then OR IFF_PROMISC, then restore the stored ifFlags value. Looks like a problem with ifreq.
+
+[MINOR] Typos in the CLI output
+
+[MINOR] Further clean up of code
+
+[MINOR] Standardise changelod tags;
+[FEATURE]  == New working feature added to etherate
+[MAJOR]    == Fixed a bug in Etherate code that effects the operations of the program or one of the test modes or test results
+[MINOR]    == Fixed a bug that doesn't stop Etherate from running properly like typoes, formatting, documentation errata
+
+
+
+-----Etherate 0.2 Alpha - 2013-06-30
+
+[MAJOR] Added promiscuous mode, frames addressed anything other than FF:FF:FF:FF:FF:FF and the NICs burnt in address wasn't being received but were being sent (e.g. TX wasn't receiving dst==00:04:00:00:00:01)
+
+[MAJOR] Using a custom MAC like 00:00:5E:00:00:02 on the RX host was being overwritten, typo in code. Know both TX and RX can use any MAC.
+
+[MAJOR] Using wrong IANA unnasigend MAC, using MAC allocated to Lexmark. Changd to 00:00:5E:00:00:0[1-2]
+
+[MINOR] Typos in the UI/CLI output
+
+[FEATURE] Added code to check CLI arguments that have two parts like "-i 2", the second option (the value) supplied was casuing etherate to Seg Fault.
+
+
+
+-----Etherate 0.1 Alpha - 2013-03
+
+Code isn't even finished or tested yet. We can send and receive data and measure the speed with basic speed, frame size and frame count options.
+
