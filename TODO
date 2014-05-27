@@ -1,19 +1,33 @@
+Priority:
+TX host doesn't receive dying gasp
 Condense one line IFs
 Standards variable naming
 Tidy up section headers/banners and file contents
-Add option for DEI/CFI header bit
-Doesn't work on my office desktop with a bridge interface
-Dump test results even when using CTRL+C
-Add pps/frames per second maximum limit cli switch
 if -m (max speed) option is low then etherate outputs "Max TX speed set to <1Mbps"
-Print round trip delay and one way delay
+Dump test results even when using CTRL+C
+RX host shows receiving traffic rate in Mbps with a deciaml place, TX host shows an integer without decimal? Remove deciaml place?
+RX host shows the median for delay, TX does not? Mean, median, mode, choose one and standardise on both!
+
+
+
+Medium:
 Checking frame order
 Detect lost frames
-Number of non test frames received
-Add option to ACK one in every 10 or every 100 frames
 Should we print non default settings to the screen when the user sets them before the test starts to show what will happen?
+Add the MEGA-DEBUG!!! option to the cli args?
 
 
+Low:
+Number of non test frames received
+Add pps/frames per second maximum limit cli switch
+Add option for DEI/CFI header bit
+Doesn't work on my office desktop with a bridge interface
+Print round trip delay as well as one way delay
+Add option to ACK one in every 10 or every 100 frames
+
+
+
+Future Features:
 For man page: Order of prefered interface names, eth0, en0 etc..wlan0
 Add RFC2544 test
 Add ITU Y.1564 tests

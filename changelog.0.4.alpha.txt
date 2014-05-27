@@ -16,10 +16,10 @@
 
 [MINOR] Further clean up of code
 
-[MINOR] Standardise changelod tags;
+[MINOR] Standardise changelog tags;
 [FEATURE]  == New working feature added to etherate
 [MAJOR]    == Fixed a bug in Etherate code that effects the operations of the program or one of the test modes or test results
-[MINOR]    == Fixed a bug that doesn't stop Etherate from running properly like typoes, formatting, documentation errata
+[MINOR]    == Fixed a bug that doesn't stop Etherate from running properly like typoes, formatting, documentation errata, code tidy
 
 
 

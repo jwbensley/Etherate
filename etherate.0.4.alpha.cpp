@@ -58,8 +58,8 @@ using namespace std;
 #define CLOCK_MONOTONIC_RAW 4
 #endif
 
-#include "etherate.0.3.alpha.h"
-#include "funcs.0.3.alpha.cpp"
+#include "etherate.0.4.alpha.h"
+#include "funcs.0.4.alpha.cpp"
 
 
 
@@ -686,7 +686,7 @@ if(txMode==true)
 
     // Send over the time for delay calculation between hosts,
     // We send it twice each time repeate this process multiple times to get an average;
-    cout << "Calculating delay between hosts" << endl;
+    cout << "Calculating delay between hosts..." << endl;
     for(lCounter=0; lCounter<=4; lCounter++)
     {
         // The monotonic value is used here in case we are unlucky enough to
@@ -719,7 +719,7 @@ if(txMode==true)
         while (waiting)
         {
             rxLength = recvfrom(sockFD, rxBuffer, fSizeTotal, 0, NULL, NULL);
-            cout << "Length " << rxLength << " rxData: " << rxData << endl;
+// cout << "Length " << rxLength << " rxData: " << rxData << endl;
 
             if(param.compare(0,param.size(),rxData,0,14)==0)
             {
@@ -766,7 +766,7 @@ if(txMode==true)
     while(waiting) {
 
         rxLength = recvfrom(sockFD, rxBuffer, fSizeTotal, 0, NULL, NULL);
-        cout << "Length " << rxLength << " rxData: " << rxData << endl;
+// cout << "Length " << rxLength << " rxData: " << rxData << endl;
 
 
         // TX has sent a non-default frame payload size
@@ -826,7 +826,7 @@ if(txMode==true)
             strncmp(rxData,"etheratetime41:",15)==0  )
         {
 
-        cout << rxLength << endl;
+//        cout << rxLength << endl;
             // Get the time we are receiving TX's sent time figure
             clock_gettime(CLOCK_MONOTONIC_RAW, &tspecRX);
             ss.str("");
@@ -837,7 +837,7 @@ if(txMode==true)
             // Extract the sent time
             exploded.clear();
             explodestring = rxData;
-        cout << rxData << endl;
+//        cout << rxData << endl;
             StringExplode(explodestring, ":", &exploded);
             if((int) exploded.size() != 3)
             {
@@ -867,7 +867,7 @@ if(txMode==true)
             strncmp(rxData,"etheratetime42:",15)==0  )
         {
 
-      cout << rxLength << endl;
+//      cout << rxLength << endl;
             // Get the moment we are receiving TXs sent time figure
             clock_gettime(CLOCK_MONOTONIC_RAW, &tspecRX);
             ss.str("");
@@ -878,7 +878,7 @@ if(txMode==true)
             // Extract the sent time
             exploded.clear();
             explodestring = rxData;
-      cout << rxData << endl;
+//      cout << rxData << endl;
             StringExplode(explodestring, ":", &exploded);
             if((int) exploded.size() != 3)
             {

@@ -103,7 +103,7 @@ cout << "Usage info; [Mode] [Destination] [Source] [Options] [Other]" << endl
      << "\t\t#NOT IMPLEMENTED YET#" << endl
      << "\t-o\tAdd an 802.1p PCP value to the outer Q-in-Q VLAN tag." << endl
      << "\t\tIf no PCP value is specified and a Q-in-Q VLAN ID is," << endl
-     << "\t\t0 will be use. If no outer Q-in-Q VLAN ID is supplied this" << endl
+     << "\t\t0 will be used. If no outer Q-in-Q VLAN ID is supplied this" << endl
      << "\t\toption is ignored. Use -o 1 to -o 7 like the -p option above." << endl
      << "\t\t#NOT IMPLEMENTED YET#" << endl
      << "\t-e\tSet a custom ethertype value, the default is 0x0800 (IPv4)." << endl
@@ -166,9 +166,9 @@ for (ifr = ifc.ifc_req; ifr < ifend; ifr++)
 
         // Try to get a typical ethernet adapter, not a loopback or virt interface
         if(strncmp(ifr->ifr_name, "eth", 3)==0 ||
-          strncmp(ifr->ifr_name, "en", 2)==0 ||
-          strncmp(ifr->ifr_name, "em", 2)==0 ||
-          strncmp(ifr->ifr_name, "wlan", 4)==0)
+           strncmp(ifr->ifr_name, "en", 2)==0 ||
+           strncmp(ifr->ifr_name, "em", 2)==0 ||
+           strncmp(ifr->ifr_name, "wlan", 4)==0)
         {
 
             strncpy(ifreq.ifr_name, ifr->ifr_name,sizeof(ifreq.ifr_name));
@@ -182,7 +182,7 @@ for (ifr = ifc.ifc_req; ifr < ifend; ifr++)
             }
 
             printf("Using device %s, Hardware Address %02x:%02x:%02x:%02x:%02x:%02x, "
-                   "Interface Index ",
+                   "Interface Index %d",
                    ifreq.ifr_name,
                    (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[0],
                    (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[1],
