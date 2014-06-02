@@ -7,7 +7,7 @@ if -m (max speed) option is low then etherate outputs "Max TX speed set to <1Mbp
 Dump test results even when using CTRL+C
 RX host shows receiving traffic rate in Mbps with a deciaml place, TX host shows an integer without decimal? Remove deciaml place?
 RX host shows the median for delay, TX does not? Mean, median, mode, choose one and standardise on both!
-
+Difference in definition between fSizeMax and fSizeDef
 
 
 Medium:
