@@ -26,34 +26,34 @@ void signal_handler(int signal) {
 // a user killing the test host before the test has ended, telling the
 // other host we are doing down, to give it a chance to reset.
 
-std::string param;
-std::stringstream ss;
-ss << "etheratedeath";
-param = ss.str();
-strncpy(txData,param.c_str(), param.length());
-sendResult = sendto(sockFD, txBuffer, headersLength+param.length(), 0, 
-             (struct sockaddr*)&socket_address, sizeof(socket_address));
+    std::string param;
+    std::stringstream ss;
+    ss << "etheratedeath";
+    param = ss.str();
+    strncpy(txData,param.c_str(), param.length());
+    sendResult = sendto(sockFD, txBuffer, headersLength+param.length(), 0, 
+                 (struct sockaddr*)&socket_address, sizeof(socket_address));
 
 
-cout << "Leaving promiscuous mode" << endl;
+    cout << "Leaving promiscuous mode" << endl;
 
-strncpy(ethreq.ifr_name,ifName,IFNAMSIZ);
+    strncpy(ethreq.ifr_name,ifName,IFNAMSIZ);
 
-if (ioctl(sockFD,SIOCGIFFLAGS,&ethreq)==-1) {
-    cout << "Error getting socket flags, entering promiscuous mode failed." << endl;
-    perror("ioctl() ");
-}
+    if (ioctl(sockFD,SIOCGIFFLAGS,&ethreq)==-1) {
+        cout << "Error getting socket flags, entering promiscuous mode failed." << endl;
+        perror("ioctl() ");
+    }
 
-ethreq.ifr_flags &= ~IFF_PROMISC;
+    ethreq.ifr_flags &= ~IFF_PROMISC;
 
-if (ioctl(sockFD,SIOCSIFFLAGS,&ethreq)==-1) {
-    cout << "Error setting socket flags, promiscuous mode failed." << endl;
-    perror("ioctl() ");
-}
+    if (ioctl(sockFD,SIOCSIFFLAGS,&ethreq)==-1) {
+        cout << "Error setting socket flags, promiscuous mode failed." << endl;
+        perror("ioctl() ");
+    }
 
-close(sockFD);
+    close(sockFD);
 
-exit(0);
+    exit(130);
 
 }
 
@@ -121,17 +121,17 @@ void StringExplode(string str, string separator, vector<string>* results) {
 // http://www.infernodevelopment.com/perfect-c-string-explode-split
 // Thanks to the author Baran Ornarli
 
-int found;
-results->clear();
-found = str.find_first_of(separator);
-while(found != string::npos)
-{
-    if(found > 0) results->push_back(str.substr(0,found)); 
-    str = str.substr(found+1);
+    int found;
+    results->clear();
     found = str.find_first_of(separator);
-}
+    while(found != string::npos)
+    {
+        if(found > 0) results->push_back(str.substr(0,found)); 
+        str = str.substr(found+1);
+        found = str.find_first_of(separator);
+    }
 
-if(str.length() > 0) results->push_back(str);
+    if(str.length() > 0) results->push_back(str);
 
 }
 

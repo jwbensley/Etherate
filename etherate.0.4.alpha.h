@@ -42,7 +42,7 @@ void BuildHeaders(char* &txBuffer, unsigned char (&destMAC)[6],
 
 const string version = "0.4.alpha 2014-02";
 
-// Maximum frame size on the with (payload + headers)
+// Maximum frame size on the wire (payload + 20 octets of headers)
 const int fSizeMax = 9020;
 
 // Default frame size in bytes

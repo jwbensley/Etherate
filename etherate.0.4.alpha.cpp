@@ -15,16 +15,19 @@
  * EX_NOPERM 77 permission denied
  * EX_SOFTWARE 70 internal software error
  * EX_PROTOCOL 76 remote error in protocol
+
  */
 
 
 #include <cmath> // std::abs() from cmath for floats and doubles
 #include <cstring> // Needed for memcpy
 #include <ctime> // Required for timer types
+#include <fcntl.h> // fcntl()
 #include <iomanip> //  setprecision() and precision()
 #include <iostream> // cout
 using namespace std;
 #include <sys/socket.h> // Provides AF_PACKET *Address Family*
+#include <sys/select.h>
 #include <linux/if_arp.h>
 #include <linux/if_ether.h> // Defines ETH_P_ALL [Ether type 0x003 (ALL PACKETS!)]
 // Also defines ETH_FRAME_LEN with default 1514
@@ -69,7 +72,7 @@ int main(int argc, char *argv[]) {
  ********************************************************************************************** Set initial variable values
  */
 
-start:
+restart:
 
 // By default we are transmitting data
 bool txMode = true;
@@ -957,7 +960,6 @@ if(txMode==true)
 
 
 
-
 /*
  ********************************************************************************************** Run tests
  */
@@ -1012,9 +1014,9 @@ if (txMode==true)
     if(bTXSpeed!=bTXSpeedDef)
       {
 
-        // Get a clock time for the speed limit
+        // Get clock time for the speed limit option,
+        // get another to record the initial starting time
         clock_gettime(CLOCK_MONOTONIC_RAW, &txLimit);
-        // Get another for the initial starting time
         clock_gettime(CLOCK_MONOTONIC_RAW, &durTimer1);
 
         // Main TX loop
@@ -1037,13 +1039,30 @@ if (txMode==true)
                 durTimer1.tv_nsec = durTimer2.tv_nsec;
             }
 
+/*
+            // Check if RX host has quit/died;
+            rxLength = recvfrom(sockFD, rxBuffer, fSizeTotal, 0, NULL, NULL);
+            if(rxLength>0)
+            {
+              param = "etheratedeath";
+              if(strncmp(rxData,param.c_str(),param.length())==0)
+              {
+                  timeNow = time(0);
+                  localtm = localtime(&timeNow);
+                  cout << "RX host is going down. Ending test and resetting on " << asctime(localtm) << endl << endl;
+                  goto finish;
+              }
+            }
+*/
+
             // If it hasn't been 1 second yet
             if (durTimer2.tv_sec-txLimit.tv_sec<1)
             {
+
+                // Check if sending another frame keeps us under the max speed limit
                 if((bTXSpeedLast+fSize)<=bTXSpeed)
                 {
 
-                    //If sending another frame keeps us under speed
                     ss.clear();
                     ss.str("");
                     ss << "etheratetest" << (fTX+1);
@@ -1091,9 +1110,20 @@ if (txMode==true)
         // Get the initial starting time
         clock_gettime(CLOCK_MONOTONIC_RAW, &durTimer1);
 
+
+fd_set readfds;
+struct timeval tv;
+int rv, n;
+
+
+
         // Main TX loop
         while (*testBase<=*testMax)
         {
+
+FD_ZERO(&readfds);
+FD_SET(sockFD, &readfds);
+n = sockFD + 1;
 
             // Get the current time
             clock_gettime(CLOCK_MONOTONIC_RAW, &durTimer2);
@@ -1110,6 +1140,44 @@ if (txMode==true)
                 durTimer1.tv_sec = durTimer2.tv_sec;
                 durTimer1.tv_nsec = durTimer2.tv_nsec;
             }
+
+
+
+    tv.tv_sec = 0;
+    tv.tv_usec = 000000;
+    rv = select(n, &readfds, NULL, NULL, &tv);
+    if (rv > 0) {
+        if (FD_ISSET(sockFD, &readfds)) {
+            rxLength = recvfrom(sockFD, rxBuffer, fSizeTotal, 0, NULL, NULL);
+            //(rxLength>10){
+            param = "etheratedeath";
+            if(strncmp(rxData,param.c_str(),param.length())==0)
+            {
+                timeNow = time(0);
+                localtm = localtime(&timeNow);
+                cout << "RX host is going down. Ending test and resetting on " << asctime(localtm) << endl << endl;
+                goto finish;
+            }
+            //
+        }
+    }
+
+    /*
+            // Check if RX host has quit/died;
+            rxLength = recvfrom(sockFD, rxBuffer, fSizeTotal, 0, NULL, NULL);
+            if(rxLength>(10+headersLength))
+            {
+              param = "etheratedeath";
+              if(strncmp(rxData,param.c_str(),param.length())==0)
+              {
+                  timeNow = time(0);
+                  localtm = localtime(&timeNow);
+                  cout << "RX host is going down. Ending test and resetting on " << asctime(localtm) << endl << endl;
+                  goto finish;
+              }
+            }
+*/
+
 
             ss.clear();
             ss.str("");
@@ -1180,15 +1248,16 @@ if (txMode==true)
 
     // Get the initial starting time
     clock_gettime(CLOCK_MONOTONIC_RAW, &durTimer1);
+
     // Main RX loop
     while (*testBase<=*testMax)
     {
 
         clock_gettime(CLOCK_MONOTONIC_RAW, &durTimer2);
-        // One second has passed
+        // If one second has passed
         if((durTimer2.tv_sec-durTimer1.tv_sec)>=1) {
             sElapsed+=1;
-            bSpeed = ((bRX-bRXlast)*8)/1000/1000;
+            bSpeed = float ((bRX-bRXlast)*8)/1000/1000;
             bRXlast = bRX;
             cout << sElapsed << "\t\t" << bSpeed << "\t" << (bRX/1000)/1000 << "\t\t"
                  << (fRX-fRXlast) << "f/s\t\t" << fRX << endl;
@@ -1202,6 +1271,17 @@ if (txMode==true)
         if(rxLength>0)
         {
 
+
+            // Check if TX host has quit/died;
+            param = "etheratedeath";
+            if(strncmp(rxData,param.c_str(),param.length())==0)
+            {
+                timeNow = time(0);
+                localtm = localtime(&timeNow);
+                cout << "TX host is going down. Ending test and resetting on " << asctime(localtm) << endl << endl;
+                goto restart;
+            }
+
             // Check if this is an etherate test frame
             param = "etheratetest";
             if(strncmp(rxData,param.c_str(),param.length())==0)
@@ -1209,7 +1289,7 @@ if (txMode==true)
 
                 // Update our stats
                 fRX+=1;
-                bRX+= (rxLength-14);
+                bRX+= (rxLength-headersLength);
 
                 // If running in ACK mode we need to ACK to TX host
                 if(ACKMode)
@@ -1226,15 +1306,6 @@ if (txMode==true)
                 rxLength = 0;
             }
 
-            // Check if the other end has quit;
-            param = "etheratedeath";
-            if(strncmp(rxData,param.c_str(),param.length())==0)
-            {
-                timeNow = time(0);
-                localtm = localtime(&timeNow);
-                cout << "TX host is going down. Ending test and resetting on " << asctime(localtm) << endl << endl;
-                goto start;
-            }
 
         }
 
@@ -1251,9 +1322,12 @@ if (txMode==true)
     localtm = localtime(&timeNow);
     cout << endl << "Ending test on " << asctime(localtm) << endl;
     close(sockFD);
-    goto start;
+    goto restart;
 
 }
+
+
+finish:
 
 cout << "Leaving promiscuous mode" << endl;
 
