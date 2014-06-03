@@ -88,7 +88,7 @@ cout << "Usage info; [Mode] [Destination] [Source] [Options] [Other]" << endl
      << "\t\t-b overrides -c." << endl
      << "\t-a\tAck mode, have the receiver ack each frame during the test" << endl
      << "\t\t(This will significantly reduce the speed of the test)." << endl
-     << "\t-m\tLimit to max bytes per/second, -m 125000 (1Mbps)." << endl
+     << "\t-m\tMax bytes per/second to send, -m 125000 (1Mbps)." << endl
      << "[Other] Misc options and additional test parameters" << endl
      << "\t-v\tAdd an 802.1q VLAN tag. By default none is in the header." << endl
      << "\t\tIf using a PCP value with -p a default VLAN of 0 is added." << endl
