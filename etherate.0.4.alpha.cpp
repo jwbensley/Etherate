@@ -976,8 +976,8 @@ for (junk = 0; junk < fSize; junk++)
 timeNow = time(0);
 localtm = localtime(&timeNow);
 cout << endl << "Starting test on " << asctime(localtm) << endl;
-ss.precision(36); // ??????????????????????????????????????????????????????????? WHY IS THIS 36?
-cout << fixed << setprecision(6);
+ss.precision(2); // ??????????????????????????????????????????????????????????? WHY IS THIS 36?
+cout << fixed << setprecision(2);
 
 testing = 1;
 
@@ -1032,7 +1032,7 @@ if (txMode==true)
                 sElapsed+=1;
                 bSpeed = (((float)bTX-(float)bTXlast)*8)/1000/1000;
                 bTXlast = bTX;
-                cout << sElapsed << "\t\t" << bSpeed << "\t" << (bTX/1000)/1000 << "\t\t"
+                cout << sElapsed << "\t\t" << bSpeed << "\t\t" << (bTX/1000)/1000 << "\t\t"
                      << (fTX-fTXlast) << "\t\t" << fTX << endl;
                 fTXlast = fTX;
                 durTimer1.tv_sec = durTimer2.tv_sec;
@@ -1134,7 +1134,7 @@ n = sockFD + 1;
                 sElapsed+=1;
                 bSpeed = (((float)bTX-(float)bTXlast)*8)/1000/1000;
                 bTXlast = bTX;
-                cout << sElapsed << "\t\t" << bSpeed << "\t" << (bTX/1000)/1000 << "\t\t"
+                cout << sElapsed << "\t\t" << bSpeed << "\t\t" << (bTX/1000)/1000 << "\t\t"
                      << (fTX-fTXlast) << "\t\t"<< fTX << endl;
                 fTXlast = fTX;
                 durTimer1.tv_sec = durTimer2.tv_sec;
@@ -1142,7 +1142,7 @@ n = sockFD + 1;
             }
 
 
-
+            // Check if RX host has quit/died;
     tv.tv_sec = 0;
     tv.tv_usec = 000000;
     rv = select(n, &readfds, NULL, NULL, &tv);
@@ -1155,29 +1155,12 @@ n = sockFD + 1;
             {
                 timeNow = time(0);
                 localtm = localtime(&timeNow);
-                cout << "RX host is going down. Ending test and resetting on " << asctime(localtm) << endl << endl;
+                cout << "RX host is going down. Ending test and resetting on " << asctime(localtm) << endl;
                 goto finish;
             }
             //
         }
     }
-
-    /*
-            // Check if RX host has quit/died;
-            rxLength = recvfrom(sockFD, rxBuffer, fSizeTotal, 0, NULL, NULL);
-            if(rxLength>(10+headersLength))
-            {
-              param = "etheratedeath";
-              if(strncmp(rxData,param.c_str(),param.length())==0)
-              {
-                  timeNow = time(0);
-                  localtm = localtime(&timeNow);
-                  cout << "RX host is going down. Ending test and resetting on " << asctime(localtm) << endl << endl;
-                  goto finish;
-              }
-            }
-*/
-
 
             ss.clear();
             ss.str("");
@@ -1214,7 +1197,7 @@ n = sockFD + 1;
     } // End of max test-speed If
 
 
-    cout << sElapsed << "\t\t" << bSpeed << "\t" << (bTX/1000)/1000 << "\t\t" << (fTX-fTXlast)
+    cout << sElapsed << "\t\t" << bSpeed << "\t\t" << (bTX/1000)/1000 << "\t\t" << (fTX-fTXlast)
          << "\t\t" << fTX << endl;
 
     timeNow = time(0);
@@ -1259,7 +1242,7 @@ n = sockFD + 1;
             sElapsed+=1;
             bSpeed = float ((bRX-bRXlast)*8)/1000/1000;
             bRXlast = bRX;
-            cout << sElapsed << "\t\t" << bSpeed << "\t" << (bRX/1000)/1000 << "\t\t"
+            cout << sElapsed << "\t\t" << bSpeed << "\t\t" << (bRX/1000)/1000 << "\t\t"
                  << (fRX-fRXlast) << "f/s\t\t" << fRX << endl;
             fRXlast = fRX;
             durTimer1.tv_sec = durTimer2.tv_sec;
@@ -1278,7 +1261,7 @@ n = sockFD + 1;
             {
                 timeNow = time(0);
                 localtm = localtime(&timeNow);
-                cout << "TX host is going down. Ending test and resetting on " << asctime(localtm) << endl << endl;
+                cout << "TX host is going down. Ending test and resetting on " << asctime(localtm) << endl;
                 goto restart;
             }
 
@@ -1316,7 +1299,7 @@ n = sockFD + 1;
 
     }
 
-    cout << sElapsed << "\t\t" << bSpeed << "\t" << (bRX/1000)/1000 << "\t\t" << (fRX-fRXlast)
+    cout << sElapsed << "\t\t" << bSpeed << "\t\t" << (bRX/1000)/1000 << "\t\t" << (fRX-fRXlast)
          << "\t\t" << fRX << endl;
     timeNow = time(0);
     localtm = localtime(&timeNow);
