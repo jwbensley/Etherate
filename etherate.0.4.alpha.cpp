@@ -584,6 +584,7 @@ cout << "Sending gratuitous broadcasts..." << endl;
 for(lCounter=1; lCounter<=3; lCounter++)
 {
     param = "etheratepresence";
+cout << "param-len: " << param.length() << " head-len: " << headersLength << endl;
     strncpy(txData,param.c_str(),param.length());
     sendResult = sendto(sockFD, txBuffer, param.length()+headersLength, 0, 
                  (struct sockaddr*)&socket_address, sizeof(socket_address));

@@ -96,7 +96,7 @@ cout << "Usage info; [Mode] [Destination] [Source] [Options] [Other]" << endl
      << "\t-p\tAdd an 802.1p PCP value from 1 to 7 using options -p 1 to" << endl
      << "\t\t-p 7. If more than one value is given, the highest is used." << endl
      << "\t\tDefault is 0 if none specified." << endl
-     << "\t\t(If no 802.1q tag is given, the VLAN number infront will be 0)." << endl
+     << "\t\t(If no 802.1q tag is set the VLAN number infront will be 0)." << endl
      << "\t\t#NOT IMPLEMENTED YET#" << endl
      << "\t-q\tAdd an outter Q-in-Q tag. If used without -v, 1 is used" << endl
      << "\t\tfor the inner VLAN ID." << endl

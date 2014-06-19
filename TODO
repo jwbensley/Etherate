@@ -9,6 +9,9 @@ RX host shows receiving traffic rate in Mbps with a deciaml place, TX host shows
 RX host shows the median for delay, TX does not? Mean, median, mode, choose one and standardise on both!
 Difference in definition between fSizeMax and fSizeDef
 
+Frames less than 60bytes are padded by Linux upto 60, is it OK to rely on the kernel to do this?
+Why when one end sends a double tagged from with 0x88a8 on the first etherype does the receiver of the frame always see it as two 0x8100 frames?
+
 
 Medium:
 Checking frame order
