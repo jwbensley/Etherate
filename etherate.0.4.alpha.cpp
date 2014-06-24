@@ -49,7 +49,7 @@ using namespace std;
 #include <string.h> //Required for strncmp() function
 #define MAX_IFS 64
 #include <sys/ioctl.h>
-#include <time.h> // Required for clock_gettime()
+#include <time.h> // Required for clock_gettime(), struct timeval
 #include "unistd.h" // sleep(), getuid()
 #include <vector> // Required for string explode function
 
@@ -171,6 +171,12 @@ time_t timeNow;
 // Time struct for breaking down the above time type
 tm* localtm;
 
+// Elapsed time struct for polling the socket file descriptor
+struct timeval tvSelectDelay;
+
+// A set of socket file descriptors for polling
+fd_set readfds;
+
 
 /* 
   These variables are declared here and used over and over throughout;
@@ -180,6 +186,7 @@ tm* localtm;
 */
 vector<string> exploded;
 string explodestring;
+
 // Also, a generic loop counter
 int lCounter;
 
@@ -505,7 +512,6 @@ socket_address.sll_addr[6]  = 0x00;
 socket_address.sll_addr[7]  = 0x00;
 
 //  RX buffer for incoming ethernet frames
-// Changed from C ctyle: (void*)malloc(ETH_FRAME_LEN);
 char* rxBuffer = (char*)operator new(fSizeMax);
 
 //  TX buffer for outgoing ethernet frames
@@ -584,7 +590,6 @@ cout << "Sending gratuitous broadcasts..." << endl;
 for(lCounter=1; lCounter<=3; lCounter++)
 {
     param = "etheratepresence";
-cout << "param-len: " << param.length() << " head-len: " << headersLength << endl;
     strncpy(txData,param.c_str(),param.length());
     sendResult = sendto(sockFD, txBuffer, param.length()+headersLength, 0, 
                  (struct sockaddr*)&socket_address, sizeof(socket_address));
@@ -689,7 +694,7 @@ if(txMode==true)
 
 
     // Send over the time for delay calculation between hosts,
-    // We send it twice each time repeate this process multiple times to get an average;
+    // We send it twice each time repeating this process multiple times to get an average;
     cout << "Calculating delay between hosts..." << endl;
     for(lCounter=0; lCounter<=4; lCounter++)
     {
@@ -723,7 +728,6 @@ if(txMode==true)
         while (waiting)
         {
             rxLength = recvfrom(sockFD, rxBuffer, fSizeTotal, 0, NULL, NULL);
-// cout << "Length " << rxLength << " rxData: " << rxData << endl;
 
             if(param.compare(0,param.size(),rxData,0,14)==0)
             {
@@ -744,7 +748,7 @@ if(txMode==true)
     }
 
 
-    cout << "Delay calculated as " << ((delay[0]+delay[1]+delay[2])/3) << endl;
+    cout << "Mean delay calculated as " << ((delay[0]+delay[1]+delay[2]+delay[3]+delay[4])/5) << endl;
     // Let the receiver know all settings have been sent
     param = "etherateallset";
     strncpy(txData,param.c_str(),param.length());
@@ -755,7 +759,7 @@ if(txMode==true)
 
 } else {
 
-    cout << "Running in RX mode, awaiting settings" << endl;
+    cout << "Running in RX mode, awaiting TX host" << endl;
     // In listening mode we start by waiting for each parameter to come through
     // So we start a loop until they have all been received
     bool waiting = true;
@@ -770,7 +774,6 @@ if(txMode==true)
     while(waiting) {
 
         rxLength = recvfrom(sockFD, rxBuffer, fSizeTotal, 0, NULL, NULL);
-// cout << "Length " << rxLength << " rxData: " << rxData << endl;
 
 
         // TX has sent a non-default frame payload size
@@ -830,7 +833,7 @@ if(txMode==true)
             strncmp(rxData,"etheratetime41:",15)==0  )
         {
 
-//        cout << rxLength << endl;
+
             // Get the time we are receiving TX's sent time figure
             clock_gettime(CLOCK_MONOTONIC_RAW, &tspecRX);
             ss.str("");
@@ -841,25 +844,25 @@ if(txMode==true)
             // Extract the sent time
             exploded.clear();
             explodestring = rxData;
-//        cout << rxData << endl;
+
             StringExplode(explodestring, ":", &exploded);
-            if((int) exploded.size() != 3)
+            /*if((int) exploded.size() != 3)
             {
                 int lala = (int) exploded.size();
                 cout << lala << " ---- " << rxData << endl;
                 cout << "Error: Invalid 1st time stamp received! " << endl;
                 return 76;                          ///////////// DO WE WANT TO ALLOW CARRY ON WITHOUT DELAY OR INVALID DELAY?
-            }
+            }*/
             ss.str("");
             ss.clear();
             ss << atol(exploded[1].c_str()) << "." << atol(exploded[2].c_str());
             ss >> timeTX1;
 
-            // Get the difference in TX and RX clocks
+            /*// Get the difference in TX and RX clocks
             if(timeTX1<timeRX1)
             {
                 timeRXdiff = std::abs(timeRX1-timeTX1);
-            }
+            }*/
 
         }
 
@@ -871,8 +874,8 @@ if(txMode==true)
             strncmp(rxData,"etheratetime42:",15)==0  )
         {
 
-//      cout << rxLength << endl;
-            // Get the moment we are receiving TXs sent time figure
+
+            // Get the time we are receiving TXs 2nd sent time figure
             clock_gettime(CLOCK_MONOTONIC_RAW, &tspecRX);
             ss.str("");
             ss.clear();
@@ -882,15 +885,15 @@ if(txMode==true)
             // Extract the sent time
             exploded.clear();
             explodestring = rxData;
-//      cout << rxData << endl;
+
             StringExplode(explodestring, ":", &exploded);
-            if((int) exploded.size() != 3)
+            /*if((int) exploded.size() != 3)
             {
                 int lala = (int) exploded.size();
                 cout << lala << " ---- " << rxData << endl;
                 cout << "Error: Invalid 2nd time stamp received!" << endl;
                 return 76;                                    ///////////// DO WE WANT TO ALLOW CARRY ON WITHOUT DELAY OR INVALID DELAY?
-            }
+            }*/
             ss.clear();
             ss.str("");
             ss << atol(exploded[1].c_str()) << "." << atol(exploded[2].c_str());
@@ -908,30 +911,10 @@ if(txMode==true)
             if(strncmp(rxData,"etheratetime12:",15)==0) delay[1] = timeTXdelay;
             if(strncmp(rxData,"etheratetime22:",15)==0) delay[2] = timeTXdelay;
             if(strncmp(rxData,"etheratetime32:",15)==0) delay[3] = timeTXdelay;
-            if(strncmp(rxData,"etheratetime42:",15)==0)
-            {
-
+            if(strncmp(rxData,"etheratetime42:",15)==0) 
+            { 
                 delay[4] = timeTXdelay;
-                cout << "Delay calculated as " << ((delay[0]+delay[1]+delay[2]+delay[3]+delay[4])/5) << endl;
-                double temp;
-                int i,j;
-                for(i=0;i<5;i++)
-                {
-                    for(j=i+1;j<5;j++)
-                    {
-                        if(delay[i]>delay[j])
-                        {
-                              temp=delay[j];
-                              delay[j]=delay[i];
-                              delay[i]=temp;
-                        }
-                    }
-                }
-                for (int n=0; n<5; n++)
-                {
-                    cout << delay[n] << endl;
-                }
-                  cout << "Median: " << delay[2] << endl;
+                cout << "Mean delay calculated as " << ((delay[0]+delay[1]+delay[2]+delay[3]+delay[4])/5) << endl;
             }
 
             // Send it back to the TX host
@@ -980,10 +963,14 @@ cout << endl << "Starting test on " << asctime(localtm) << endl;
 ss.precision(2); // ??????????????????????????????????????????????????????????? WHY IS THIS 36?
 cout << fixed << setprecision(2);
 
-testing = 1;
 
 if (txMode==true)
 {
+
+    FD_ZERO(&readfds);
+    int sockFDCount = sockFD + 1;
+    int selectRetVal;
+
     cout << "Seconds\t\tMbps TX\t\tMBs Tx\t\tFrmTX/s\t\tFrames TX" << endl;
 
     long long *testBase, *testMax;
@@ -1002,14 +989,6 @@ if (txMode==true)
         testBase = &sElapsed;
     }
 
-    // ETH_FRAME_LEN - Go through and check where this is used to transmit/receive a frame
-    // If we are sending less that 1500 bytes for example, it should be payLoadSize+headersLength
-
-    // The displaid TX rate (19Mbps) on the TX host when testing with 20 byte frames is less than the RX host displaid RX rate (40Mbps)
-
-    // No time out feature; for example, after 30 seconds the test should finish on the TX host (actually, this does happen sometimes?)
-
-    // Display post test details; min max avg for Mbps and FrmRX/S
 
     // A max speed has been set
     if(bTXSpeed!=bTXSpeedDef)
@@ -1040,21 +1019,26 @@ if (txMode==true)
                 durTimer1.tv_nsec = durTimer2.tv_nsec;
             }
 
-/*
             // Check if RX host has quit/died;
-            rxLength = recvfrom(sockFD, rxBuffer, fSizeTotal, 0, NULL, NULL);
-            if(rxLength>0)
-            {
-              param = "etheratedeath";
-              if(strncmp(rxData,param.c_str(),param.length())==0)
-              {
-                  timeNow = time(0);
-                  localtm = localtime(&timeNow);
-                  cout << "RX host is going down. Ending test and resetting on " << asctime(localtm) << endl << endl;
-                  goto finish;
-              }
+            tvSelectDelay.tv_sec = 0;
+            tvSelectDelay.tv_usec = 000000;
+            FD_SET(sockFD, &readfds);
+            selectRetVal = select(sockFDCount, &readfds, NULL, NULL, &tvSelectDelay);
+            if (selectRetVal > 0) {
+                if (FD_ISSET(sockFD, &readfds)) {
+
+                    rxLength = recvfrom(sockFD, rxBuffer, fSizeTotal, 0, NULL, NULL);
+                    param = "etheratedeath";
+                    if(strncmp(rxData,param.c_str(),param.length())==0)
+                    {
+                        timeNow = time(0);
+                        localtm = localtime(&timeNow);
+                        cout << "RX host is going down. Ending test and resetting on " << asctime(localtm) << endl;
+                        goto finish;
+                    }
+                    
+                }
             }
-*/
 
             // If it hasn't been 1 second yet
             if (durTimer2.tv_sec-txLimit.tv_sec<1)
@@ -1112,19 +1096,10 @@ if (txMode==true)
         clock_gettime(CLOCK_MONOTONIC_RAW, &durTimer1);
 
 
-fd_set readfds;
-struct timeval tv;
-int rv, n;
-
-
-
         // Main TX loop
         while (*testBase<=*testMax)
         {
 
-FD_ZERO(&readfds);
-FD_SET(sockFD, &readfds);
-n = sockFD + 1;
 
             // Get the current time
             clock_gettime(CLOCK_MONOTONIC_RAW, &durTimer2);
@@ -1142,26 +1117,26 @@ n = sockFD + 1;
                 durTimer1.tv_nsec = durTimer2.tv_nsec;
             }
 
-
             // Check if RX host has quit/died;
-    tv.tv_sec = 0;
-    tv.tv_usec = 000000;
-    rv = select(n, &readfds, NULL, NULL, &tv);
-    if (rv > 0) {
-        if (FD_ISSET(sockFD, &readfds)) {
-            rxLength = recvfrom(sockFD, rxBuffer, fSizeTotal, 0, NULL, NULL);
-            //(rxLength>10){
-            param = "etheratedeath";
-            if(strncmp(rxData,param.c_str(),param.length())==0)
-            {
-                timeNow = time(0);
-                localtm = localtime(&timeNow);
-                cout << "RX host is going down. Ending test and resetting on " << asctime(localtm) << endl;
-                goto finish;
+            tvSelectDelay.tv_sec = 0;
+            tvSelectDelay.tv_usec = 000000;
+            FD_SET(sockFD, &readfds);
+            selectRetVal = select(sockFDCount, &readfds, NULL, NULL, &tvSelectDelay);
+            if (selectRetVal > 0) {
+                if (FD_ISSET(sockFD, &readfds)) {
+
+                    rxLength = recvfrom(sockFD, rxBuffer, fSizeTotal, 0, NULL, NULL);
+                    param = "etheratedeath";
+                    if(strncmp(rxData,param.c_str(),param.length())==0)
+                    {
+                        timeNow = time(0);
+                        localtm = localtime(&timeNow);
+                        cout << "RX host is going down. Ending test and resetting on " << asctime(localtm) << endl;
+                        goto finish;
+                    }
+                    
+                }
             }
-            //
-        }
-    }
 
             ss.clear();
             ss.str("");

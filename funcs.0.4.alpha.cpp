@@ -92,12 +92,10 @@ cout << "Usage info; [Mode] [Destination] [Source] [Options] [Other]" << endl
      << "[Other] Misc options and additional test parameters" << endl
      << "\t-v\tAdd an 802.1q VLAN tag. By default none is in the header." << endl
      << "\t\tIf using a PCP value with -p a default VLAN of 0 is added." << endl
-     << "\t\t#NOT IMPLEMENTED YET#" << endl
      << "\t-p\tAdd an 802.1p PCP value from 1 to 7 using options -p 1 to" << endl
      << "\t\t-p 7. If more than one value is given, the highest is used." << endl
      << "\t\tDefault is 0 if none specified." << endl
      << "\t\t(If no 802.1q tag is set the VLAN number infront will be 0)." << endl
-     << "\t\t#NOT IMPLEMENTED YET#" << endl
      << "\t-q\tAdd an outter Q-in-Q tag. If used without -v, 1 is used" << endl
      << "\t\tfor the inner VLAN ID." << endl
      << "\t\t#NOT IMPLEMENTED YET#" << endl
@@ -278,8 +276,9 @@ short vlanIDtemp;
 
 // Copy the destination and source MAC addresses
 memcpy((void*)txBuffer, (void*)destMAC, ETH_ALEN);
-memcpy((void*)(txBuffer+ETH_ALEN), (void*)sourceMAC, ETH_ALEN);
-offset = (ETH_ALEN*2);
+offset+=sizeof(ETH_ALEN);
+memcpy((void*)(txBuffer+offset), (void*)sourceMAC, ETH_ALEN);
+offset+=sizeof(ETH_ALEN);
 
 //Check to see if QinQ VLAN ID has been supplied
 if(qinqID!=qinqIDDef)
@@ -287,8 +286,8 @@ if(qinqID!=qinqIDDef)
 
     // Add on the QinQ Tag Protocol Identifier
     TPI = htons(0x88a8); //0x88a8 == IEEE802.1ad, 0x9100 == older IEEE802.1QinQ
-    memcpy((void*)(txBuffer+offset), p, 2);
-    offset+=2;
+    memcpy((void*)(txBuffer+offset), p, sizeof(TPI));
+    offset+=sizeof(TPI);
 
     // Now build the QinQ Tag Control Identifier:
     vlanIDtemp = qinqID;
@@ -299,10 +298,10 @@ if(qinqID!=qinqIDDef)
     qinqID = qinqID << 8;
     TCI = TCI | (qinqID & 0xffff);
 
-    memcpy((void*)(txBuffer+offset), c, 2);
-    offset+=2;
+    memcpy((void*)(txBuffer+offset), c, sizeof(TCI));
+    offset+=sizeof(TCI);
 
-    qinqID = vlanIDtemp;    ///////////// Do we need this?
+//qinqID = vlanIDtemp;    ///////////// Do we need this?
 
     // If an outer VLAN ID has been set, but not an inner one (which would be a mistake)
     // set it to 1 so the frame is still valid
@@ -316,8 +315,8 @@ if(PCP!=PCPDef || vlanID!=vlanIDDef)
 {
 
     TPI = htons(0x8100);
-    memcpy((void*)(txBuffer+offset), p, 2);
-    offset+=2;
+    memcpy((void*)(txBuffer+offset), p, sizeof(TPI));
+    offset+=sizeof(TPI);
 
     vlanIDtemp = vlanID;
     TCI = (PCP & 0x07) << 5;
@@ -327,20 +326,18 @@ if(PCP!=PCPDef || vlanID!=vlanIDDef)
     vlanID = vlanID << 8;
     TCI = TCI | (vlanID & 0xffff);
 
-    memcpy((void*)(txBuffer+offset), c, 2);
-    offset+=2;
+    memcpy((void*)(txBuffer+offset), c, sizeof(TCI));
+    offset+=sizeof(TCI);
 
-    vlanID = vlanIDtemp;    ///////////// Do we need this?
+//    vlanID = vlanIDtemp;    ///////////// Do we need this?
 
 }
 
   // Push on the Ethertype (IPv4) for the Etherate payload
   TPI = htons(0x0800);
-  memcpy((void*)(txBuffer+offset), p, 2);
-  offset+=2;
+  memcpy((void*)(txBuffer+offset), p, sizeof(TPI));
+  offset+=sizeof(TPI);
 
   headersLength = offset;
-
-  cout << "headersLength: " << headersLength << endl;
 
 }

@@ -40,7 +40,7 @@ void BuildHeaders(char* &txBuffer, unsigned char (&destMAC)[6],
  ********************************************************************************************** Global constants
  */
 
-const string version = "0.4.alpha 2014-02";
+const string version = "0.4.alpha 2014-06";
 
 // Maximum frame size on the wire (payload + 20 octets of headers)
 const int fSizeMax = 9020;
@@ -114,7 +114,3 @@ short qinqID = 0;
 
 // Default 802.1p PCP/CoS value of outer frame = 0
 short qinqPCP = 0;
-
-// Is the test running
-bool testing = 0;
-
