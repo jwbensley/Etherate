@@ -162,11 +162,13 @@ for (ifr = ifc.ifc_req; ifr < ifend; ifr++)
     if (ifr->ifr_addr.sa_family == AF_INET)
     {
 
-        // Try to get a typical ethernet adapter, not a loopback or virt interface
+
+        // Try to get a typical ethernet adapter, not a bridge virt interface
         if(strncmp(ifr->ifr_name, "eth", 3)==0 ||
            strncmp(ifr->ifr_name, "en", 2)==0 ||
-           strncmp(ifr->ifr_name, "em", 2)==0 ||
-           strncmp(ifr->ifr_name, "wlan", 4)==0)
+           strncmp(ifr->ifr_name, "em", 2)==0)
+           //strncmp(ifr->ifr_name, "wlan", 4)==0 ||
+           //strncmp(ifr->ifr_name, "lo", 2)==0)
         {
 
             strncpy(ifreq.ifr_name, ifr->ifr_name,sizeof(ifreq.ifr_name));
@@ -179,7 +181,7 @@ for (ifr = ifc.ifc_req; ifr < ifend; ifr++)
                 return 0;
             }
 
-            printf("Using device %s, Hardware Address %02x:%02x:%02x:%02x:%02x:%02x, "
+            printf("Using device %s with hardware Address %02x:%02x:%02x:%02x:%02x:%02x\n"
                    "Interface Index %d",
                    ifreq.ifr_name,
                    (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[0],
@@ -276,9 +278,9 @@ short vlanIDtemp;
 
 // Copy the destination and source MAC addresses
 memcpy((void*)txBuffer, (void*)destMAC, ETH_ALEN);
-offset+=sizeof(ETH_ALEN);
+offset+=ETH_ALEN;
 memcpy((void*)(txBuffer+offset), (void*)sourceMAC, ETH_ALEN);
-offset+=sizeof(ETH_ALEN);
+offset+=ETH_ALEN;
 
 //Check to see if QinQ VLAN ID has been supplied
 if(qinqID!=qinqIDDef)
@@ -300,8 +302,6 @@ if(qinqID!=qinqIDDef)
 
     memcpy((void*)(txBuffer+offset), c, sizeof(TCI));
     offset+=sizeof(TCI);
-
-//qinqID = vlanIDtemp;    ///////////// Do we need this?
 
     // If an outer VLAN ID has been set, but not an inner one (which would be a mistake)
     // set it to 1 so the frame is still valid
@@ -328,8 +328,6 @@ if(PCP!=PCPDef || vlanID!=vlanIDDef)
 
     memcpy((void*)(txBuffer+offset), c, sizeof(TCI));
     offset+=sizeof(TCI);
-
-//    vlanID = vlanIDtemp;    ///////////// Do we need this?
 
 }
 

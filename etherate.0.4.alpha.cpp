@@ -6,18 +6,18 @@
  * Please send corrections, ideas and help to: jwbensley@gmail.com (I'm a beginner if that isn't obvious!)
  * compile with: g++ -o etherate etherate.cpp -lrt
  *
+ * File Contents:
+ *
+ * HEADERS AND DEFS
+ * GLOBAL VARIABLES
+ * CLI ARGS
+ * TX/RX SETUP
+ * SETTINGS SYNC
+ * TEST PHASE
+ *
+ *
+ ********************************************************************************************** HEADERS AND DEFS
  */
-
-
-/*
- * Exit codes are from: /usr/include/sysexits.h
- * EX_USAGE 64 command line usage error
- * EX_NOPERM 77 permission denied
- * EX_SOFTWARE 70 internal software error
- * EX_PROTOCOL 76 remote error in protocol
-
- */
-
 
 #include <cmath> // std::abs() from cmath for floats and doubles
 #include <cstring> // Needed for memcpy
@@ -37,10 +37,6 @@ using namespace std;
 #include <linux/net.h> // Provides SOCK_RAW *Socket Type*
 //#include <net/if.h> // Provides if_indextoname/if_nametoindex
 #include <netinet/in.h> // Needed for htons() and htonl()
-// Host-to-Network-short htons()
-// Host-to-Network-long htonl()
-// Network-to-Host-short ntohs()
-// Network-to-Host-long ntohl()
 #include <signal.h> // For use of signal() to catch SIGINT
 #include <sstream> // Stringstream objects and functions
 #include <stdio.h> //perror()
@@ -48,6 +44,13 @@ using namespace std;
 #include <stdbool.h> // bool/_Bool
 #include <string.h> //Required for strncmp() function
 #define MAX_IFS 64
+#include "sysexits.h"
+/*
+ * EX_USAGE 64 command line usage error
+ * EX_NOPERM 77 permission denied
+ * EX_SOFTWARE 70 internal software error
+ * EX_PROTOCOL 76 remote error in protocol
+ */
 #include <sys/ioctl.h>
 #include <time.h> // Required for clock_gettime(), struct timeval
 #include "unistd.h" // sleep(), getuid()
@@ -64,12 +67,15 @@ using namespace std;
 #include "etherate.0.4.alpha.h"
 #include "funcs.0.4.alpha.cpp"
 
+/*
+ ********************************************************************************************** HEADERS AND DEFS
+ */
 
 
 int main(int argc, char *argv[]) {
 
 /*
- ********************************************************************************************** Set initial variable values
+ ********************************************************************************************** GLOBAL VARIABLES
  */
 
 restart:
@@ -144,20 +150,20 @@ long long bRX = 0;
 // Bytes received at last count for calculating speed
 long long bRXlast = 0;
 
-// Average speed whilst running the test
+// Max speed whilst running the test
 float bSpeed = 0;
 
 // Are we running in ACK mode during transmition
-bool ACKMode = false;
+bool fACK = false;
 
 // These timespecs are used for calculating delay/RTT
-timespec tspecTX, tspecRX;
+timespec tsRTT;
 
-// Three doubles to calculate the delay three times, to divide for an average
+// 5 doubles to calculate the delay 5 times, to get an average
 double delay[5];
 
 // Two timers for timing the test and calculating stats
-timespec durTimer1, durTimer2;
+timespec tsCurrent, tsElapsed;
 
 // Seconds the test has been running
 long long sElapsed = 0;
@@ -194,7 +200,7 @@ int lCounter;
 
 
 /*
- ********************************************************************************************** Process CLI arguments
+ ********************************************************************************************** CLI ARGS
  */
 
 if(argc>1) 
@@ -233,7 +239,7 @@ if(argc>1)
             {
                 cout << "Error: Invalid destination MAC address!" << endl
                      << "Usage info: " << argv[0] << " -h" << endl;
-                return 64;
+                return EX_USAGE;
             }
             cout << "Destination MAC ";
 
@@ -258,7 +264,7 @@ if(argc>1)
             {
                 cout << "Error: Invalid source MAC address!" << endl
                      << "Usage info: " << argv[0] << " -h" << endl;
-                return 64;
+                return EX_USAGE;
             }
             cout << "Custom source MAC ";
 
@@ -280,7 +286,7 @@ if(argc>1)
             } else {
                 cout << "Oops! Missing interface index" << endl
                      << "Usage info: " << argv[0] << " -h" << endl;
-                return 64;
+                return EX_USAGE;
             }
 
 
@@ -305,7 +311,7 @@ if(argc>1)
             } else {
                 cout << "Oops! Missing frame size" << endl
                      << "Usage info: " << argv[0] << " -h" << endl;
-                return 64;
+                return EX_USAGE;
             }
 
 
@@ -318,7 +324,7 @@ if(argc>1)
             } else {
                 cout << "Oops! Missing transmission duration" << endl
                      << "Usage info: " << argv[0] << " -h" << endl;
-                return 64;
+                return EX_USAGE;
             }
 
 
@@ -331,7 +337,7 @@ if(argc>1)
             } else {
                 cout << "Oops! Missing max frame count" << endl
                      << "Usage info: " << argv[0] << " -h" << endl;
-                return 64;
+                return EX_USAGE;
             }
 
 
@@ -344,13 +350,13 @@ if(argc>1)
             } else {
                 cout << "Oops! Missing max byte transfer limit" << endl
                      << "Usage info: " << argv[0] << " -h" << endl;
-                return 64;
+                return EX_USAGE;
             }
 
 
         // Enable ACK mode testing
         } else if(strncmp(argv[lCounter],"-a",2)==0) {
-            ACKMode = true;
+            fACK = true;
 
 
         // Limit TX rate to max mbps
@@ -362,7 +368,7 @@ if(argc>1)
             } else {
                 cout << "Oops! Missing max TX rate" << endl
                      << "Usage info: " << argv[0] << " -h" << endl;
-                return 64;
+                return EX_USAGE;
             }
 
 
@@ -375,7 +381,7 @@ if(argc>1)
             } else {
                 cout << "Oops! Missing 802.1p PCP value" << endl
                      << "Usage info: " << argv[0] << " -h" << endl;
-                return 64;
+                return EX_USAGE;
             }
 
 
@@ -388,7 +394,7 @@ if(argc>1)
             } else {
                 cout << "Oops! Missing 802.1p VLAN ID" << endl
                      << "Usage info: " << argv[0] << " -h" << endl;
-                return 64;
+                return EX_USAGE;
             }
 
 
@@ -401,7 +407,7 @@ if(argc>1)
             } else {
                 cout << "Oops! Missing 802.1ad QinQ outer VLAN ID" << endl
                      << "Usage info: " << argv[0] << " -h" << endl;
-                return 64;
+                return EX_USAGE;
             }
 
 
@@ -414,7 +420,7 @@ if(argc>1)
             } else {
                 cout << "Oops! Missing 802.1ad QinQ outer PCP value" << endl
                      << "Usage info: " << argv[0] << " -h" << endl;
-                return 64;
+                return EX_USAGE;
             }
 
 
@@ -433,23 +439,23 @@ if(argc>1)
 
     }
 
-} // Argc > 1
+}
 
 /*
- ********************************************************************************************** End CLI arguments
+ ********************************************************************************************** CLI ARGS
  */
 
 
 
 
 /*
- ********************************************************************************************** Socket and tx/rx definitions
+ ********************************************************************************************** TX/RX SETUP
  */
 
 // Check for root access, otherwise we can't gain the low level socket access we desire;
 if(getuid()!=0) {
     cout << "Must be root to use this program!" << endl;
-    return 77;
+    return EX_NOPERM;
 }
 
 
@@ -469,7 +475,7 @@ if (sockFD < 0 )
   cout << "Error defining socket." << endl;
   perror("socket() ");
   close(sockFD);
-  return 70;
+  return EX_SOFTWARE;
 }
 
 
@@ -482,7 +488,7 @@ if(ifIndex<0)
         cout << "Error: Couldn't find appropriate interface ID, returned ID was 0." << endl
              << "This is typically the loopback interface ID. Supply a source MAC address "
              << "with the -s option to try and manually fudge it." << endl;
-        return 70;
+        return EX_SOFTWARE;
     }
 }
 
@@ -544,7 +550,7 @@ if (ioctl(sockFD,SIOCGIFFLAGS,&ethreq)==-1)
     cout << "Error getting socket flags, entering promiscuous mode failed." << endl;
     perror("ioctl() ");
     close(sockFD);
-    return 70;
+    return EX_SOFTWARE;
 }
 
 ethreq.ifr_flags|=IFF_PROMISC;
@@ -554,9 +560,8 @@ if (ioctl(sockFD,SIOCSIFFLAGS,&ethreq)==-1)
     cout << "Error setting socket flags, entering promiscuous mode failed." << endl;
     perror("ioctl() ");
     close(sockFD);
-    return 70;
+    return EX_SOFTWARE;
 }
-
 
 std::string param;
 std::stringstream ss;
@@ -603,7 +608,7 @@ if(headersLength==18)
     rxData = rxBuffer + (headersLength-4);
     txData = txBuffer + headersLength;
 } else if (headersLength==22) {
-    rxData = rxBuffer + headersLength;
+    rxData = rxBuffer + headersLength-4;
     txData = txBuffer + headersLength;
 } else {
     rxData = rxBuffer + headersLength;
@@ -613,13 +618,13 @@ fSizeTotal = fSize + headersLength;
 
 
 /*
- ********************************************************************************************** End socket definitions
+ ********************************************************************************************** TX/RX SETUP
  */
 
 
 
 /*
- ********************************************************************************************** Sync settings between hosts
+ ********************************************************************************************** SETTINGS SYNC
  */
 
 // Set up the test by communicating settings with the RX host receiver
@@ -684,7 +689,7 @@ if(txMode==true)
 
 
     // Tell the receiver to run in ACK mode
-    if(ACKMode==true) {
+    if(fACK==true) {
         param = "etherateack";
         strncpy(txData,param.c_str(),param.length());
         sendResult = sendto(sockFD, txBuffer, param.length()+headersLength, 0, 
@@ -700,19 +705,19 @@ if(txMode==true)
     {
         // The monotonic value is used here in case we are unlucky enough to
         // run this during and NTP update, so we stay consistent
-        clock_gettime(CLOCK_MONOTONIC_RAW, &tspecTX);
+        clock_gettime(CLOCK_MONOTONIC_RAW, &tsRTT);
         ss.str("");
         ss.clear();
-        ss<<"etheratetime"<<lCounter<<"1:"<<tspecTX.tv_sec<<":"<<tspecTX.tv_nsec;
+        ss<<"etheratetime"<<lCounter<<"1:"<<tsRTT.tv_sec<<":"<<tsRTT.tv_nsec;
         param = ss.str();
         strncpy(txData,param.c_str(),param.length());
         sendResult = sendto(sockFD, txBuffer, param.length()+headersLength, 0, 
                      (struct sockaddr*)&socket_address, sizeof(socket_address));
 
-        clock_gettime(CLOCK_MONOTONIC_RAW, &tspecTX);
+        clock_gettime(CLOCK_MONOTONIC_RAW, &tsRTT);
         ss.str("");
         ss.clear();
-        ss<<"etheratetime"<<lCounter<<"2:"<<tspecTX.tv_sec<<":"<<tspecTX.tv_nsec;
+        ss<<"etheratetime"<<lCounter<<"2:"<<tsRTT.tv_sec<<":"<<tsRTT.tv_nsec;
         param = ss.str();
         strncpy(txData,param.c_str(),param.length());
         sendResult = sendto(sockFD, txBuffer, param.length()+headersLength, 0, 
@@ -818,7 +823,7 @@ if(txMode==true)
 
         // TX has requested we run in ACK mode
         if(strncmp(rxData,"etherateack",11)==0) {
-            ACKMode = true;
+            fACK = true;
             cout << "ACK mode enabled" << endl;
         }
 
@@ -833,36 +838,22 @@ if(txMode==true)
             strncmp(rxData,"etheratetime41:",15)==0  )
         {
 
-
             // Get the time we are receiving TX's sent time figure
-            clock_gettime(CLOCK_MONOTONIC_RAW, &tspecRX);
+            clock_gettime(CLOCK_MONOTONIC_RAW, &tsRTT);
             ss.str("");
             ss.clear();
-            ss << tspecRX.tv_sec << "." << tspecRX.tv_nsec;
+            ss << tsRTT.tv_sec << "." << tsRTT.tv_nsec;
             ss >> timeRX1;
 
             // Extract the sent time
             exploded.clear();
             explodestring = rxData;
-
             StringExplode(explodestring, ":", &exploded);
-            /*if((int) exploded.size() != 3)
-            {
-                int lala = (int) exploded.size();
-                cout << lala << " ---- " << rxData << endl;
-                cout << "Error: Invalid 1st time stamp received! " << endl;
-                return 76;                          ///////////// DO WE WANT TO ALLOW CARRY ON WITHOUT DELAY OR INVALID DELAY?
-            }*/
+
             ss.str("");
             ss.clear();
             ss << atol(exploded[1].c_str()) << "." << atol(exploded[2].c_str());
             ss >> timeTX1;
-
-            /*// Get the difference in TX and RX clocks
-            if(timeTX1<timeRX1)
-            {
-                timeRXdiff = std::abs(timeRX1-timeTX1);
-            }*/
 
         }
 
@@ -874,26 +865,18 @@ if(txMode==true)
             strncmp(rxData,"etheratetime42:",15)==0  )
         {
 
-
             // Get the time we are receiving TXs 2nd sent time figure
-            clock_gettime(CLOCK_MONOTONIC_RAW, &tspecRX);
+            clock_gettime(CLOCK_MONOTONIC_RAW, &tsRTT);
             ss.str("");
             ss.clear();
-            ss << tspecRX.tv_sec << "." << tspecRX.tv_nsec;
+            ss << tsRTT.tv_sec << "." << tsRTT.tv_nsec;
             ss >> timeRX2;
 
             // Extract the sent time
             exploded.clear();
             explodestring = rxData;
-
             StringExplode(explodestring, ":", &exploded);
-            /*if((int) exploded.size() != 3)
-            {
-                int lala = (int) exploded.size();
-                cout << lala << " ---- " << rxData << endl;
-                cout << "Error: Invalid 2nd time stamp received!" << endl;
-                return 76;                                    ///////////// DO WE WANT TO ALLOW CARRY ON WITHOUT DELAY OR INVALID DELAY?
-            }*/
+
             ss.clear();
             ss.str("");
             ss << atol(exploded[1].c_str()) << "." << atol(exploded[2].c_str());
@@ -924,7 +907,7 @@ if(txMode==true)
             param = ss.str();
             strncpy(txData,param.c_str(), param.length());
             sendResult = sendto(sockFD, txBuffer, param.length()+headersLength, 0, 
-                   (struct sockaddr*)&socket_address, sizeof(socket_address));
+                                (struct sockaddr*)&socket_address, sizeof(socket_address));
         }
 
         // All settings have been received
@@ -939,13 +922,13 @@ if(txMode==true)
 }
 
 /*
- ********************************************************************************************** End Sync settings
+ ********************************************************************************************** SETTINGS SYNC
  */
 
 
 
 /*
- ********************************************************************************************** Run tests
+ ********************************************************************************************** TEST PHASE
  */
 
 // Fill the test frame with some junk data
@@ -960,16 +943,15 @@ for (junk = 0; junk < fSize; junk++)
 timeNow = time(0);
 localtm = localtime(&timeNow);
 cout << endl << "Starting test on " << asctime(localtm) << endl;
-ss.precision(2); // ??????????????????????????????????????????????????????????? WHY IS THIS 36?
+ss.precision(2);
 cout << fixed << setprecision(2);
 
+FD_ZERO(&readfds);
+int sockFDCount = sockFD + 1;
+int selectRetVal;
 
 if (txMode==true)
 {
-
-    FD_ZERO(&readfds);
-    int sockFDCount = sockFD + 1;
-    int selectRetVal;
 
     cout << "Seconds\t\tMbps TX\t\tMBs Tx\t\tFrmTX/s\t\tFrames TX" << endl;
 
@@ -979,10 +961,12 @@ if (txMode==true)
         // We are testing until X bytes received
         testMax = &fBytes;
         testBase = &bTX;
+
     } else if (fCount>0) {
         // We are testing until X frames received
         testMax = &fCount;
         testBase = &fTX;
+
     } else if (fDuration>0) {
         // We are testing until X seconds has passed
         testMax = &fDuration;
@@ -997,17 +981,17 @@ if (txMode==true)
         // Get clock time for the speed limit option,
         // get another to record the initial starting time
         clock_gettime(CLOCK_MONOTONIC_RAW, &txLimit);
-        clock_gettime(CLOCK_MONOTONIC_RAW, &durTimer1);
+        clock_gettime(CLOCK_MONOTONIC_RAW, &tsElapsed);
 
         // Main TX loop
         while (*testBase<=*testMax)
         {
 
             // Get the current time
-            clock_gettime(CLOCK_MONOTONIC_RAW, &durTimer2);
+            clock_gettime(CLOCK_MONOTONIC_RAW, &tsCurrent);
 
             // One second has passed
-            if((durTimer2.tv_sec-durTimer1.tv_sec)>=1)
+            if((tsCurrent.tv_sec-tsElapsed.tv_sec)>=1)
             {
                 sElapsed+=1;
                 bSpeed = (((float)bTX-(float)bTXlast)*8)/1000/1000;
@@ -1015,8 +999,8 @@ if (txMode==true)
                 cout << sElapsed << "\t\t" << bSpeed << "\t\t" << (bTX/1000)/1000 << "\t\t"
                      << (fTX-fTXlast) << "\t\t" << fTX << endl;
                 fTXlast = fTX;
-                durTimer1.tv_sec = durTimer2.tv_sec;
-                durTimer1.tv_nsec = durTimer2.tv_nsec;
+                tsElapsed.tv_sec = tsCurrent.tv_sec;
+                tsElapsed.tv_nsec = tsCurrent.tv_nsec;
             }
 
             // Check if RX host has quit/died;
@@ -1033,7 +1017,7 @@ if (txMode==true)
                     {
                         timeNow = time(0);
                         localtm = localtime(&timeNow);
-                        cout << "RX host is going down. Ending test and resetting on " << asctime(localtm) << endl;
+                        cout << "RX host is going down." << endl << "Ending test and resetting on " << asctime(localtm) << endl;
                         goto finish;
                     }
                     
@@ -1041,7 +1025,7 @@ if (txMode==true)
             }
 
             // If it hasn't been 1 second yet
-            if (durTimer2.tv_sec-txLimit.tv_sec<1)
+            if (tsCurrent.tv_sec-txLimit.tv_sec<1)
             {
 
                 // Check if sending another frame keeps us under the max speed limit
@@ -1054,11 +1038,11 @@ if (txMode==true)
                     param = ss.str();
                     strncpy(txData,param.c_str(), param.length());
                     sendResult = sendto(sockFD, txBuffer, fSizeTotal, 0, 
-               	          (struct sockaddr*)&socket_address, sizeof(socket_address));
+               	                        (struct sockaddr*)&socket_address, sizeof(socket_address));
                     fTX+=1;
                     bTX+=fSize;
                     bTXSpeedLast+=fSize;
-                    if(ACKMode)
+                    if(fACK)
                     {
                         ss.clear();
                         ss.str("");
@@ -1093,7 +1077,7 @@ if (txMode==true)
 
 
         // Get the initial starting time
-        clock_gettime(CLOCK_MONOTONIC_RAW, &durTimer1);
+        clock_gettime(CLOCK_MONOTONIC_RAW, &tsElapsed);
 
 
         // Main TX loop
@@ -1102,10 +1086,10 @@ if (txMode==true)
 
 
             // Get the current time
-            clock_gettime(CLOCK_MONOTONIC_RAW, &durTimer2);
+            clock_gettime(CLOCK_MONOTONIC_RAW, &tsCurrent);
 
             // One second has passed
-            if((durTimer2.tv_sec-durTimer1.tv_sec)>=1)
+            if((tsCurrent.tv_sec-tsElapsed.tv_sec)>=1)
             {
                 sElapsed+=1;
                 bSpeed = (((float)bTX-(float)bTXlast)*8)/1000/1000;
@@ -1113,11 +1097,12 @@ if (txMode==true)
                 cout << sElapsed << "\t\t" << bSpeed << "\t\t" << (bTX/1000)/1000 << "\t\t"
                      << (fTX-fTXlast) << "\t\t"<< fTX << endl;
                 fTXlast = fTX;
-                durTimer1.tv_sec = durTimer2.tv_sec;
-                durTimer1.tv_nsec = durTimer2.tv_nsec;
+                tsElapsed.tv_sec = tsCurrent.tv_sec;
+                tsElapsed.tv_nsec = tsCurrent.tv_nsec;
             }
 
-            // Check if RX host has quit/died;
+            // Poll the socket file descriptor with select() to 
+            // check if RX host has sent a dying gasp
             tvSelectDelay.tv_sec = 0;
             tvSelectDelay.tv_usec = 000000;
             FD_SET(sockFD, &readfds);
@@ -1131,7 +1116,7 @@ if (txMode==true)
                     {
                         timeNow = time(0);
                         localtm = localtime(&timeNow);
-                        cout << "RX host is going down. Ending test and resetting on " << asctime(localtm) << endl;
+                        cout << "RX host is going down." << endl << "Ending test and resetting on " << asctime(localtm) << endl;
                         goto finish;
                     }
                     
@@ -1144,10 +1129,10 @@ if (txMode==true)
             param = ss.str();
             strncpy(txData,param.c_str(), param.length());
             sendResult = sendto(sockFD, txBuffer, fSize+headersLength, 0, 
-       	          (struct sockaddr*)&socket_address, sizeof(socket_address));
+       	                        (struct sockaddr*)&socket_address, sizeof(socket_address));
             fTX+=1;
             bTX+=fSize;
-            if(ACKMode)
+            if(fACK)
             {
                 ss.clear();
                 ss.str("");
@@ -1186,7 +1171,7 @@ if (txMode==true)
 
     cout << "Seconds\t\tMbps RX\t\tMBs Rx\t\tFrmRX/s\t\tFrames RX" << endl;
 
-    long long *testBase, *testMax;                     //////// DOUBLE CHECK PORTABILITY OF LONG LONG AND x86 COMPATABILITY
+    long long *testBase, *testMax;
 
     // Are we testing until X bytes received
     if (fBytes>0)
@@ -1206,71 +1191,75 @@ if (txMode==true)
     }
 
     // Get the initial starting time
-    clock_gettime(CLOCK_MONOTONIC_RAW, &durTimer1);
+    clock_gettime(CLOCK_MONOTONIC_RAW, &tsElapsed);
 
     // Main RX loop
     while (*testBase<=*testMax)
     {
 
-        clock_gettime(CLOCK_MONOTONIC_RAW, &durTimer2);
+        clock_gettime(CLOCK_MONOTONIC_RAW, &tsCurrent);
         // If one second has passed
-        if((durTimer2.tv_sec-durTimer1.tv_sec)>=1) {
+        if((tsCurrent.tv_sec-tsElapsed.tv_sec)>=1) {
             sElapsed+=1;
             bSpeed = float ((bRX-bRXlast)*8)/1000/1000;
-            bRXlast = bRX;
+
             cout << sElapsed << "\t\t" << bSpeed << "\t\t" << (bRX/1000)/1000 << "\t\t"
                  << (fRX-fRXlast) << "f/s\t\t" << fRX << endl;
             fRXlast = fRX;
-            durTimer1.tv_sec = durTimer2.tv_sec;
-            durTimer1.tv_nsec = durTimer2.tv_nsec;
+            tsElapsed.tv_sec = tsCurrent.tv_sec;
+            tsElapsed.tv_nsec = tsCurrent.tv_nsec;
         }
 
-        // Receive incoming frames
-        rxLength = recvfrom(sockFD, rxBuffer, fSizeTotal, 0, NULL, NULL);
-        if(rxLength>0)
-        {
+        // Poll the socket file descriptor with select() to 
+        // check for incoming frames
+        tvSelectDelay.tv_sec = 0;
+        tvSelectDelay.tv_usec = 000000;
+        FD_SET(sockFD, &readfds);
+        selectRetVal = select(sockFDCount, &readfds, NULL, NULL, &tvSelectDelay);
+        if (selectRetVal > 0) {
+            if (FD_ISSET(sockFD, &readfds)) {
 
+                rxLength = recvfrom(sockFD, rxBuffer, fSizeTotal, 0, NULL, NULL);
 
-            // Check if TX host has quit/died;
-            param = "etheratedeath";
-            if(strncmp(rxData,param.c_str(),param.length())==0)
-            {
-                timeNow = time(0);
-                localtm = localtime(&timeNow);
-                cout << "TX host is going down. Ending test and resetting on " << asctime(localtm) << endl;
-                goto restart;
-            }
+                /*if (rxLength == -1) { 
+                    cout << "Error receiving frame" << endl;
+                    perror("recvfrom() ");
+                }*/
 
-            // Check if this is an etherate test frame
-            param = "etheratetest";
-            if(strncmp(rxData,param.c_str(),param.length())==0)
-            {
-
-                // Update our stats
-                fRX+=1;
-                bRX+= (rxLength-headersLength);
-
-                // If running in ACK mode we need to ACK to TX host
-                if(ACKMode)
+                // Check if this is an etherate test frame
+                param = "etheratetest";
+                if(strncmp(rxData,param.c_str(),param.length())==0)
                 {
-                  ss.clear();
-                  ss.str("");
-                  ss << "etherateack" << fRX;
-                  param = ss.str();
-                  strncpy(txData,param.c_str(), param.length());
-                  sendResult = sendto(sockFD, txBuffer, fSizeTotal, 0, 
-         	               (struct sockaddr*)&socket_address, sizeof(socket_address));
+
+                    // Update test stats
+                    fRX+=1;
+                    bRX+=(rxLength-headersLength);
+
+                    // If running in ACK mode we need to ACK to TX host
+                    if(fACK)
+                    {
+                        ss.clear();
+                        ss.str("");
+                        ss << "etherateack" << fRX;
+                        param = ss.str();
+                        strncpy(txData,param.c_str(), param.length());
+                        sendResult = sendto(sockFD, txBuffer, fSizeTotal, 0, 
+                                            (struct sockaddr*)&socket_address, sizeof(socket_address));
+                    }
+
                 }
 
-                rxLength = 0;
+                // Check if TX host has quit/died;
+                param = "etheratedeath";
+                if(strncmp(rxData,param.c_str(),param.length())==0)
+                {
+                    timeNow = time(0);
+                    localtm = localtime(&timeNow);
+                    cout << "TX host is going down." << endl << "Ending test and resetting on " << asctime(localtm) << endl;
+                    goto restart;
+                }
+                  
             }
-
-
-        }
-
-        if (rxLength == -1) { 
-            cout << "Error receiving frame" << endl;
-            perror("recvfrom() ");
         }
 
     }
@@ -1297,7 +1286,7 @@ if (ioctl(sockFD,SIOCGIFFLAGS,&ethreq)==-1)
     cout << "Error getting socket flags, entering promiscuous mode failed." << endl;
     perror("ioctl() ");
     close(sockFD);
-    return 70;
+    return EX_SOFTWARE;
 }
 
 ethreq.ifr_flags &= ~IFF_PROMISC;
@@ -1307,7 +1296,7 @@ if (ioctl(sockFD,SIOCSIFFLAGS,&ethreq)==-1)
     cout << "Error setting socket flags, promiscuous mode failed." << endl;
     perror("ioctl() ");
     close(sockFD);
-    return 70;
+    return EX_SOFTWARE;
 }
 
 close(sockFD);
