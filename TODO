@@ -1,9 +1,5 @@
 Priority:
-Condense one line IFs
-Standards variable naming
-Tidy up section headers/banners and file contents
-if -m (max speed) option is low then etherate outputs "Max TX speed set to <1Mbps"
-Dump test results even when using CTRL+C
+Add option for speed limit in bits per second
 Difference in definition between fSizeMax and fSizeDef
 
 Frames less than 60bytes are padded by Linux upto 60, is it OK to rely on the kernel to do this?
