@@ -6,6 +6,8 @@
 
 [MINOR] TX host can receive dying gasp from RX (RX could already recieve DG from TX)
 
+[MINOR] Fixed hanging of RX host on recv()
+
 [MINOR] Further clean up of code
 
 
