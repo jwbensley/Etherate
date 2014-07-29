@@ -37,15 +37,20 @@ void BuildHeaders(char* &txBuffer, unsigned char (&destMAC)[6],
 
 
 /*
+ ********************************************************************************************** GLOBAL FUNCTIONS
+ */
+
+/*
  ********************************************************************************************** GLOBAL CONSTANTS
  */
 
 const string version = "0.4.alpha 2014-06";
 
-// Maximum frame size on the wire (payload + 20 octets of headers)
-const int fSizeMax = 9020;
+// Maximum frame size on the wire (payload + 22 octets for QinQ headers) etherate will
+// support, this is hard coded here because we have to allocate send and receive buffers
+const int fSizeMax = 9216;
 
-// Default frame size in bytes
+// Default frame payload size in bytes
 const int fSizeDef = 1500;
 
 // Default duration in seconds
@@ -72,6 +77,9 @@ const int qinqIDDef = 0;
 // Default QinQ PCP value
 const int qinqPCPDef = 0;
 
+/*
+ ********************************************************************************************** GLOBAL CONSTANTS
+ */
 
 /*
  ********************************************************************************************** GLOBAL VARIABLES
@@ -80,10 +88,10 @@ const int qinqPCPDef = 0;
 
 /*
  * These are the minimun declarations required to send a frame; 
- * They have been moved into the global variable space. This is
+ * They have been moved into this global variable space. This is
  * because they are being used by the signal handler function
  * signal_handler() to send one last "dying gasp" frame upon
- * program exit().
+ * program exit()
  */
 
 unsigned char sourceMAC[6];
@@ -100,7 +108,7 @@ int sendResult;
 
 
 /*
- * Optional TX/Rx variables
+ * Optional Tx/Rx variables
  */
 
 // Default 802.1p PCP/CoS value = 0
@@ -114,3 +122,7 @@ short qinqID = 0;
 
 // Default 802.1p PCP/CoS value of outer frame = 0
 short qinqPCP = 0;
+
+/*
+ ********************************************************************************************** GLOBAL VARIABLES
+ */

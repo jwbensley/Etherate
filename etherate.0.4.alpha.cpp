@@ -102,14 +102,14 @@ destMAC[3] = 0x00;
 destMAC[4] = 0x00;
 destMAC[5] = 0x02;
 
-// This is the length of a frame header by default, without dot1Q tags
+// This is the length of a frame header by default
 headersLength = 14;
 
-// Frame size in bytes (just the payload)
+// Frame payload in bytes
 int fSize = fSizeDef;
 
 // Total frame size including headers
-int fSizeTotal = fSize + headersLength;
+int fSizeTotal = fSizeDef + headersLength;
 
 // Duration in seconds
 long long fDuration = fDurationDef;
@@ -137,6 +137,12 @@ long long fRX = 0;
 
 // Frames received at last count for stats
 long long fRXlast = 0;
+
+// Index of the last test frame received;
+long long fRXindex = 0;
+
+// Number of non test frames received
+long fRXother = 0;
 
 // Total number of bytes transmitted
 long long bTX = 0;
@@ -1247,6 +1253,11 @@ if (txMode==true)
                                             (struct sockaddr*)&socket_address, sizeof(socket_address));
                     }
 
+                } else {
+
+                    // We received a non-test frame
+                    fRXother++;
+
                 }
 
                 // Check if TX host has quit/died;
@@ -1265,7 +1276,9 @@ if (txMode==true)
     }
 
     cout << sElapsed << "\t\t" << bSpeed << "\t\t" << (bRX/1000)/1000 << "\t\t" << (fRX-fRXlast)
-         << "\t\t" << fRX << endl;
+         << "\t\t" << fRX << endl << endl
+         << "Non test frames received: " << fRXother << endl;
+
     timeNow = time(0);
     localtm = localtime(&timeNow);
     cout << endl << "Ending test on " << asctime(localtm) << endl;
@@ -1303,8 +1316,8 @@ close(sockFD);
 
 
 /*
-********************************************************************************************** End tests
-*/
+ ********************************************************************************************** TEST PHASE
+ */
 
 
  return EXIT_SUCCESS;
