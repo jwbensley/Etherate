@@ -249,8 +249,9 @@ if(argc>1)
             }
             cout << "Destination MAC ";
 
-            // Here strtoul() is used to convert the interger value of c_str() to a hex
-            // number by giving it the number base 16 (hexadecimal) otherwise it would be atoi()
+            // Here strtoul() is used to convert the interger value of c_str()
+            // to a hex number by giving it the number base 16 (hexadecimal)
+            // otherwise it would be atoi()
             for(int i = 0; (i < 6) && (i < exploded.size()); ++i)
             {
                 destMAC[i] = (unsigned char)strtoul(exploded[i].c_str(), NULL, 16);
@@ -309,8 +310,8 @@ if(argc>1)
                 fSize = atoi(argv[lCounter+1]);
                 if(fSize > 1500)
                 {
-                    cout << "WARNING: Make sure your device supports baby giant or jumbo"
-                         << "frames as required" << endl;
+                    cout << "WARNING: Make sure your device supports baby giant"
+                         << "or jumbo frames as required" << endl;
                 }
                 lCounter++;
 
@@ -418,7 +419,7 @@ if(argc>1)
 
 
         // Set 802.1ad QinQ outer PCP value
-        } else if(strncmp(argv[lCounter],"-o",2)==0) {
+        } else if(strncmp(argv[lCounter],"-o",2)==0){
             if (argc>(lCounter+1))
             {
                 qinqPCP = atoi(argv[lCounter+1]);
@@ -431,15 +432,17 @@ if(argc>1)
 
 
         // Display version
-        } else if(strncmp(argv[lCounter],"-V",2)==0 || strncmp(argv[lCounter],"--version",9)==0) {
+        } else if(strncmp(argv[lCounter],"-V",2)==0 ||
+                  strncmp(argv[lCounter],"--version",9)==0) {
             cout << "Etherate version " << version << endl;
-            return 0;
+            return EXIT_SUCCESS;
 
 
         // Display usage instructions
-        } else if(strncmp(argv[lCounter],"-h",2)==0 || strncmp(argv[lCounter],"--help",6)==0) {
+        } else if(strncmp(argv[lCounter],"-h",2)==0 ||
+                  strncmp(argv[lCounter],"--help",6)==0) {
             PrintUsage();
-            return 0;
+            return EXIT_SUCCESS;
         }
 
 
@@ -580,8 +583,10 @@ cout<<fixed<<setprecision(9);
 // start communicating it will be of use, the TX will signal RX to reset when it dies
 signal (SIGINT,signal_handler);
 
-printf("Source MAC %02x:%02x:%02x:%02x:%02x:%02x\n",sourceMAC[0],sourceMAC[1],sourceMAC[2],sourceMAC[3],sourceMAC[4],sourceMAC[5]);
-printf("Destination MAC %02x:%02x:%02x:%02x:%02x:%02x\n",destMAC[0],destMAC[1],destMAC[2],destMAC[3],destMAC[4],destMAC[5]);
+printf("Source MAC %02x:%02x:%02x:%02x:%02x:%02x\n",
+       sourceMAC[0],sourceMAC[1],sourceMAC[2],sourceMAC[3],sourceMAC[4],sourceMAC[5]);
+printf("Destination MAC %02x:%02x:%02x:%02x:%02x:%02x\n",
+       destMAC[0],destMAC[1],destMAC[2],destMAC[3],destMAC[4],destMAC[5]);
 
 /* 
  * Before any communication happens between the local host and remote host, we must 
@@ -640,7 +645,8 @@ if(txMode==true)
     cout << "Running in TX mode, synchronising settings" << endl;
 
     // Testing with a custom frame size
-    if(fSize!=fSizeDef) {
+    if(fSize!=fSizeDef)
+    {
         ss << "etheratesize" << fSize;
         param = ss.str();
         strncpy(txData,param.c_str(),param.length());
@@ -651,7 +657,8 @@ if(txMode==true)
 
 
     // Testing with a custom duration
-    if(fDuration!=fDurationDef) {
+    if(fDuration!=fDurationDef)
+    {
         ss << "etherateduration" << fDuration;
         param = ss.str();
         strncpy(txData,param.c_str(),param.length());
@@ -684,7 +691,8 @@ if(txMode==true)
 
 
     // Testing with a custom max speed limit
-    if(bTXSpeed!=bTXSpeedDef) {
+    if(bTXSpeed!=bTXSpeedDef)
+    {
         ss << "etheratespeed" << bTXSpeed;
         param = ss.str();
         strncpy(txData,param.c_str(),param.length());
@@ -695,7 +703,8 @@ if(txMode==true)
 
 
     // Tell the receiver to run in ACK mode
-    if(fACK==true) {
+    if(fACK==true)
+    {
         param = "etherateack";
         strncpy(txData,param.c_str(),param.length());
         sendResult = sendto(sockFD, txBuffer, param.length()+headersLength, 0, 
@@ -755,17 +764,16 @@ if(txMode==true)
 
         }
 
-
     }
 
-
-    cout << "Mean delay calculated as " << ((delay[0]+delay[1]+delay[2]+delay[3]+delay[4])/5) << endl;
+    cout << "Tx to Rx delay calculated as " <<
+         ((delay[0]+delay[1]+delay[2]+delay[3]+delay[4])/5)*1000 << "ms" << endl;
     // Let the receiver know all settings have been sent
     param = "etherateallset";
     strncpy(txData,param.c_str(),param.length());
     sendResult = sendto(sockFD, txBuffer, param.length()+headersLength, 0, 
            (struct sockaddr*)&socket_address, sizeof(socket_address));
-    cout<<"Settings have been synchronised."<<endl;
+    cout << "Settings have been synchronised." << endl;
 
 
 } else {
@@ -782,13 +790,15 @@ if(txMode==true)
     // In this loop we are grabbing each incoming frame and looking at the 
     // string that prefixes it, to state which variable the following value
     // will be for
-    while(waiting) {
+    while(waiting)
+    {
 
         rxLength = recvfrom(sockFD, rxBuffer, fSizeTotal, 0, NULL, NULL);
 
 
         // TX has sent a non-default frame payload size
-        if(strncmp(rxData,"etheratesize",12)==0) {
+        if(strncmp(rxData,"etheratesize",12)==0)
+        {
             diff = (rxLength-12);
             ss << rxData;
             param = ss.str().substr(12,diff);
@@ -798,7 +808,8 @@ if(txMode==true)
 
 
         // TX has sent a non-default transmition duration
-        if(strncmp(rxData,"etherateduration",16)==0) {
+        if(strncmp(rxData,"etherateduration",16)==0)
+        {
             diff = (rxLength-16);
             ss << rxData;
             param = ss.str().substr(16,diff);
@@ -808,7 +819,8 @@ if(txMode==true)
 
 
         // TX has sent a frame count to use instead of duration
-        if(strncmp(rxData,"etheratecount",13)==0) {
+        if(strncmp(rxData,"etheratecount",13)==0)
+        {
             diff = (rxLength-13);
             ss << rxData;
             param = ss.str().substr(13,diff);
@@ -818,7 +830,8 @@ if(txMode==true)
 
 
         // TX has sent a total bytes value to use instead of frame count
-        if(strncmp(rxData,"etheratebytes",13)==0) {
+        if(strncmp(rxData,"etheratebytes",13)==0)
+        {
             diff = (rxLength-13);
             ss << rxData;
             param = ss.str().substr(13,diff);
@@ -828,7 +841,8 @@ if(txMode==true)
 
 
         // TX has requested we run in ACK mode
-        if(strncmp(rxData,"etherateack",11)==0) {
+        if(strncmp(rxData,"etherateack",11)==0)
+        {
             fACK = true;
             cout << "ACK mode enabled" << endl;
         }
@@ -868,7 +882,7 @@ if(txMode==true)
             strncmp(rxData,"etheratetime12:",15)==0 ||
             strncmp(rxData,"etheratetime22:",15)==0 ||
             strncmp(rxData,"etheratetime32:",15)==0 ||
-            strncmp(rxData,"etheratetime42:",15)==0  )
+            strncmp(rxData,"etheratetime42:",15)==0    )
         {
 
             // Get the time we are receiving TXs 2nd sent time figure
@@ -891,10 +905,10 @@ if(txMode==true)
             // Calculate the delay
             timeTXdiff = timeTX2-timeTX1;
             timeTXdelay = (timeRX2-timeTXdiff)-timeRX1;
-            cout << timeRX1 << " : " << timeTX1 << endl;
-            cout << timeRX2 << " : " << timeTX2 << endl;
-            cout << "timeTXdiff = " << timeTXdiff << endl;
-            cout << "timeTXdelay = " << timeTXdelay << endl;
+            //cout << timeRX1 << " : " << timeTX1 << endl;
+            //cout << timeRX2 << " : " << timeTX2 << endl;
+            //cout << "timeTXdiff = " << timeTXdiff << endl;
+            //cout << "timeTXdelay = " << timeTXdelay << endl;
 
             if(strncmp(rxData,"etheratetime02:",15)==0) delay[0] = timeTXdelay;
             if(strncmp(rxData,"etheratetime12:",15)==0) delay[1] = timeTXdelay;
@@ -903,7 +917,9 @@ if(txMode==true)
             if(strncmp(rxData,"etheratetime42:",15)==0) 
             { 
                 delay[4] = timeTXdelay;
-                cout << "Mean delay calculated as " << ((delay[0]+delay[1]+delay[2]+delay[3]+delay[4])/5) << endl;
+                cout << "Tx to Rx delay calculated as " <<
+                     ((delay[0]+delay[1]+delay[2]+delay[3]+delay[4])/5)*1000
+                     << "ms" << endl;
             }
 
             // Send it back to the TX host
@@ -1009,7 +1025,7 @@ if (txMode==true)
                 tsElapsed.tv_nsec = tsCurrent.tv_nsec;
             }
 
-            // Check if RX host has quit/died;
+            // Poll the socket file descriptor with select() for incoming frames
             tvSelectDelay.tv_sec = 0;
             tvSelectDelay.tv_usec = 000000;
             FD_SET(sockFD, &readfds);
@@ -1018,13 +1034,43 @@ if (txMode==true)
                 if (FD_ISSET(sockFD, &readfds)) {
 
                     rxLength = recvfrom(sockFD, rxBuffer, fSizeTotal, 0, NULL, NULL);
-                    param = "etheratedeath";
-                    if(strncmp(rxData,param.c_str(),param.length())==0)
+                    if(fACK)
                     {
-                        timeNow = time(0);
-                        localtm = localtime(&timeNow);
-                        cout << "RX host is going down." << endl << "Ending test and resetting on " << asctime(localtm) << endl;
-                        goto finish;
+
+                        param = "etherateack";
+                        if(strncmp(rxData,param.c_str(),param.length())==0)
+                        {
+                            fRX++;
+                        } else {
+                            // Check if RX host has sent a dying gasp
+                            param = "etheratedeath";
+                            if(strncmp(rxData,param.c_str(),param.length())==0)
+                            {
+                                timeNow = time(0);
+                                localtm = localtime(&timeNow);
+                                cout << "RX host is going down." << endl
+                                    << "Ending test and resetting on "
+                                    << asctime(localtm) << endl;
+                                goto finish;
+                            } else {
+                                fRXother++;
+                            }
+                        }
+
+                    } else {
+                        
+                        // Check if RX host has sent a dying gasp
+                        param = "etheratedeath";
+                        if(strncmp(rxData,param.c_str(),param.length())==0)
+                        {
+                            timeNow = time(0);
+                            localtm = localtime(&timeNow);
+                            cout << "RX host is going down." << endl
+                                 << "Ending test and resetting on "
+                                 << asctime(localtm) << endl;
+                            goto finish;
+                        }
+                        
                     }
                     
                 }
@@ -1048,25 +1094,6 @@ if (txMode==true)
                     fTX+=1;
                     bTX+=fSize;
                     bTXSpeedLast+=fSize;
-                    if(fACK)
-                    {
-                        ss.clear();
-                        ss.str("");
-                        ss << "etherateack" << fTX;
-                        param = ss.str();
-                        while(true)
-                        {
-                            rxLength = recvfrom(sockFD, rxBuffer, fSizeTotal, 0, NULL, NULL);
-                            if(rxLength>0)
-                            {
-                                if(strncmp(rxData,param.c_str(),param.length())==0)
-                                {
-                                    fRX++;
-                                    break;
-                                }
-                            }
-                        }
-                    } 
 
                 } // End of <=bTXSpeed
 
@@ -1107,23 +1134,53 @@ if (txMode==true)
                 tsElapsed.tv_nsec = tsCurrent.tv_nsec;
             }
 
-            // Poll the socket file descriptor with select() to 
-            // check if RX host has sent a dying gasp
+            // Poll the socket file descriptor with select() for incoming frames
             tvSelectDelay.tv_sec = 0;
             tvSelectDelay.tv_usec = 000000;
             FD_SET(sockFD, &readfds);
             selectRetVal = select(sockFDCount, &readfds, NULL, NULL, &tvSelectDelay);
             if (selectRetVal > 0) {
-                if (FD_ISSET(sockFD, &readfds)) {
+                if (FD_ISSET(sockFD, &readfds))
+                {
 
                     rxLength = recvfrom(sockFD, rxBuffer, fSizeTotal, 0, NULL, NULL);
-                    param = "etheratedeath";
-                    if(strncmp(rxData,param.c_str(),param.length())==0)
+                    if(fACK)
                     {
-                        timeNow = time(0);
-                        localtm = localtime(&timeNow);
-                        cout << "RX host is going down." << endl << "Ending test and resetting on " << asctime(localtm) << endl;
-                        goto finish;
+
+                        param = "etherateack";
+                        if(strncmp(rxData,param.c_str(),param.length())==0)
+                        {
+                            fRX++;
+                        } else {
+                            // Check if RX host has sent a dying gasp
+                            param = "etheratedeath";
+                            if(strncmp(rxData,param.c_str(),param.length())==0)
+                            {
+                                timeNow = time(0);
+                                localtm = localtime(&timeNow);
+                                cout << "RX host is going down." << endl
+                                    << "Ending test and resetting on "
+                                    << asctime(localtm) << endl;
+                                goto finish;
+                            } else {
+                                fRXother++;
+                            }
+                        }
+
+                    } else {
+                        
+                        // Check if RX host has sent a dying gasp
+                        param = "etheratedeath";
+                        if(strncmp(rxData,param.c_str(),param.length())==0)
+                        {
+                            timeNow = time(0);
+                            localtm = localtime(&timeNow);
+                            cout << "RX host is going down." << endl
+                                 << "Ending test and resetting on "
+                                 << asctime(localtm) << endl;
+                            goto finish;
+                        }
+                        
                     }
                     
                 }
@@ -1138,25 +1195,6 @@ if (txMode==true)
        	                        (struct sockaddr*)&socket_address, sizeof(socket_address));
             fTX+=1;
             bTX+=fSize;
-            if(fACK)
-            {
-                ss.clear();
-                ss.str("");
-                ss << "etherateack" << fTX;
-                param = ss.str();
-                while(true)
-                {
-                    rxLength = recvfrom(sockFD, rxBuffer, fSizeTotal, 0, NULL, NULL);
-                    if(rxLength>0)
-                    {
-                        if(strncmp(rxData,param.c_str(),param.length())==0)
-                        {
-                            fRX++;
-                            break;
-                        }
-                    }
-                }
-            }
 
         } // End of non-speed-restricted test
 
@@ -1165,7 +1203,8 @@ if (txMode==true)
 
 
     cout << sElapsed << "\t\t" << bSpeed << "\t\t" << (bTX/1000)/1000 << "\t\t" << (fTX-fTXlast)
-         << "\t\t" << fTX << endl;
+         << "\t\t" << fTX << endl << endl
+         << "Non test frames received: " << fRXother << endl;
 
     timeNow = time(0);
     localtm = localtime(&timeNow);
@@ -1205,12 +1244,13 @@ if (txMode==true)
 
         clock_gettime(CLOCK_MONOTONIC_RAW, &tsCurrent);
         // If one second has passed
-        if((tsCurrent.tv_sec-tsElapsed.tv_sec)>=1) {
+        if((tsCurrent.tv_sec-tsElapsed.tv_sec)>=1)
+        {
             sElapsed+=1;
-            bSpeed = float ((bRX-bRXlast)*8)/1000/1000;
-
+            bSpeed = float (((float)bRX-(float)bRXlast)*8)/1000/1000;
+            bRXlast = bRX;
             cout << sElapsed << "\t\t" << bSpeed << "\t\t" << (bRX/1000)/1000 << "\t\t"
-                 << (fRX-fRXlast) << "f/s\t\t" << fRX << endl;
+                 << (fRX-fRXlast) << "\t\t" << fRX << endl;
             fRXlast = fRX;
             tsElapsed.tv_sec = tsCurrent.tv_sec;
             tsElapsed.tv_nsec = tsCurrent.tv_nsec;
@@ -1223,14 +1263,10 @@ if (txMode==true)
         FD_SET(sockFD, &readfds);
         selectRetVal = select(sockFDCount, &readfds, NULL, NULL, &tvSelectDelay);
         if (selectRetVal > 0) {
-            if (FD_ISSET(sockFD, &readfds)) {
+            if (FD_ISSET(sockFD, &readfds))
+            {
 
                 rxLength = recvfrom(sockFD, rxBuffer, fSizeTotal, 0, NULL, NULL);
-
-                /*if (rxLength == -1) { 
-                    cout << "Error receiving frame" << endl;
-                    perror("recvfrom() ");
-                }*/
 
                 // Check if this is an etherate test frame
                 param = "etheratetest";
