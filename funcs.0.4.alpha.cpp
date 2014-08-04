@@ -1,19 +1,21 @@
 /*
  * Etherate Functions,
  *
+ * License: First rule of license club...
+ *
+ * Updates: https://github.com/jwbensley/Etherate and http://null.53bits.co.uk
+ * Please send corrections, ideas and help to: jwbensley@gmail.com 
+ * (I'm a beginner if that isn't obvious!)
+ *
+ * compile with: g++ -o etherate etherate.cpp -lrt
  * 
  * File Contents:
  *
  * void signal_handler(int signal)
- *
  * void PrintUsage ()
- *
  * void StringExplode(string str, string separator, vector<string>* results)
- *
  * int GetSockInterface(int &sockFD)
- *
  * void ListInterfaces()
- *
  * void BuildHeaders(char* &txBuffer, unsigned char (&destMAC)[6], 
      unsigned char (&sourceMAC)[6], short &PCP, short &vlanID,
      short &qinqID, short &qinqPCP, int &headersLength)

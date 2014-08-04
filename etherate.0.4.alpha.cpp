@@ -1,9 +1,12 @@
 /*
- * Etherate ~ 0.4.alpha
- * 2014-02-10
+ * Etherate Main Body
+ *
+ * License: First rule of license club...
  *
  * Updates: https://github.com/jwbensley/Etherate and http://null.53bits.co.uk
- * Please send corrections, ideas and help to: jwbensley@gmail.com (I'm a beginner if that isn't obvious!)
+ * Please send corrections, ideas and help to: jwbensley@gmail.com 
+ * (I'm a beginner if that isn't obvious!)
+ *
  * compile with: g++ -o etherate etherate.cpp -lrt
  *
  * File Contents:
@@ -138,8 +141,17 @@ long long fRX = 0;
 // Frames received at last count for stats
 long long fRXlast = 0;
 
-// Index of the last test frame received;
-long long fRXindex = 0;
+// Index of the current test frame sent/received;
+long long fIndex = 0;
+
+// Index of the last test frame sent/received;
+long long fIndexLast = 0;
+
+// Frames received out of order that are early
+long long fEarly = 0;
+
+// Frames received out of order that are late
+long long fLate = 0;
 
 // Number of non test frames received
 long fRXother = 0;
@@ -161,6 +173,9 @@ float bSpeed = 0;
 
 // Are we running in ACK mode during transmition
 bool fACK = false;
+
+// Are we waiting for an ACK frame
+bool fWaiting = false;
 
 // These timespecs are used for calculating delay/RTT
 timespec tsRTT;
@@ -929,7 +944,8 @@ if(txMode==true)
             param = ss.str();
             strncpy(txData,param.c_str(), param.length());
             sendResult = sendto(sockFD, txBuffer, param.length()+headersLength, 0, 
-                                (struct sockaddr*)&socket_address, sizeof(socket_address));
+                                (struct sockaddr*)&socket_address,
+                                sizeof(socket_address));
         }
 
         // All settings have been received
@@ -954,7 +970,7 @@ if(txMode==true)
  */
 
 // Fill the test frame with some junk data
-int junk;
+int junk = 0;
 for (junk = 0; junk < fSize; junk++)
 {
     txData[junk] = (char)((int) 65); // ASCII 65 = A;
@@ -996,69 +1012,47 @@ if (txMode==true)
     }
 
 
-    // A max speed has been set
-    if(bTXSpeed!=bTXSpeedDef)
-      {
+    // Get clock time for the speed limit option,
+    // get another to record the initial starting time
+    clock_gettime(CLOCK_MONOTONIC_RAW, &txLimit);
+    clock_gettime(CLOCK_MONOTONIC_RAW, &tsElapsed);
 
-        // Get clock time for the speed limit option,
-        // get another to record the initial starting time
-        clock_gettime(CLOCK_MONOTONIC_RAW, &txLimit);
-        clock_gettime(CLOCK_MONOTONIC_RAW, &tsElapsed);
+    // Main TX loop
+    while (*testBase<=*testMax)
+    {
 
-        // Main TX loop
-        while (*testBase<=*testMax)
+        // Get the current time
+        clock_gettime(CLOCK_MONOTONIC_RAW, &tsCurrent);
+
+        // One second has passed
+        if((tsCurrent.tv_sec-tsElapsed.tv_sec)>=1)
         {
+            sElapsed+=1;
+            bSpeed = (((float)bTX-(float)bTXlast)*8)/1000/1000;
+            bTXlast = bTX;
+            cout << sElapsed << "\t\t" << bSpeed << "\t\t" << (bTX/1000)/1000 << "\t\t"
+                 << (fTX-fTXlast) << "\t\t" << fTX << endl;
+            fTXlast = fTX;
+            tsElapsed.tv_sec = tsCurrent.tv_sec;
+            tsElapsed.tv_nsec = tsCurrent.tv_nsec;
+        }
 
-            // Get the current time
-            clock_gettime(CLOCK_MONOTONIC_RAW, &tsCurrent);
+        // Poll the socket file descriptor with select() for incoming frames
+        tvSelectDelay.tv_sec = 0;
+        tvSelectDelay.tv_usec = 000000;
+        FD_SET(sockFD, &readfds);
+        selectRetVal = select(sockFDCount, &readfds, NULL, NULL, &tvSelectDelay);
+        if (selectRetVal > 0) {
+            if (FD_ISSET(sockFD, &readfds)) {
 
-            // One second has passed
-            if((tsCurrent.tv_sec-tsElapsed.tv_sec)>=1)
-            {
-                sElapsed+=1;
-                bSpeed = (((float)bTX-(float)bTXlast)*8)/1000/1000;
-                bTXlast = bTX;
-                cout << sElapsed << "\t\t" << bSpeed << "\t\t" << (bTX/1000)/1000 << "\t\t"
-                     << (fTX-fTXlast) << "\t\t" << fTX << endl;
-                fTXlast = fTX;
-                tsElapsed.tv_sec = tsCurrent.tv_sec;
-                tsElapsed.tv_nsec = tsCurrent.tv_nsec;
-            }
-
-            // Poll the socket file descriptor with select() for incoming frames
-            tvSelectDelay.tv_sec = 0;
-            tvSelectDelay.tv_usec = 000000;
-            FD_SET(sockFD, &readfds);
-            selectRetVal = select(sockFDCount, &readfds, NULL, NULL, &tvSelectDelay);
-            if (selectRetVal > 0) {
-                if (FD_ISSET(sockFD, &readfds)) {
-
-                    rxLength = recvfrom(sockFD, rxBuffer, fSizeTotal, 0, NULL, NULL);
-                    if(fACK)
+                rxLength = recvfrom(sockFD, rxBuffer, fSizeTotal, 0, NULL, NULL);
+                if(fACK)
+                {
+                    param = "etherateack";
+                    if(strncmp(rxData,param.c_str(),param.length())==0)
                     {
-
-                        param = "etherateack";
-                        if(strncmp(rxData,param.c_str(),param.length())==0)
-                        {
-                            fRX++;
-                        } else {
-                            // Check if RX host has sent a dying gasp
-                            param = "etheratedeath";
-                            if(strncmp(rxData,param.c_str(),param.length())==0)
-                            {
-                                timeNow = time(0);
-                                localtm = localtime(&timeNow);
-                                cout << "RX host is going down." << endl
-                                    << "Ending test and resetting on "
-                                    << asctime(localtm) << endl;
-                                goto finish;
-                            } else {
-                                fRXother++;
-                            }
-                        }
-
+                        fRX++;
                     } else {
-                        
                         // Check if RX host has sent a dying gasp
                         param = "etheratedeath";
                         if(strncmp(rxData,param.c_str(),param.length())==0)
@@ -1069,15 +1063,36 @@ if (txMode==true)
                                  << "Ending test and resetting on "
                                  << asctime(localtm) << endl;
                             goto finish;
+                        } else {
+                            fRXother++;
                         }
-                        
+                    }
+
+                } else {
+                    
+                    // Check if RX host has sent a dying gasp
+                    param = "etheratedeath";
+                    if(strncmp(rxData,param.c_str(),param.length())==0)
+                    {
+                        timeNow = time(0);
+                        localtm = localtime(&timeNow);
+                        cout << "RX host is going down." << endl
+                             << "Ending test and resetting on "
+                             << asctime(localtm) << endl;
+                        goto finish;
                     }
                     
                 }
+                
             }
+        }
 
-            // If it hasn't been 1 second yet
-            if (tsCurrent.tv_sec-txLimit.tv_sec<1)
+        // If it hasn't been 1 second yet
+        if (tsCurrent.tv_sec-txLimit.tv_sec<1)
+        {
+
+            // A max speed has been set
+            if(bTXSpeed!=bTXSpeedDef)
             {
 
                 // Check if sending another frame keeps us under the max speed limit
@@ -1086,121 +1101,43 @@ if (txMode==true)
 
                     ss.clear();
                     ss.str("");
-                    ss << "etheratetest" << (fTX+1);
+                    ss << "etheratetest" << (fTX+1) <<  ":";
                     param = ss.str();
                     strncpy(txData,param.c_str(), param.length());
                     sendResult = sendto(sockFD, txBuffer, fSizeTotal, 0, 
-               	                        (struct sockaddr*)&socket_address, sizeof(socket_address));
+               	                        (struct sockaddr*)&socket_address,
+                                        sizeof(socket_address));
                     fTX+=1;
                     bTX+=fSize;
                     bTXSpeedLast+=fSize;
+                    if (fACK) fWaiting = true;
 
-                } // End of <=bTXSpeed
-
-            } else { // 1 second has passed
-              bTXSpeedLast = 0;
-              clock_gettime(CLOCK_MONOTONIC_RAW, &txLimit);
-
-            } // End of txLimit.tv_sec<1
-
-        }
-
-
-    } else { // Else, if we aren't testing with a speed restriction:
-
-
-        // Get the initial starting time
-        clock_gettime(CLOCK_MONOTONIC_RAW, &tsElapsed);
-
-
-        // Main TX loop
-        while (*testBase<=*testMax)
-        {
-
-
-            // Get the current time
-            clock_gettime(CLOCK_MONOTONIC_RAW, &tsCurrent);
-
-            // One second has passed
-            if((tsCurrent.tv_sec-tsElapsed.tv_sec)>=1)
-            {
-                sElapsed+=1;
-                bSpeed = (((float)bTX-(float)bTXlast)*8)/1000/1000;
-                bTXlast = bTX;
-                cout << sElapsed << "\t\t" << bSpeed << "\t\t" << (bTX/1000)/1000 << "\t\t"
-                     << (fTX-fTXlast) << "\t\t"<< fTX << endl;
-                fTXlast = fTX;
-                tsElapsed.tv_sec = tsCurrent.tv_sec;
-                tsElapsed.tv_nsec = tsCurrent.tv_nsec;
-            }
-
-            // Poll the socket file descriptor with select() for incoming frames
-            tvSelectDelay.tv_sec = 0;
-            tvSelectDelay.tv_usec = 000000;
-            FD_SET(sockFD, &readfds);
-            selectRetVal = select(sockFDCount, &readfds, NULL, NULL, &tvSelectDelay);
-            if (selectRetVal > 0) {
-                if (FD_ISSET(sockFD, &readfds))
-                {
-
-                    rxLength = recvfrom(sockFD, rxBuffer, fSizeTotal, 0, NULL, NULL);
-                    if(fACK)
-                    {
-
-                        param = "etherateack";
-                        if(strncmp(rxData,param.c_str(),param.length())==0)
-                        {
-                            fRX++;
-                        } else {
-                            // Check if RX host has sent a dying gasp
-                            param = "etheratedeath";
-                            if(strncmp(rxData,param.c_str(),param.length())==0)
-                            {
-                                timeNow = time(0);
-                                localtm = localtime(&timeNow);
-                                cout << "RX host is going down." << endl
-                                    << "Ending test and resetting on "
-                                    << asctime(localtm) << endl;
-                                goto finish;
-                            } else {
-                                fRXother++;
-                            }
-                        }
-
-                    } else {
-                        
-                        // Check if RX host has sent a dying gasp
-                        param = "etheratedeath";
-                        if(strncmp(rxData,param.c_str(),param.length())==0)
-                        {
-                            timeNow = time(0);
-                            localtm = localtime(&timeNow);
-                            cout << "RX host is going down." << endl
-                                 << "Ending test and resetting on "
-                                 << asctime(localtm) << endl;
-                            goto finish;
-                        }
-                        
-                    }
-                    
                 }
+
+            } else {
+
+                ss.clear();
+                ss.str("");
+                ss << "etheratetest" << (fTX+1) <<  ":";
+                param = ss.str();
+                strncpy(txData,param.c_str(), param.length());
+                sendResult = sendto(sockFD, txBuffer, fSizeTotal, 0, 
+                                    (struct sockaddr*)&socket_address,
+                                    sizeof(socket_address));
+                fTX+=1;
+                bTX+=fSize;
+                bTXSpeedLast+=fSize;
+                if (fACK) fWaiting = true;
             }
 
-            ss.clear();
-            ss.str("");
-            ss << "etheratetest" << (fTX+1);
-            param = ss.str();
-            strncpy(txData,param.c_str(), param.length());
-            sendResult = sendto(sockFD, txBuffer, fSize+headersLength, 0, 
-       	                        (struct sockaddr*)&socket_address, sizeof(socket_address));
-            fTX+=1;
-            bTX+=fSize;
+        } else { // 1 second has passed
 
-        } // End of non-speed-restricted test
+          bTXSpeedLast = 0;
+          clock_gettime(CLOCK_MONOTONIC_RAW, &txLimit);
 
+        } // End of txLimit.tv_sec<1
 
-    } // End of max test-speed If
-
+    }
 
     cout << sElapsed << "\t\t" << bSpeed << "\t\t" << (bTX/1000)/1000 << "\t\t" << (fTX-fTXlast)
          << "\t\t" << fTX << endl << endl
@@ -1280,13 +1217,32 @@ if (txMode==true)
                     // If running in ACK mode we need to ACK to TX host
                     if(fACK)
                     {
+
+                        // Get the index of the received frame
+                        exploded.clear();
+                        explodestring = rxData;
+                        StringExplode(explodestring, ".", &exploded);
+                        fIndex = atoi(exploded[1].c_str());
+
+                        if(fIndex==(fIndexLast+1))
+                        {
+
+                        } else if (fIndex<fIndexLast) {
+                            fEarly++;
+
+                        } else if (fIndex>(fIndexLast+1)) {
+                            fLate++;
+                        }
+
                         ss.clear();
                         ss.str("");
                         ss << "etherateack" << fRX;
                         param = ss.str();
                         strncpy(txData,param.c_str(), param.length());
                         sendResult = sendto(sockFD, txBuffer, fSizeTotal, 0, 
-                                            (struct sockaddr*)&socket_address, sizeof(socket_address));
+                                     (struct sockaddr*)&socket_address,
+                                     sizeof(socket_address));
+                        
                     }
 
                 } else {
@@ -1302,7 +1258,9 @@ if (txMode==true)
                 {
                     timeNow = time(0);
                     localtm = localtime(&timeNow);
-                    cout << "TX host is going down." << endl << "Ending test and resetting on " << asctime(localtm) << endl;
+                    cout << "TX host is going down." << endl <<
+                            "Ending test and resetting on " << asctime(localtm)
+                            << endl;
                     goto restart;
                 }
                   
@@ -1311,8 +1269,8 @@ if (txMode==true)
 
     }
 
-    cout << sElapsed << "\t\t" << bSpeed << "\t\t" << (bRX/1000)/1000 << "\t\t" << (fRX-fRXlast)
-         << "\t\t" << fRX << endl << endl
+    cout << sElapsed << "\t\t" << bSpeed << "\t\t" << (bRX/1000)/1000 << "\t\t"
+         << (fRX-fRXlast) << "\t\t" << fRX << endl << endl
          << "Non test frames received: " << fRXother << endl;
 
     timeNow = time(0);
