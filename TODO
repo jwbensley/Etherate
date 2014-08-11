@@ -1,6 +1,6 @@
 Priority:
 Add option for speed limit in bits per second
-Difference in definition between fSizeMax and fSizeDef
+finish ack and out of order frame counts and print out and in order frame counts at the end of the test
 
 Frames less than 60bytes are padded by Linux upto 60, is it OK to rely on the kernel to do this?
 Why when one end sends a double tagged from with 0x88a8 on the first etherype does the receiver of the frame always see it as two 0x8100 frames?

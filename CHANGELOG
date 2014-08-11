@@ -2,7 +2,11 @@
 
 [FEATURE] Code for VLAN tagging an priority codes is working (QinQ needs further research)
 
+[FEATURE] Both hosts display the number of non-test frames received during a test
+
 [MAJOR] Finalised delay calculation code (calculates mean delay based on 5 samples)
+
+[MINOR] Fixed the interface selection by ID/index
 
 [MINOR] TX host can receive dying gasp from RX (RX could already recieve DG from TX)
 
