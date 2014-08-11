@@ -73,9 +73,8 @@ cout << "Usage info; [Mode] [Destination] [Source] [Options] [Other]" << endl
      << "\t-s\tWithout this we default to 00:00:5E:00:00:01" << endl
      << "\t\tas the TX host and :02 as the RX host." << endl
      << "\t\tSpecify a custom source MAC address, -s 11:22:33:44:55:66" << endl
-     << "\t-i\tInterface index for outgoing interface, \"2\" is eth0 in" << endl
-     << "\t\tmost cases. If no -i option is specified we will try and" << endl
-     << "\t\tbest guess an interface." << endl
+     << "\t-i\tInterface index for outgoing interface. Without this" << endl
+     << "\t\toption a standard eth/em/en interface is chosen." << endl
      << "\t-l\tList interface indexes (then quit) for use with -i option." << endl
      << "[Options] These are all optional settings for the test parameters" << endl
      << "\t-f\tFrame payload size in bytes, default is " << fSizeDef << endl
@@ -97,14 +96,14 @@ cout << "Usage info; [Mode] [Destination] [Source] [Options] [Other]" << endl
      << "\t-p\tAdd an 802.1p PCP value from 1 to 7 using options -p 1 to" << endl
      << "\t\t-p 7. If more than one value is given, the highest is used." << endl
      << "\t\tDefault is 0 if none specified." << endl
-     << "\t\t(If no 802.1q tag is set the VLAN number infront will be 0)." << endl
+     << "\t\t(If no 802.1q tag is set the VLAN 0 will be used)." << endl
      << "\t-q\tAdd an outter Q-in-Q tag. If used without -v, 1 is used" << endl
      << "\t\tfor the inner VLAN ID." << endl
      << "\t\t#NOT IMPLEMENTED YET#" << endl
      << "\t-o\tAdd an 802.1p PCP value to the outer Q-in-Q VLAN tag." << endl
      << "\t\tIf no PCP value is specified and a Q-in-Q VLAN ID is," << endl
      << "\t\t0 will be used. If no outer Q-in-Q VLAN ID is supplied this" << endl
-     << "\t\toption is ignored. Use -o 1 to -o 7 like the -p option above." << endl
+     << "\t\toption is ignored. -o 1 to -o 7 like the -p option above." << endl
      << "\t\t#NOT IMPLEMENTED YET#" << endl
      << "\t-e\tSet a custom ethertype value, the default is 0x0800 (IPv4)." << endl
      << "\t\t#NOT IMPLEMENTED YET#" << endl
@@ -143,6 +142,8 @@ int GetSockInterface(int &sockFD) {
 // Diald, which is here: http://diald.sourceforge.net/FAQ/diald-faq.html
 // So thanks go to the Diald authors Eric Schenk and Gordon Soukoreff!
 
+const int NO_INT = 0;
+
 struct ifreq *ifr, *ifend;
 struct ifreq ifreq;
 struct ifconf ifc;
@@ -150,6 +151,7 @@ struct ifreq ifs[MAX_IFS];
 
 ifc.ifc_len = sizeof(ifs);
 ifc.ifc_req = ifs;
+
 if (ioctl(sockFD, SIOCGIFCONF, &ifc) < 0)
 {
     printf("Error: No compatible interfaces found: ioctl(SIOCGIFCONF): %m\n");
@@ -164,27 +166,32 @@ for (ifr = ifc.ifc_req; ifr < ifend; ifr++)
     if (ifr->ifr_addr.sa_family == AF_INET)
     {
 
-
         // Try to get a typical ethernet adapter, not a bridge virt interface
         if(strncmp(ifr->ifr_name, "eth", 3)==0 ||
            strncmp(ifr->ifr_name, "en", 2)==0 ||
-           strncmp(ifr->ifr_name, "em", 2)==0)
-           //strncmp(ifr->ifr_name, "wlan", 4)==0 ||
+           strncmp(ifr->ifr_name, "em2", 3)==0 ||
+           strncmp(ifr->ifr_name, "wlan", 4)==0)
            //strncmp(ifr->ifr_name, "lo", 2)==0)
         {
 
-            strncpy(ifreq.ifr_name, ifr->ifr_name,sizeof(ifreq.ifr_name));
+            strncpy(ifreq.ifr_name,ifr->ifr_name,sizeof(ifreq.ifr_name));
 
             // Does this device even have hardware address?
             if (ioctl (sockFD, SIOCGIFHWADDR, &ifreq) != 0)
             {
-                printf("Error: Device has no Hardware address: SIOCGIFHWADDR(%s): %m\n",
+                printf("Error: Device has no hardware address: SIOCGIFHWADDR(%s): %m\n",
                        ifreq.ifr_name);
                 return 0;
             }
 
-            printf("Using device %s with hardware Address %02x:%02x:%02x:%02x:%02x:%02x\n"
-                   "Interface Index %d",
+            // Get the interface index
+            ioctl(sockFD, SIOCGIFINDEX, &ifreq);
+
+            // Get the interface name
+            strncpy(ifName,ifreq.ifr_name,IFNAMSIZ);
+
+            printf("Using device %s with hardware address %02x:%02x:%02x:%02x:%02x:%02x, "
+                   "interface index %u\n",
                    ifreq.ifr_name,
                    (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[0],
                    (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[1],
@@ -193,11 +200,7 @@ for (ifr = ifc.ifc_req; ifr < ifend; ifr++)
                    (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[4],
                    (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[5],
                    ifreq.ifr_ifindex);
-            ioctl(sockFD, SIOCGIFINDEX, &ifreq);
 
-            // Set the interface name
-            strncpy(ifName,ifreq.ifr_name,IFNAMSIZ);
-            printf("%u\n", ifreq.ifr_ifindex);
             return ifreq.ifr_ifindex;
 
         } // If eth* || en* || em* || wlan*
@@ -205,6 +208,64 @@ for (ifr = ifc.ifc_req; ifr < ifend; ifr++)
     } // If AF_INET
 
 } // Looping through interface count
+
+return NO_INT;
+
+}
+
+
+int SetSockInterface(int &sockFD, int &ifIndex) {
+
+struct ifreq *ifr, *ifend;
+struct ifreq ifreq;
+struct ifconf ifc;
+struct ifreq ifs[MAX_IFS];
+
+ifc.ifc_len = sizeof(ifs);
+ifc.ifc_req = ifs;
+
+ioctl(sockFD, SIOCGIFCONF, &ifc);
+
+ifend = ifs + (ifc.ifc_len / sizeof(struct ifreq));
+for (ifr = ifc.ifc_req; ifr < ifend; ifr++)
+{
+
+    if (ifr->ifr_addr.sa_family == AF_INET)
+    {
+
+        strncpy(ifreq.ifr_name,ifr->ifr_name,sizeof(ifreq.ifr_name));
+
+        // Does this device have a hardware address?
+        if (ioctl (sockFD, SIOCGIFHWADDR, &ifreq) == 0)
+        {
+
+            // Get the interface index
+            ioctl(sockFD, SIOCGIFINDEX, &ifreq);
+
+            if (ifreq.ifr_ifindex==ifIndex)
+            {
+                // Get the interface name
+                strncpy(ifName,ifreq.ifr_name,IFNAMSIZ);
+
+                printf("Using device %s with hardware address "
+                       "%02x:%02x:%02x:%02x:%02x:%02x, interface index %u\n",
+                       ifreq.ifr_name,
+                       (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[0],
+                       (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[1],
+                       (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[2],
+                       (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[3],
+                       (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[4],
+                       (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[5],
+                       ifreq.ifr_ifindex);
+
+                return ifIndex;
+            }
+
+        }
+
+    }
+
+}
 
 return 0;
 
@@ -217,13 +278,13 @@ struct ifreq *ifr, *ifend;
 struct ifreq ifreq;
 struct ifconf ifc;
 struct ifreq ifs[MAX_IFS];
-int SockFD;
-SockFD = socket(AF_INET, SOCK_DGRAM, 0);
+int sockFD;
+sockFD = socket(AF_PACKET, SOCK_RAW, 0);
 
 ifc.ifc_len = sizeof(ifs);
 ifc.ifc_req = ifs;
 
-if (ioctl(SockFD, SIOCGIFCONF, &ifc) < 0)
+if (ioctl(sockFD, SIOCGIFCONF, &ifc) < 0)
 {
     printf("Error: No AF_INET (IPv4) compatible interfaces found: ioctl(SIOCGIFCONF): "
            "%m\n");
@@ -236,24 +297,26 @@ for (ifr = ifc.ifc_req; ifr < ifend; ifr++)
 
     if (ifr->ifr_addr.sa_family == AF_INET)
     {
-        strncpy(ifreq.ifr_name, ifr->ifr_name,sizeof(ifreq.ifr_name));
-        // Does this device hav a hardware address?
+        strncpy(ifreq.ifr_name,ifr->ifr_name,sizeof(ifreq.ifr_name));
 
-        if (ioctl (SockFD, SIOCGIFHWADDR, &ifreq) == 0)
+        // Does this device have a hardware address?
+        if (ioctl (sockFD, SIOCGIFHWADDR, &ifreq) == 0)
         {
+            // Get the interface index
+            ioctl(sockFD, SIOCGIFINDEX, &ifreq);
+
             // Print the current interface address
-            printf("Device %s, Hardware Address %02x:%02x:%02x:%02x:%02x:%02x, "
-                   "Interface Index ",
+            printf("Device %s, hardware address %02x:%02x:%02x:%02x:%02x:%02x, "
+                   "interface index %u\n",
                    ifreq.ifr_name,
                    (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[0],
                    (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[1],
                    (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[2],
                    (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[3],
                    (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[4],
-                   (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[5]);
-            // And the interface index
-            ioctl(SockFD, SIOCGIFINDEX, &ifreq);
-            printf("%u\n", ifreq.ifr_ifindex);
+                   (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[5],
+                   ifreq.ifr_ifindex);
+
         }else{ // Interface has no hardware address
             return; 
         }

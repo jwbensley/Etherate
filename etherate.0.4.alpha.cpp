@@ -177,6 +177,9 @@ bool fACK = false;
 // Are we waiting for an ACK frame
 bool fWaiting = false;
 
+// Timeout to wait for a frame ACK
+timespec tsACK;
+
 // These timespecs are used for calculating delay/RTT
 timespec tsRTT;
 
@@ -503,18 +506,26 @@ if (sockFD < 0 )
 }
 
 
-// If the user hasn't set an interface index try and grab one
-if(ifIndex<0)
+// If the user hasn't set an interface index try and guess the best one
+if (ifIndex<0)
 {
     ifIndex = GetSockInterface(sockFD);
     if (ifIndex==0)
     {
-        cout << "Error: Couldn't find appropriate interface ID, returned ID was 0." << endl
-             << "This is typically the loopback interface ID. Supply a source MAC address "
-             << "with the -s option to try and manually fudge it." << endl;
+        cout << "Error: Couldn't find appropriate interface ID, returned ID was 0."
+             << "This is typically the loopback interface ID."
+             << "Try supplying a source MAC address with the -s option." << endl;
+        return EX_SOFTWARE;
+    }
+} else {
+    ifIndex = SetSockInterface(sockFD, ifIndex);
+    if (ifIndex==0)
+    {
+        cout << "Error: Couldn't set interface ID, returned ID was 0." << endl;
         return EX_SOFTWARE;
     }
 }
+
 
 // Link layer socket struct (socket_address)
 // RAW packet communication = PF_PACKET
@@ -1052,6 +1063,7 @@ if (txMode==true)
                     if(strncmp(rxData,param.c_str(),param.length())==0)
                     {
                         fRX++;
+                        fWaiting = false;
                     } else {
                         // Check if RX host has sent a dying gasp
                         param = "etheratedeath";
@@ -1091,6 +1103,8 @@ if (txMode==true)
         if (tsCurrent.tv_sec-txLimit.tv_sec<1)
         {
 
+            if(!fWaiting) {
+
             // A max speed has been set
             if(bTXSpeed!=bTXSpeedDef)
             {
@@ -1128,6 +1142,8 @@ if (txMode==true)
                 bTX+=fSize;
                 bTXSpeedLast+=fSize;
                 if (fACK) fWaiting = true;
+            }
+
             }
 
         } else { // 1 second has passed
