@@ -1,6 +1,13 @@
 /*
  * Etherate Global Definitions
- * 
+ *
+ * License: First rule of license club...
+ *
+ * Updates: https://github.com/jwbensley/Etherate and http://null.53bits.co.uk
+ * Please send corrections, ideas and help to: jwbensley@gmail.com 
+ * (I'm a beginner if that isn't obvious!)
+ *
+ * compile with: g++ -o etherate etherate.cpp -lrt
  *
  * File Contents:
  *
@@ -19,19 +26,22 @@
 void signal_handler(int signal);
 
 // Print CLI args and usage
-void PrintUsage();
+void print_usage();
 
 // Explode a string into an array using a seperator value
-void StringExplode(string str, string separator, vector<string>* results);
+void string_explode(string str, string separator, vector<string>* results);
 
-// Try to open the passed socket on an interface
-int GetSockInterface(int &sockFD);
+// Try to automatically chose an interface to run the test on
+int get_sock_interface(int &sockFD);
+
+// Try to open the passed socket on a user specified interface by index
+int set_sock_interface(int &sockFD, int &ifIndex);
 
 // List interfaces and hardware (MAC) address
-void ListInterfaces();
+void list_interfaces();
 
 // Build the Ethernet headers for sending frames
-void BuildHeaders(char* &txBuffer, unsigned char (&destMAC)[6], 
+void build_headers(char* &txBuffer, unsigned char (&destMAC)[6], 
                   unsigned char (&sourceMAC)[6], short &PCP, short &vlanID,
                   short &qinqID, short &qinqPCP, int &headersLength);
 

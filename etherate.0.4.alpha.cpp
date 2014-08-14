@@ -257,7 +257,7 @@ if(argc>1)
         } else if(strncmp(argv[lCounter],"-d",2)==0) {
             explodestring = argv[lCounter+1];
             exploded.clear();
-            StringExplode(explodestring, ":", &exploded);
+            string_explode(explodestring, ":", &exploded);
 
             if((int) exploded.size() != 6) 
             {
@@ -283,7 +283,7 @@ if(argc>1)
         } else if(strncmp(argv[lCounter],"-s",2)==0) {
             explodestring = argv[lCounter+1];
             exploded.clear();
-            StringExplode(explodestring, ":", &exploded);
+            string_explode(explodestring, ":", &exploded);
 
             if((int) exploded.size() != 6) 
             {
@@ -317,7 +317,7 @@ if(argc>1)
 
         // Requesting to list interfaces
         } else if(strncmp(argv[lCounter],"-l",2)==0) {
-            ListInterfaces();
+            list_interfaces();
             return EXIT_SUCCESS;
 
 
@@ -459,7 +459,7 @@ if(argc>1)
         // Display usage instructions
         } else if(strncmp(argv[lCounter],"-h",2)==0 ||
                   strncmp(argv[lCounter],"--help",6)==0) {
-            PrintUsage();
+            print_usage();
             return EXIT_SUCCESS;
         }
 
@@ -509,7 +509,8 @@ if (sockFD < 0 )
 // If the user hasn't set an interface index try and guess the best one
 if (ifIndex<0)
 {
-    ifIndex = GetSockInterface(sockFD);
+
+    ifIndex = get_sock_interface(sockFD);
     if (ifIndex==0)
     {
         cout << "Error: Couldn't find appropriate interface ID, returned ID was 0."
@@ -517,13 +518,16 @@ if (ifIndex<0)
              << "Try supplying a source MAC address with the -s option." << endl;
         return EX_SOFTWARE;
     }
+
 } else {
-    ifIndex = SetSockInterface(sockFD, ifIndex);
+
+    ifIndex = set_sock_interface(sockFD, ifIndex);
     if (ifIndex==0)
     {
         cout << "Error: Couldn't set interface ID, returned ID was 0." << endl;
         return EX_SOFTWARE;
     }
+    
 }
 
 
@@ -560,7 +564,7 @@ txBuffer = (char*)operator new(fSizeMax);
 
 txEtherhead = (unsigned char*)txBuffer;
 
-BuildHeaders(txBuffer, destMAC, sourceMAC, PCP, vlanID, qinqID, qinqPCP, headersLength);
+build_headers(txBuffer, destMAC, sourceMAC, PCP, vlanID, qinqID, qinqPCP, headersLength);
 
 // Userdata pointers in ethernet frames
 char* rxData = rxBuffer + headersLength;
@@ -624,7 +628,7 @@ printf("Destination MAC %02x:%02x:%02x:%02x:%02x:%02x\n",
  */
 
 unsigned char broadMAC[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-BuildHeaders(txBuffer, broadMAC, sourceMAC, PCP, vlanID, qinqID, qinqPCP, headersLength);
+build_headers(txBuffer, broadMAC, sourceMAC, PCP, vlanID, qinqID, qinqPCP, headersLength);
 rxData = rxBuffer + headersLength;
 txData = txBuffer + headersLength;
 
@@ -638,7 +642,7 @@ for(lCounter=1; lCounter<=3; lCounter++)
     sleep(1);
 }
 
-BuildHeaders(txBuffer, destMAC, sourceMAC, PCP, vlanID, qinqID, qinqPCP, headersLength);
+build_headers(txBuffer, destMAC, sourceMAC, PCP, vlanID, qinqID, qinqPCP, headersLength);
 
 if(headersLength==18)
 {
@@ -779,7 +783,7 @@ if(txMode==true)
             {
                 exploded.clear();
                 explodestring = rxData;
-                StringExplode(explodestring, ".", &exploded);
+                string_explode(explodestring, ".", &exploded);
                 ss.str("");
                 ss.clear();
                 ss << exploded[1].c_str()<<"."<<exploded[2].c_str();
@@ -894,7 +898,7 @@ if(txMode==true)
             // Extract the sent time
             exploded.clear();
             explodestring = rxData;
-            StringExplode(explodestring, ":", &exploded);
+            string_explode(explodestring, ":", &exploded);
 
             ss.str("");
             ss.clear();
@@ -921,7 +925,7 @@ if(txMode==true)
             // Extract the sent time
             exploded.clear();
             explodestring = rxData;
-            StringExplode(explodestring, ":", &exploded);
+            string_explode(explodestring, ":", &exploded);
 
             ss.clear();
             ss.str("");
@@ -1237,7 +1241,7 @@ if (txMode==true)
                         // Get the index of the received frame
                         exploded.clear();
                         explodestring = rxData;
-                        StringExplode(explodestring, ".", &exploded);
+                        string_explode(explodestring, ".", &exploded);
                         fIndex = atoi(exploded[1].c_str());
 
                         if(fIndex==(fIndexLast+1))
