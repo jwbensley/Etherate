@@ -35,7 +35,10 @@ void string_explode(string str, string separator, vector<string>* results);
 int get_sock_interface(int &sockFD);
 
 // Try to open the passed socket on a user specified interface by index
-int set_sock_interface(int &sockFD, int &ifIndex);
+int set_sock_interface_index(int &sockFD, int &ifIndex);
+
+// Try to open the passed socket on a user specified interface by name
+int set_sock_interface_name(int &sockFD, char &ifName);
 
 // List interfaces and hardware (MAC) address
 void list_interfaces();
@@ -67,7 +70,7 @@ const int fSizeDef = 1500;
 const long fDurationDef = 30;
 
 // Default total number of frames to transmit
-const long fCountDef = 0; // 83.3k frames at 1Gbps is 1 second
+const long fCountDef = 0;
 
 // Default amount of data to transmit in bytes
 const long fBytesDef = 0;
@@ -86,6 +89,12 @@ const int qinqIDDef = 0;
 
 // Default QinQ PCP value
 const int qinqPCPDef = 0;
+
+// Default frame headers length
+const int headersLengthDefault = 14;
+
+// Default interface index number
+const int ifIndexDefault = -1;
 
 /*
  ********************************************************************************************** GLOBAL CONSTANTS

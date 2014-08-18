@@ -15,7 +15,7 @@
  * void print_usage ()
  * void string_explode(string str, string separator, vector<string>* results)
  * int get_sock_interface(int &sockFD)
- * int set_sock_interface(int &sockFD, int &ifIndex)
+ * int set_sock_interface_index(int &sockFD, int &ifIndex)
  * void list_interfaces()
  * void build_headers(char* &txBuffer, unsigned char (&destMAC)[6], 
      unsigned char (&sourceMAC)[6], short &PCP, short &vlanID,
@@ -75,7 +75,7 @@ void print_usage () {
             "\t-s\tWithout this we default to 00:00:5E:00:00:01\n"
             "\t\tas the TX host and :02 as the RX host.\n"
             "\t\tSpecify a custom source MAC address, -s 11:22:33:44:55:66\n"
-            "\t-i\tInterface index for outgoing interface. Without this\n"
+            "\t-I\tInterface index for outgoing interface. Without this\n"
             "\t\toption a standard eth/em/en interface is chosen.\n"
             "\t-l\tList interface indexes (then quit) for use with -i option.\n"
             "[Options] These are all optional settings for the test parameters\n"
@@ -193,7 +193,7 @@ int get_sock_interface(int &sockFD) {
                 // Get the interface name
                 strncpy(ifName,ifreq.ifr_name,IFNAMSIZ);
 
-                printf("Using device %s with hardware address %02x:%02x:%02x:%02x:%02x:%02x, "
+                printf("Using device %s with address %02x:%02x:%02x:%02x:%02x:%02x, "
                        "interface index %u\n",
                        ifreq.ifr_name,
                        (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[0],
@@ -217,7 +217,7 @@ int get_sock_interface(int &sockFD) {
 }
 
 
-int set_sock_interface(int &sockFD, int &ifIndex) {
+int set_sock_interface_index(int &sockFD, int &ifIndex) {
 
     const int NO_INT = 0;
 
@@ -252,8 +252,8 @@ int set_sock_interface(int &sockFD, int &ifIndex) {
                     // Get the interface name
                     strncpy(ifName,ifreq.ifr_name,IFNAMSIZ);
 
-                    printf("Using device %s with hardware address "
-                           "%02x:%02x:%02x:%02x:%02x:%02x, interface index %u\n",
+                    printf("Using device %s with address %02x:%02x:%02x:%02x:%02x:%02x, "
+                           "interface index %u\n",
                            ifreq.ifr_name,
                            (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[0],
                            (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[1],
@@ -264,6 +264,67 @@ int set_sock_interface(int &sockFD, int &ifIndex) {
                            ifreq.ifr_ifindex);
 
                     return ifIndex;
+                }
+
+            }
+
+        }
+
+    }
+
+    return NO_INT;
+
+}
+
+
+int set_sock_interface_name(int &sockFD, char &ifName) {
+
+    const int NO_INT = 0;
+
+    struct ifreq *ifr, *ifend;
+    struct ifreq ifreq;
+    struct ifconf ifc;
+    struct ifreq ifs[MAX_IFS];
+
+    ifc.ifc_len = sizeof(ifs);
+    ifc.ifc_req = ifs;
+
+    ioctl(sockFD, SIOCGIFCONF, &ifc);
+
+    ifend = ifs + (ifc.ifc_len / sizeof(struct ifreq));
+    for (ifr = ifc.ifc_req; ifr < ifend; ifr++)
+    {
+
+        if (ifr->ifr_addr.sa_family == AF_INET)
+        {
+
+            strncpy(ifreq.ifr_name,ifr->ifr_name,sizeof(ifreq.ifr_name));
+
+            // Does this device have a hardware address?
+            if (ioctl (sockFD, SIOCGIFHWADDR, &ifreq) == 0)
+            {
+
+
+                if (strcmp(ifreq.ifr_name,(char *)&ifName)==0)
+                {
+                    // Get the interface name
+                    //strncpy(ifName,ifreq.ifr_name,IFNAMSIZ);
+
+                    // Get the interface index
+                    ioctl(sockFD, SIOCGIFINDEX, &ifreq);
+
+                    printf("Using device %s with address %02x:%02x:%02x:%02x:%02x:%02x, "
+                           "interface index %u\n",
+                           ifreq.ifr_name,
+                           (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[0],
+                           (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[1],
+                           (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[2],
+                           (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[3],
+                           (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[4],
+                           (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[5],
+                           ifreq.ifr_ifindex);
+
+                    return ifreq.ifr_ifindex;
                 }
 
             }
@@ -311,7 +372,7 @@ void list_interfaces() {
                 ioctl(sockFD, SIOCGIFINDEX, &ifreq);
 
                 // Print the current interface address
-                printf("Device %s, hardware address %02x:%02x:%02x:%02x:%02x:%02x, "
+                printf("Device %s with address %02x:%02x:%02x:%02x:%02x:%02x, "
                        "interface index %u\n",
                        ifreq.ifr_name,
                        (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[0],
