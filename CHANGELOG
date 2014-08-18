@@ -33,7 +33,7 @@
 [MINOR] Standardise changelog tags;
 [FEATURE]  == New working feature added to etherate
 [MAJOR]    == Fixed a bug in Etherate code that effects the operations of the program or one of the test modes or test results
-[MINOR]    == Fixed a bug that doesn't stop Etherate from running properly like typoes, formatting, documentation errata, code tidy
+[MINOR]    == Fixed a bug that doesn't stop Etherate from running properly like typos, formatting, documentation errata, code tidies
 
 
 
@@ -41,9 +41,9 @@
 
 [MAJOR] Added promiscuous mode, frames addressed anything other than FF:FF:FF:FF:FF:FF and the NICs burnt in address wasn't being received but were being sent (e.g. TX wasn't receiving dst==00:04:00:00:00:01)
 
-[MAJOR] Using a custom MAC like 00:00:5E:00:00:02 on the RX host was being overwritten, typo in code. Know both TX and RX can use any MAC.
+[MAJOR] Using a custom MAC like 00:00:5E:00:00:02 on the RX host was being overwritten, typo in code. Now both TX and RX can use any MAC.
 
-[MAJOR] Using wrong IANA unnasigend MAC, using MAC allocated to Lexmark. Changd to 00:00:5E:00:00:0[1-2]
+[MAJOR] Using wrong IANA unnasigend MAC, using MAC allocated to Lexmark. Changed to 00:00:5E:00:00:0[1-2]
 
 [MINOR] Typos in the UI/CLI output
 
