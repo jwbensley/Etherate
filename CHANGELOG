@@ -4,6 +4,8 @@
 
 [FEATURE] Both hosts display the number of non-test frames received during a test
 
+[FEATURE] Code for interface selection by index and by name is now working
+
 [MAJOR] Finalised delay calculation code (calculates mean delay based on 5 samples)
 
 [MINOR] Fixed the interface selection by ID/index
