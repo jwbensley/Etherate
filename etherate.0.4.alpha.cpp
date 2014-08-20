@@ -112,6 +112,9 @@ int main(int argc, char *argv[]) {
     // This is the length of a frame header by default
     headersLength = headersLengthDefault;
 
+    // The ethertype for the Etherate payload
+    ethertype = ethertypeDefault;
+
     // Frame payload in bytes
     int fSize = fSizeDef;
 
@@ -471,6 +474,19 @@ int main(int argc, char *argv[]) {
                 }
 
 
+            // Set a custom ethertype
+            } else if(strncmp(argv[lCounter],"-e",2)==0){
+                if (argc>(lCounter+1))
+                {
+                    ethertype = (int)strtoul(argv[lCounter+1], NULL, 16);
+                    lCounter++;
+                } else {
+                    cout << "Oops! Missing ethertype value" << endl
+                         << "Usage info: " << argv[0] << " -h" << endl;
+                    return EX_USAGE;
+                }
+
+
             // Display version
             } else if(strncmp(argv[lCounter],"-V",2)==0 ||
                       strncmp(argv[lCounter],"--version",9)==0) {
@@ -595,7 +611,7 @@ int main(int argc, char *argv[]) {
 
     txEtherhead = (unsigned char*)txBuffer;
 
-    build_headers(txBuffer, destMAC, sourceMAC, PCP, vlanID, qinqID, qinqPCP, headersLength);
+    build_headers(txBuffer, destMAC, sourceMAC, ethertype, PCP, vlanID, qinqID, qinqPCP, headersLength);
 
     // Userdata pointers in ethernet frames
     char* rxData = rxBuffer + headersLength;
@@ -659,7 +675,7 @@ int main(int argc, char *argv[]) {
      */
 
     unsigned char broadMAC[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-    build_headers(txBuffer, broadMAC, sourceMAC, PCP, vlanID, qinqID, qinqPCP, headersLength);
+    build_headers(txBuffer, broadMAC, sourceMAC, ethertype, PCP, vlanID, qinqID, qinqPCP, headersLength);
     rxData = rxBuffer + headersLength;
     txData = txBuffer + headersLength;
 
@@ -673,7 +689,7 @@ int main(int argc, char *argv[]) {
         sleep(1);
     }
 
-    build_headers(txBuffer, destMAC, sourceMAC, PCP, vlanID, qinqID, qinqPCP, headersLength);
+    build_headers(txBuffer, destMAC, sourceMAC, ethertype, PCP, vlanID, qinqID, qinqPCP, headersLength);
 
     if(headersLength==18)
     {

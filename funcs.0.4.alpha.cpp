@@ -18,8 +18,8 @@
  * int set_sock_interface_index(int &sockFD, int &ifIndex)
  * void list_interfaces()
  * void build_headers(char* &txBuffer, unsigned char (&destMAC)[6], 
-     unsigned char (&sourceMAC)[6], short &PCP, short &vlanID,
-     short &qinqID, short &qinqPCP, int &headersLength)
+     unsigned char (&sourceMAC)[6], int &ethertype, short &PCP,
+     short &vlanID, short &qinqID, short &qinqPCP, int &headersLength)
  *
  */
 
@@ -75,8 +75,10 @@ void print_usage () {
             "\t-s\tWithout this we default to 00:00:5E:00:00:01\n"
             "\t\tas the TX host and :02 as the RX host.\n"
             "\t\tSpecify a custom source MAC address, -s 11:22:33:44:55:66\n"
-            "\t-I\tInterface index for outgoing interface. Without this\n"
-            "\t\toption a standard eth/em/en interface is chosen.\n"
+            "\t-i\tSet interface by name. Without this option we guess which\n"
+            "\t\tinterface to use.\n"
+            "\t-I\tSet interface by index. Without this option we guess which\n"
+            "\t\tinterface to use.\n"
             "\t-l\tList interface indexes (then quit) for use with -i option.\n"
             "[Options] These are all optional settings for the test parameters\n"
             "\t-f\tFrame payload size in bytes, default is %d\n"
@@ -107,7 +109,6 @@ void print_usage () {
             "\t\toption is ignored. -o 1 to -o 7 like the -p option above.\n"
             "\t\t#NOT IMPLEMENTED YET#\n"
             "\t-e\tSet a custom ethertype value, the default is 0x0800 (IPv4).\n"
-            "\t\t#NOT IMPLEMENTED YET#\n"
             "\t-x\tDisplay examples.\n"
             "\t\t#NOT IMPLEMENTED YET#\n"
             "\t-V|--version Display version\n"
@@ -395,8 +396,8 @@ void list_interfaces() {
 
 
 void build_headers(char* &txBuffer, unsigned char (&destMAC)[6], 
-     unsigned char (&sourceMAC)[6], short &PCP, short &vlanID,
-     short &qinqID, short &qinqPCP, int &headersLength) {
+     unsigned char (&sourceMAC)[6], int &ethertype, short &PCP,
+     short &vlanID, short &qinqID, short &qinqPCP, int &headersLength) {
 
     int offset = 0;
     short TPI = 0;
@@ -461,8 +462,8 @@ void build_headers(char* &txBuffer, unsigned char (&destMAC)[6],
 
     }
 
-      // Push on the Ethertype (IPv4) for the Etherate payload
-      TPI = htons(0x0800);
+      // Push on the ethertype for the Etherate payload
+      TPI = htons(ethertype);
       memcpy((void*)(txBuffer+offset), p, sizeof(TPI));
       offset+=sizeof(TPI);
 
