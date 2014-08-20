@@ -19,8 +19,9 @@
 
 
 /*
- ********************************************************************************************** GLOBAL FUNCTIONS
+ ************************************************************* GLOBAL FUNCTIONS
  */
+ 
 
 // Signal handler to notify remote host of local application termiantion
 void signal_handler(int signal);
@@ -45,23 +46,28 @@ void list_interfaces();
 
 // Build the Ethernet headers for sending frames
 void build_headers(char* &txBuffer, unsigned char (&destMAC)[6], 
-                  unsigned char (&sourceMAC)[6], short &PCP, short &vlanID,
-                  short &qinqID, short &qinqPCP, int &headersLength);
+     unsigned char (&sourceMAC)[6], int &ethertype, short &PCP,
+     short &vlanID, short &qinqID, short &qinqPCP, int &headersLength);
 
 
 /*
- ********************************************************************************************** GLOBAL FUNCTIONS
+ ************************************************************* GLOBAL FUNCTIONS
  */
 
+
+
+
 /*
- ********************************************************************************************** GLOBAL CONSTANTS
+ ************************************************************* GLOBAL CONSTANTS
  */
+
 
 const string version = "0.4.alpha 2014-06";
 
-// Maximum frame size on the wire (payload + 22 octets for QinQ headers) etherate will
-// support, this is hard coded here because we have to allocate send and receive buffers
-const int fSizeMax = 9216;
+// Maximum frame size on the wire (payload + 22 octets for QinQ headers)
+// Etherate will support, this is hard coded here because we have to allocate
+// send and receive buffers. 
+const int fSizeMax = 9022;
 
 // Default frame payload size in bytes
 const int fSizeDef = 1500;
@@ -93,28 +99,35 @@ const int qinqPCPDef = 0;
 // Default frame headers length
 const int headersLengthDefault = 14;
 
+// Default ethertype (0x0800 == IPv4)
+const int ethertypeDefault = 2048;
+
 // Default interface index number
 const int ifIndexDefault = -1;
 
-/*
- ********************************************************************************************** GLOBAL CONSTANTS
- */
 
 /*
- ********************************************************************************************** GLOBAL VARIABLES
+ ************************************************************* GLOBAL CONSTANTS
+ */
+
+
+
+
+/*
+ ************************************************************* GLOBAL VARIABLES
  */
 
 
 /*
  * These are the minimun declarations required to send a frame; 
- * They have been moved into this global variable space. This is
- * because they are being used by the signal handler function
- * signal_handler() to send one last "dying gasp" frame upon
- * program exit()
+ * They have been moved into this global variable space. This is because they
+ * are being used by the signal handler function signal_handler() to send the
+ * dying gasp frame upon program exit()
  */
 
 unsigned char sourceMAC[6];
 unsigned char destMAC[6];
+int ethertype;
 char* txBuffer;
 unsigned char* txEtherhead;
 struct ifreq ethreq;
@@ -142,6 +155,7 @@ short qinqID = 0;
 // Default 802.1p PCP/CoS value of outer frame = 0
 short qinqPCP = 0;
 
+
 /*
- ********************************************************************************************** GLOBAL VARIABLES
+ ************************************************************* GLOBAL VARIABLES
  */
