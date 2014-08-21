@@ -62,7 +62,7 @@ void build_headers(char* &txBuffer, unsigned char (&destMAC)[6],
  */
 
 
-const string version = "0.4.alpha 2014-06";
+const string version = "0.4.alpha 2014-08";
 
 // Maximum frame size on the wire (payload + 22 octets for QinQ headers)
 // Etherate will support, this is hard coded here because we have to allocate
@@ -85,16 +85,16 @@ const long fBytesDef = 0;
 const long bTXSpeedDef = 0;
 
 // Default PCP value
-const int PCPDef = 0;
+const short PCPDef = 0;
 
 // Default VLAN ID
-const int vlanIDDef = 0;
+const short vlanIDDef = 0;
 
 // Default QinQ VLAN ID
-const int qinqIDDef = 0;
+const short qinqIDDef = 0;
 
 // Default QinQ PCP value
-const int qinqPCPDef = 0;
+const short qinqPCPDef = 0;
 
 // Default frame headers length
 const int headersLengthDefault = 14;
@@ -144,16 +144,16 @@ int sendResult;
  */
 
 // Default 802.1p PCP/CoS value = 0
-short PCP = 0;
+short PCP;
 
 // Default 802.1q VLAN ID = 0
-short vlanID = 0;
+short vlanID;
 
 // Default 802.1ad VLAN ID of QinQ outer frame = 0
-short qinqID = 0;
+short qinqID;
 
 // Default 802.1p PCP/CoS value of outer frame = 0
-short qinqPCP = 0;
+short qinqPCP;
 
 
 /*

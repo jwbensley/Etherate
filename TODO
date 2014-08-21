@@ -11,6 +11,7 @@ Why when one end sends a double tagged from with 0x88a8 on the first etherype do
     // Display post test details; min max avg for Mbps and FrmRX/S
 
 Medium:
+Start swapping out 'cout' for 'printf'
 Checking frame order
 Detect lost frames
 Should we print non default settings to the screen when the user sets them before the test starts to show what will happen?
