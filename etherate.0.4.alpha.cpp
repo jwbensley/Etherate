@@ -115,6 +115,18 @@ int main(int argc, char *argv[]) {
     // The ethertype for the Etherate payload
     ethertype = ethertypeDefault;
 
+    // Default 802.1p PCP/CoS value = 0
+    PCP = PCPDef;
+
+    // Default 802.1q VLAN ID = 0
+    vlanID = vlanIDDef;
+
+    // Default 802.1ad VLAN ID of QinQ outer frame = 0
+    qinqID = qinqIDDef;
+
+    // Default 802.1p PCP/CoS value of outer frame = 0
+    qinqPCP = qinqPCPDef;
+
     // Frame payload in bytes
     int fSize = fSizeDef;
 
@@ -723,6 +735,17 @@ int main(int argc, char *argv[]) {
         cout << "Running in TX mode, synchronising settings" << endl;
 
         // Testing with a custom frame size
+        if(ethertype!=ethertypeDefault)
+        {
+            ss << "etherateethertype" << ethertype;
+            param = ss.str();
+            strncpy(txData,param.c_str(),param.length());
+            sendResult = sendto(sockFD, txBuffer, param.length()+headersLength, 0, 
+                   (struct sockaddr*)&socket_address, sizeof(socket_address));
+            printf("Ethertype set to 0x%X\n", ethertype);
+        }
+
+        // Testing with a custom frame size
         if(fSize!=fSizeDef)
         {
             ss << "etheratesize" << fSize;
@@ -779,6 +802,27 @@ int main(int argc, char *argv[]) {
             cout << "Max TX speed set to " << ((bTXSpeed*8)/1000/1000) << "Mbps" << endl;
         }
 
+        // Testing with a custom inner VLAN PCP value
+        if(PCP!=PCPDef)
+        {
+            ss << "etheratepcp" << PCP;
+            param = ss.str();
+            strncpy(txData,param.c_str(),param.length());
+            sendResult = sendto(sockFD, txBuffer, param.length()+headersLength, 0, 
+                   (struct sockaddr*)&socket_address, sizeof(socket_address));
+            cout << "Inner VLAN PCP value set to " << PCP << endl;
+        }
+
+        // Tesing with a custom QinQ PCP value
+        if(PCP!=PCPDef)
+        {
+            ss << "etherateqinqpcp" << qinqPCP;
+            param = ss.str();
+            strncpy(txData,param.c_str(),param.length());
+            sendResult = sendto(sockFD, txBuffer, param.length()+headersLength, 0, 
+                   (struct sockaddr*)&socket_address, sizeof(socket_address));
+            cout << "QinQ VLAN PCP value set to " << qinqPCP << endl;
+        }
 
         // Tell the receiver to run in ACK mode
         if(fACK==true)
@@ -873,6 +917,17 @@ int main(int argc, char *argv[]) {
 
             rxLength = recvfrom(sockFD, rxBuffer, fSizeTotal, 0, NULL, NULL);
 
+            // TX has sent a non-default ethertype
+            if(strncmp(rxData,"etherateethertype",17)==0)
+            {
+                diff = (rxLength-17);
+                ss << rxData;
+                param = ss.str().substr(17,diff);
+                ethertype = strtol(param.c_str(),NULL,10);
+                printf("Ethertype set to 0x%X\n", ethertype);
+
+            }
+
 
             // TX has sent a non-default frame payload size
             if(strncmp(rxData,"etheratesize",12)==0)
@@ -880,7 +935,7 @@ int main(int argc, char *argv[]) {
                 diff = (rxLength-12);
                 ss << rxData;
                 param = ss.str().substr(12,diff);
-                fSize = strtol(param.c_str(),0,10);
+                fSize = strtol(param.c_str(),NULL,10);
                 cout << "Frame size set to " << fSize << endl;
             }
 
@@ -917,6 +972,25 @@ int main(int argc, char *argv[]) {
                 cout << "Byte limit set to " << fBytes << endl;
             }
 
+            // TX has set a custom PCP value
+            if(strncmp(rxData,"etheratepcp",11)==0)
+            {
+                diff = (rxLength-11);
+                ss << rxData;
+                param = ss.str().substr(11,diff);
+                PCP = strtoull(param.c_str(),0,10);
+                cout << "PCP value set to " << PCP << endl;
+            }
+
+            // TX has set a custom PCP value
+            if(strncmp(rxData,"etherateqinqpcp",15)==0)
+            {
+                diff = (rxLength-15);
+                ss << rxData;
+                param = ss.str().substr(15,diff);
+                qinqPCP = strtoull(param.c_str(),0,10);
+                cout << "QinQ PCP value set to " << qinqPCP << endl;
+            }
 
             // TX has requested we run in ACK mode
             if(strncmp(rxData,"etherateack",11)==0)
@@ -1019,8 +1093,13 @@ int main(int argc, char *argv[]) {
             }
 
         } // Waiting bool
+
+        // Rebuild the test frame headers in case any settings have been changed
+        // by the TX host
+        build_headers(txBuffer, destMAC, sourceMAC, ethertype, PCP, vlanID,
+                      qinqID, qinqPCP, headersLength);
       
-    }
+    } // TX or RX mode
 
 
     /*
