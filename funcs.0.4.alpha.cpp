@@ -353,8 +353,8 @@ void list_interfaces() {
 
     if (ioctl(sockFD, SIOCGIFCONF, &ifc) < 0)
     {
-        printf("Error: No AF_INET (IPv4) compatible interfaces found: ioctl(SIOCGIFCONF): "
-               "%m\n");
+        printf("Error: No AF_INET (IPv4) compatible interfaces found: "
+               "ioctl(SIOCGIFCONF): %m\n");
         return;
     }
 
@@ -412,12 +412,12 @@ void build_headers(char* &txBuffer, unsigned char (&destMAC)[6],
     memcpy((void*)(txBuffer+offset), (void*)sourceMAC, ETH_ALEN);
     offset+=ETH_ALEN;
 
-    //Check to see if QinQ VLAN ID has been supplied
-    if(qinqID!=qinqIDDef)
+    // Check to see if QinQ VLAN ID has been supplied
+    if(qinqPCP!=qinqPCPDef || qinqID!=qinqIDDef)
     {
 
         // Add on the QinQ Tag Protocol Identifier
-        //0x88a8 == IEEE802.1ad, 0x9100 == older IEEE802.1QinQ
+        // 0x88a8 == IEEE802.1ad, 0x9100 == older IEEE802.1QinQ
         TPI = htons(0x88a8);
         memcpy((void*)(txBuffer+offset), p, sizeof(TPI));
         offset+=sizeof(TPI);
@@ -434,8 +434,8 @@ void build_headers(char* &txBuffer, unsigned char (&destMAC)[6],
         memcpy((void*)(txBuffer+offset), c, sizeof(TCI));
         offset+=sizeof(TCI);
 
-        // If an outer VLAN ID has been set, but not an inner one (which would be a mistake)
-        // set it to 1 so the frame is still valid
+        // If an outer VLAN ID has been set, but not an inner one
+        // (which would be a mistake) set it to 1 so the frame is still valid
         if(vlanID==0) vlanID=1;
 
     }
