@@ -1,8 +1,13 @@
 Priority:
-Add option for speed limit in bits per second
+Add option to test without sync
+Number of non test frames received
+Checking frame order
+Detect lost frames
+VARIABLE NAMES!!
 finish ack and out of order frame counts and print out and in order frame counts at the end of the test
-
+Don't get count of in/out order frames when CTRL+C in the middle of a test
 Frames less than 60bytes are padded by Linux upto 60, is it OK to rely on the kernel to do this?
+
 Why when one end sends a double tagged from with 0x88a8 on the first etherype does the receiver of the frame always see it as two 0x8100 frames?
     // The displaid TX rate (19Mbps) on the TX host when testing with 20 byte frames is less than the RX host displaid RX rate (40Mbps)
 
@@ -10,16 +15,15 @@ Why when one end sends a double tagged from with 0x88a8 on the first etherype do
 
     // Display post test details; min max avg for Mbps and FrmRX/S
 
+
 Medium:
+Change from using byte speed counters to bits or using -M will cause rounding inaccuracy when /8
 Start swapping out 'cout' for 'printf'
-Checking frame order
-Detect lost frames
 Should we print non default settings to the screen when the user sets them before the test starts to show what will happen?
 Add the MEGA-DEBUG!!! option to the cli args?
 
 
 Low:
-Number of non test frames received
 Add pps/frames per second maximum limit cli switch
 Add option for DEI/CFI header bit
 Doesn't work on my office desktop with a bridge interface

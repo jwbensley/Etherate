@@ -43,7 +43,8 @@ void signal_handler(int signal) {
     strncpy(ethreq.ifr_name,ifName,IFNAMSIZ);
 
     if (ioctl(sockFD,SIOCGIFFLAGS,&ethreq)==-1) {
-        cout << "Error getting socket flags, entering promiscuous mode failed." << endl;
+        cout << "Error getting socket flags, entering promiscuous mode failed."
+             << endl;
         perror("ioctl() ");
     }
 
@@ -113,7 +114,12 @@ void print_usage () {
             "\t\t#NOT IMPLEMENTED YET#\n"
             "\t-V|--version Display version\n"
             "\t-h|--help Display this help text\n",
-            fBytesDef, fCountDef, fSizeDef, (fSizeDef+headersLength), fDurationDef);
+            fBytesDef, fCountDef, fSizeDef, (fSizeDef+headersLength),
+            fDurationDef);
+
+}
+
+void print_examples () {
 
 }
 
@@ -141,9 +147,10 @@ void string_explode(string str, string separator, vector<string>* results) {
 
 int get_sock_interface(int &sockFD) {
 // This function was gleaned from;
-// http://cboard.cprogramming.com/linux-programming/43261-ioctl-request-get-hw-address.html
-// As far as I can tell its a variation on some open source code originally written for
-// Diald, which is here: http://diald.sourceforge.net/FAQ/diald-faq.html
+// http://cboard.cprogramming.com/linux-programming/43261-ioctl-request-get
+// -hw-address.html
+// As far as I can tell its a variation on some open source code originally
+// written for Diald, here: http://diald.sourceforge.net/FAQ/diald-faq.html
 // So thanks go to the Diald authors Eric Schenk and Gordon Soukoreff!
 
     const int NO_INT = 0;
@@ -183,8 +190,8 @@ int get_sock_interface(int &sockFD) {
                 // Does this device even have hardware address?
                 if (ioctl (sockFD, SIOCGIFHWADDR, &ifreq) != 0)
                 {
-                    printf("Error: Device has no hardware address: SIOCGIFHWADDR(%s): %m\n",
-                           ifreq.ifr_name);
+                    printf("Error: Device has no hardware address: \n"
+                           "SIOCGIFHWADDR(%s): %m\n", ifreq.ifr_name);
                     return NO_INT;
                 }
 
@@ -194,8 +201,8 @@ int get_sock_interface(int &sockFD) {
                 // Get the interface name
                 strncpy(ifName,ifreq.ifr_name,IFNAMSIZ);
 
-                printf("Using device %s with address %02x:%02x:%02x:%02x:%02x:%02x, "
-                       "interface index %u\n",
+                printf("Using device %s with address "
+                       "%02x:%02x:%02x:%02x:%02x:%02x, interface index %u\n",
                        ifreq.ifr_name,
                        (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[0],
                        (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[1],
@@ -253,8 +260,8 @@ int set_sock_interface_index(int &sockFD, int &ifIndex) {
                     // Get the interface name
                     strncpy(ifName,ifreq.ifr_name,IFNAMSIZ);
 
-                    printf("Using device %s with address %02x:%02x:%02x:%02x:%02x:%02x, "
-                           "interface index %u\n",
+                    printf("Using device %s with address "
+                           "%02x:%02x:%02x:%02x:%02x:%02x, interface index %u\n",
                            ifreq.ifr_name,
                            (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[0],
                            (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[1],
@@ -314,8 +321,8 @@ int set_sock_interface_name(int &sockFD, char &ifName) {
                     // Get the interface index
                     ioctl(sockFD, SIOCGIFINDEX, &ifreq);
 
-                    printf("Using device %s with address %02x:%02x:%02x:%02x:%02x:%02x, "
-                           "interface index %u\n",
+                    printf("Using device %s with address "
+                           "%02x:%02x:%02x:%02x:%02x:%02x, interface index %u\n",
                            ifreq.ifr_name,
                            (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[0],
                            (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[1],
@@ -346,14 +353,14 @@ void list_interfaces() {
     struct ifconf ifc;
     struct ifreq ifs[MAX_IFS];
     int sockFD;
-    sockFD = socket(AF_PACKET, SOCK_RAW, 0);
+    sockFD = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 
     ifc.ifc_len = sizeof(ifs);
     ifc.ifc_req = ifs;
 
     if (ioctl(sockFD, SIOCGIFCONF, &ifc) < 0)
     {
-        printf("Error: No AF_INET (IPv4) compatible interfaces found: "
+        printf("Error: No AF_INET (IPv4) compatible interfaces found: \n"
                "ioctl(SIOCGIFCONF): %m\n");
         return;
     }

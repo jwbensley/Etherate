@@ -163,8 +163,8 @@ int main(int argc, char *argv[]) {
     // Index of the current test frame sent/received;
     long long fIndex = 0;
 
-    // Index of the last test frame sent/received;
-    long long fIndexLast = 0;
+    // Frames received on time
+    long long fOnTime = 0;
 
     // Frames received out of order that are early
     long long fEarly = 0;
@@ -421,11 +421,24 @@ int main(int argc, char *argv[]) {
                 fACK = true;
 
 
-            // Limit TX rate to max mbps
+            // Limit TX rate to max bytes per second
             } else if(strncmp(argv[lCounter],"-m",2)==0) {
                 if (argc>(lCounter+1))
                 {
                     bTXSpeed = atol(argv[lCounter+1]);
+                    lCounter++;
+                } else {
+                    cout << "Oops! Missing max TX rate" << endl
+                         << "Usage info: " << argv[0] << " -h" << endl;
+                    return EX_USAGE;
+                }
+
+
+            // Limit TX rate to max bits per second
+            } else if(strncmp(argv[lCounter],"-M",2)==0) {
+                if (argc>(lCounter+1))
+                {
+                    bTXSpeed = atol(argv[lCounter+1]) / 8;
                     lCounter++;
                 } else {
                     cout << "Oops! Missing max TX rate" << endl
@@ -561,7 +574,8 @@ int main(int argc, char *argv[]) {
         ifIndex = set_sock_interface_index(sockFD, ifIndex);
         if (ifIndex==0)
         {
-            cout << "Error: Couldn't set interface with index, returned index was 0." << endl;
+            cout << "Error: Couldn't set interface with index, "
+                 << "returned index was 0." << endl;
             return EX_SOFTWARE;
         }
 
@@ -571,7 +585,8 @@ int main(int argc, char *argv[]) {
         ifIndex = set_sock_interface_name(sockFD, *ifName);
         if (ifIndex==0)
         {
-            cout << "Error: Couldn't set interface index from name, returned index was 0." << endl;
+            cout << "Error: Couldn't set interface index from name, "
+                 << "returned index was 0." << endl;
             return EX_SOFTWARE;
         }
 
@@ -1174,8 +1189,8 @@ int main(int argc, char *argv[]) {
                 sElapsed+=1;
                 bSpeed = (((float)bTX-(float)bTXlast)*8)/1000/1000;
                 bTXlast = bTX;
-                cout << sElapsed << "\t\t" << bSpeed << "\t\t" << (bTX/1000)/1000 << "\t\t"
-                     << (fTX-fTXlast) << "\t\t" << fTX << endl;
+                cout << sElapsed << "\t\t" << bSpeed << "\t\t" << (bTX/1000)/1000
+                     << "\t\t" << (fTX-fTXlast) << "\t\t" << fTX << endl;
                 fTXlast = fTX;
                 tsElapsed.tv_sec = tsCurrent.tv_sec;
                 tsElapsed.tv_nsec = tsCurrent.tv_nsec;
@@ -1248,7 +1263,7 @@ int main(int argc, char *argv[]) {
 
                         ss.clear();
                         ss.str("");
-                        ss << "etheratetest" << (fTX+1) <<  ":";
+                        ss << "etheratetest:" << (fTX+1) <<  ":";
                         param = ss.str();
                         strncpy(txData,param.c_str(), param.length());
                         sendResult = sendto(sockFD, txBuffer, fSizeTotal, 0, 
@@ -1265,7 +1280,7 @@ int main(int argc, char *argv[]) {
 
                     ss.clear();
                     ss.str("");
-                    ss << "etheratetest" << (fTX+1) <<  ":";
+                    ss << "etheratetest:" << (fTX+1) <<  ":";
                     param = ss.str();
                     strncpy(txData,param.c_str(), param.length());
                     sendResult = sendto(sockFD, txBuffer, fSizeTotal, 0, 
@@ -1288,8 +1303,8 @@ int main(int argc, char *argv[]) {
 
         }
 
-        cout << sElapsed << "\t\t" << bSpeed << "\t\t" << (bTX/1000)/1000 << "\t\t" << (fTX-fTXlast)
-             << "\t\t" << fTX << endl << endl
+        cout << sElapsed << "\t\t" << bSpeed << "\t\t" << (bTX/1000)/1000 << "\t\t"
+             << (fTX-fTXlast) << "\t\t" << fTX << endl << endl
              << "Non test frames received: " << fRXother << endl;
 
         timeNow = time(0);
@@ -1363,25 +1378,27 @@ int main(int argc, char *argv[]) {
                         fRX+=1;
                         bRX+=(rxLength-headersLength);
 
+                        // Get the index of the received frame
+                        exploded.clear();
+                        explodestring = rxData;
+                        string_explode(explodestring, ":", &exploded);
+                        fIndex = atoi(exploded[1].c_str());
+
+                        if(fIndex==(fRX))
+                        {
+                            fOnTime++;
+
+                        } else if (fIndex<fRX) {
+                            fEarly++;
+
+                        } else if (fIndex>(fRX+1)) {
+                            fLate++;
+
+                        }
+
                         // If running in ACK mode we need to ACK to TX host
                         if(fACK)
                         {
-
-                            // Get the index of the received frame
-                            exploded.clear();
-                            explodestring = rxData;
-                            string_explode(explodestring, ".", &exploded);
-                            fIndex = atoi(exploded[1].c_str());
-
-                            if(fIndex==(fIndexLast+1))
-                            {
-
-                            } else if (fIndex<fIndexLast) {
-                                fEarly++;
-
-                            } else if (fIndex>(fIndexLast+1)) {
-                                fLate++;
-                            }
 
                             ss.clear();
                             ss.str("");
@@ -1420,7 +1437,10 @@ int main(int argc, char *argv[]) {
 
         cout << sElapsed << "\t\t" << bSpeed << "\t\t" << (bRX/1000)/1000 << "\t\t"
              << (fRX-fRXlast) << "\t\t" << fRX << endl << endl
-             << "Non test frames received: " << fRXother << endl;
+             << "Non test frames received: " << fRXother << endl
+             << "In order frames received: " << fOnTime << endl
+             << "Out of order frames received early: " << fEarly << endl
+             << "Out of order frames received late: " << fLate << endl;
 
         timeNow = time(0);
         localtm = localtime(&timeNow);

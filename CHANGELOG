@@ -1,10 +1,12 @@
 -----Etherarte 0.4 Alpha - 2014-08-18
 
-[FEATURE] Code for VLAN tagging an priority codes is working (QinQ needs further research)
+[FEATURE] Code for single VLAN tagging an priority codes is working (double tag/QinQ needs further research)
 
 [FEATURE] Both hosts display the number of non-test frames received during a test
 
 [FEATURE] Code for interface selection by index and by name is now working
+
+[FEATURE] Added rate limit in bits per second using -M option (previously just -m for bytes per second)
 
 [MAJOR] Finalised delay calculation code (calculates mean delay based on 5 samples)
 
