@@ -163,6 +163,9 @@ int main(int argc, char *argv[]) {
     // Index of the current test frame sent/received;
     long long fIndex = 0;
 
+    // Index of the last test frame sent/received;
+    long long fIndexLast = 0;
+
     // Frames received on time
     long long fOnTime = 0;
 
@@ -1384,17 +1387,18 @@ int main(int argc, char *argv[]) {
                         string_explode(explodestring, ":", &exploded);
                         fIndex = atoi(exploded[1].c_str());
 
-                        if(fIndex==(fRX))
+
+                        if(fIndex==(fRX) || fIndex==(fIndexLast+1))
                         {
                             fOnTime++;
-
-                        } else if (fIndex<fRX) {
+                            fIndexLast++;
+                        } else if (fIndex>(fRX)) {
+                            fIndexLast = fIndex;
                             fEarly++;
-
-                        } else if (fIndex>(fRX+1)) {
+                        } else if (fIndex<fRX) {
                             fLate++;
-
                         }
+
 
                         // If running in ACK mode we need to ACK to TX host
                         if(fACK)
