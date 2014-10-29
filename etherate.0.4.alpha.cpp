@@ -202,6 +202,9 @@ int main(int argc, char *argv[]) {
     // Timeout to wait for a frame ACK
     timespec tsACK;
 
+    // TX host waists to sync settings with RX or skip to transmit
+    bool txSync = true;
+
     // These timespecs are used for calculating delay/RTT
     timespec tsRTT;
 
@@ -307,6 +310,11 @@ int main(int argc, char *argv[]) {
                 lCounter++;
 
 
+            // Disable settings sync between TX and RX
+            } else if(strncmp(argv[lCounter],"-g",2)==0) {
+                txSync = false;
+
+
             // Specifying a custom source MAC address
             } else if(strncmp(argv[lCounter],"-s",2)==0) {
                 explodestring = argv[lCounter+1];
@@ -328,6 +336,7 @@ int main(int argc, char *argv[]) {
                 }
                 cout << dec << endl;
                 lCounter++;
+
 
             // Specifying a custom interface name
             } else if(strncmp(argv[lCounter],"-i",2)==0) {
@@ -747,7 +756,7 @@ int main(int argc, char *argv[]) {
 
 
     // Set up the test by communicating settings with the RX host receiver
-    if(txMode==true)
+    if(txMode==true && txSync==true)
     { // If we are the TX host...
 
         cout << "Running in TX mode, synchronising settings" << endl;
@@ -916,7 +925,7 @@ int main(int argc, char *argv[]) {
         cout << "Settings have been synchronised." << endl;
 
 
-    } else {
+    } else if (txMode==false && txSync==true) {
 
         cout << "Running in RX mode, awaiting TX host" << endl;
         // In listening mode we start by waiting for each parameter to come through
@@ -1130,6 +1139,7 @@ int main(int argc, char *argv[]) {
      *************************************************************** TEST PHASE
      */
 
+    
 
     // Fill the test frame with some junk data
     int junk = 0;
@@ -1169,6 +1179,7 @@ int main(int argc, char *argv[]) {
 
         } else if (fDuration>0) {
             // We are testing until X seconds has passed
+            fDuration--;
             testMax = &fDuration;
             testBase = &sElapsed;
         }
@@ -1189,7 +1200,7 @@ int main(int argc, char *argv[]) {
             // One second has passed
             if((tsCurrent.tv_sec-tsElapsed.tv_sec)>=1)
             {
-                sElapsed+=1;
+                sElapsed++;
                 bSpeed = (((float)bTX-(float)bTXlast)*8)/1000/1000;
                 bTXlast = bTX;
                 cout << sElapsed << "\t\t" << bSpeed << "\t\t" << (bTX/1000)/1000
@@ -1215,7 +1226,9 @@ int main(int argc, char *argv[]) {
                         {
                             fRX++;
                             fWaiting = false;
+
                         } else {
+
                             // Check if RX host has sent a dying gasp
                             param = "etheratedeath";
                             if(strncmp(rxData,param.c_str(),param.length())==0)
@@ -1226,9 +1239,11 @@ int main(int argc, char *argv[]) {
                                      << "Ending test and resetting on "
                                      << asctime(localtm) << endl;
                                 goto finish;
+
                             } else {
                                 fRXother++;
                             }
+
                         }
 
                     } else {
@@ -1243,6 +1258,9 @@ int main(int argc, char *argv[]) {
                                  << "Ending test and resetting on "
                                  << asctime(localtm) << endl;
                             goto finish;
+
+                        } else {
+                            fRXother++;
                         }
                         
                     }
@@ -1256,13 +1274,30 @@ int main(int argc, char *argv[]) {
 
                 if(!fWaiting) {
 
-                // A max speed has been set
-                if(bTXSpeed!=bTXSpeedDef)
-                {
-
-                    // Check if sending another frame keeps us under the max speed limit
-                    if((bTXSpeedLast+fSize)<=bTXSpeed)
+                    // A max speed has been set
+                    if(bTXSpeed!=bTXSpeedDef)
                     {
+
+                        // Check if sending another frame keeps us under the max speed limit
+                        if((bTXSpeedLast+fSize)<=bTXSpeed)
+                        {
+
+                            ss.clear();
+                            ss.str("");
+                            ss << "etheratetest:" << (fTX+1) <<  ":";
+                            param = ss.str();
+                            strncpy(txData,param.c_str(), param.length());
+                            sendResult = sendto(sockFD, txBuffer, fSizeTotal, 0, 
+                       	                        (struct sockaddr*)&socket_address,
+                                                sizeof(socket_address));
+                            fTX++;
+                            bTX+=fSize;
+                            bTXSpeedLast+=fSize;
+                            if (fACK) fWaiting = true;
+
+                        }
+
+                    } else {
 
                         ss.clear();
                         ss.str("");
@@ -1270,30 +1305,13 @@ int main(int argc, char *argv[]) {
                         param = ss.str();
                         strncpy(txData,param.c_str(), param.length());
                         sendResult = sendto(sockFD, txBuffer, fSizeTotal, 0, 
-                   	                        (struct sockaddr*)&socket_address,
+                                            (struct sockaddr*)&socket_address,
                                             sizeof(socket_address));
                         fTX+=1;
                         bTX+=fSize;
                         bTXSpeedLast+=fSize;
                         if (fACK) fWaiting = true;
-
                     }
-
-                } else {
-
-                    ss.clear();
-                    ss.str("");
-                    ss << "etheratetest:" << (fTX+1) <<  ":";
-                    param = ss.str();
-                    strncpy(txData,param.c_str(), param.length());
-                    sendResult = sendto(sockFD, txBuffer, fSizeTotal, 0, 
-                                        (struct sockaddr*)&socket_address,
-                                        sizeof(socket_address));
-                    fTX+=1;
-                    bTX+=fSize;
-                    bTXSpeedLast+=fSize;
-                    if (fACK) fWaiting = true;
-                }
 
                 }
 
@@ -1306,8 +1324,8 @@ int main(int argc, char *argv[]) {
 
         }
 
-        cout << sElapsed << "\t\t" << bSpeed << "\t\t" << (bTX/1000)/1000 << "\t\t"
-             << (fTX-fTXlast) << "\t\t" << fTX << endl << endl
+        cout << "Test frames transmitted: " << fTX << endl
+             << "Test frames received: " << fRX << endl
              << "Non test frames received: " << fRXother << endl;
 
         timeNow = time(0);
@@ -1335,6 +1353,7 @@ int main(int argc, char *argv[]) {
 
         // Or are we testing until X seconds has passed
         } else if (fDuration>0) {
+            fDuration--;
             testMax = &fDuration;
             testBase = &sElapsed;
         }
@@ -1350,7 +1369,7 @@ int main(int argc, char *argv[]) {
             // If one second has passed
             if((tsCurrent.tv_sec-tsElapsed.tv_sec)>=1)
             {
-                sElapsed+=1;
+                sElapsed++;
                 bSpeed = float (((float)bRX-(float)bRXlast)*8)/1000/1000;
                 bRXlast = bRX;
                 cout << sElapsed << "\t\t" << bSpeed << "\t\t" << (bRX/1000)/1000 << "\t\t"
@@ -1378,7 +1397,7 @@ int main(int argc, char *argv[]) {
                     {
 
                         // Update test stats
-                        fRX+=1;
+                        fRX++;
                         bRX+=(rxLength-headersLength);
 
                         // Get the index of the received frame
@@ -1412,6 +1431,7 @@ int main(int argc, char *argv[]) {
                             sendResult = sendto(sockFD, txBuffer, fSizeTotal, 0, 
                                          (struct sockaddr*)&socket_address,
                                          sizeof(socket_address));
+                            fTX++;
                             
                         }
 
@@ -1439,11 +1459,11 @@ int main(int argc, char *argv[]) {
 
         }
 
-        cout << sElapsed << "\t\t" << bSpeed << "\t\t" << (bRX/1000)/1000 << "\t\t"
-             << (fRX-fRXlast) << "\t\t" << fRX << endl << endl
+        cout << "Test frames transmitted: " << fTX << endl
+             << "Test frames received: " << fRX << endl
              << "Non test frames received: " << fRXother << endl
-             << "In order frames received: " << fOnTime << endl
-             << "Out of order frames received early: " << fEarly << endl
+             << "In order test frames received: " << fOnTime << endl
+             << "Out of order test frames received early: " << fEarly << endl
              << "Out of order frames received late: " << fLate << endl;
 
         timeNow = time(0);
