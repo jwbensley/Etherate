@@ -1,6 +1,4 @@
 Priority:
-Add option to test without sync
-Number of non test frames received
 Checking frame order
 Detect lost frames
 VARIABLE NAMES!!
@@ -24,6 +22,7 @@ Add the MEGA-DEBUG!!! option to the cli args?
 
 
 Low:
+Feature to randomise frame payload per frame
 Add pps/frames per second maximum limit cli switch
 Add option for DEI/CFI header bit
 Doesn't work on my office desktop with a bridge interface

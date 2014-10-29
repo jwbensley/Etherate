@@ -8,6 +8,8 @@
 
 [FEATURE] Added rate limit in bits per second using -M option (previously just -m for bytes per second)
 
+[FEATURE] Option to transmit without sync is coded, -g will skip strait to transmittion
+
 [MAJOR] Finalised delay calculation code (calculates mean delay based on 5 samples)
 
 [MINOR] Fixed the interface selection by ID/index
@@ -18,6 +20,9 @@
 
 [MINOR] Further clean up of code
 
+[MINOR] Further clean up of CLI output
+
+[MINOR] Non test frame receive count is fixed
 
 
 -----Etherate 0.3 Alpha - 2014-01-10
