@@ -31,6 +31,7 @@
 using namespace std;
 #include <sys/socket.h> // Provides AF_PACKET *Address Family*
 #include <sys/select.h>
+#include <ifaddrs.h>
 #include <linux/if_arp.h>
 #include <linux/if_ether.h> // Defines ETH_P_ALL [Ether type 0x003 (ALL PACKETS!)]
 // Also defines ETH_FRAME_LEN with default 1514
