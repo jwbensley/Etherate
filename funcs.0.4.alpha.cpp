@@ -292,34 +292,39 @@ int set_sock_interface_name(int &sockFD, char &ifName) {
 
     const int NO_INT = 0;
 
-    struct ifreq *ifr, *ifend;
+
     struct ifreq ifreq;
-    struct ifconf ifc;
-    struct ifreq ifs[MAX_IFS];
+    struct ifaddrs *ifaddr, *ifa;
 
-    ifc.ifc_len = sizeof(ifs);
-    ifc.ifc_req = ifs;
+    int counter;
 
-    ioctl(sockFD, SIOCGIFCONF, &ifc);
+    if (getifaddrs(&ifaddr)==-1)
+    {
+        perror("getifaddrs");
+        exit(EX_PROTOCOL);
+    }
 
-    ifend = ifs + (ifc.ifc_len / sizeof(struct ifreq));
-    for (ifr = ifc.ifc_req; ifr < ifend; ifr++)
+    for (ifa = ifaddr, counter = 0; ifa != NULL; ifa = ifa->ifa_next, counter++)
     {
 
-        if (ifr->ifr_addr.sa_family == AF_INET)
+        if (ifa->ifa_addr == NULL) {
+            continue;
+        }
+
+        // Does this interface sub address family support AF_PACKET
+        if (ifa->ifa_addr->sa_family==AF_PACKET)
         {
 
-            strncpy(ifreq.ifr_name,ifr->ifr_name,sizeof(ifreq.ifr_name));
+            // Set the ifreq by interface name
+            strncpy(ifreq.ifr_name,ifa->ifa_name,sizeof(ifreq.ifr_name));
 
             // Does this device have a hardware address?
             if (ioctl (sockFD, SIOCGIFHWADDR, &ifreq) == 0)
             {
 
-
+                // Check if this is the interface name the user specified
                 if (strcmp(ifreq.ifr_name,(char *)&ifName)==0)
                 {
-                    // Get the interface name
-                    //strncpy(ifName,ifreq.ifr_name,IFNAMSIZ);
 
                     // Get the interface index
                     ioctl(sockFD, SIOCGIFINDEX, &ifreq);
@@ -346,17 +351,177 @@ int set_sock_interface_name(int &sockFD, char &ifName) {
 
     return NO_INT;
 
+/*
+    struct ifreq *ifr, *ifend;
+    struct ifreq ifreq;
+    struct ifconf ifc;
+    struct ifreq ifs[MAX_IFS];
+
+    ifc.ifc_len = sizeof(ifs);
+    ifc.ifc_req = ifs;
+
+    ioctl(sockFD, SIOCGIFCONF, &ifc);
+
+    ifend = ifs + (ifc.ifc_len / sizeof(struct ifreq));
+    for (ifr = ifc.ifc_req; ifr < ifend; ifr++)
+    {
+
+        if (ifr->ifr_addr.sa_family == AF_INET)
+        {
+
+            strncpy(ifreq.ifr_name,ifr->ifr_name,sizeof(ifreq.ifr_name));
+
+            // Does this device have a hardware address?
+            if (ioctl (sockFD, SIOCGIFHWADDR, &ifreq) == 0)
+            {
+
+
+                if (strcmp(ifreq.ifr_name,(char *)&ifName)==0)
+                {
+
+                    // Get the interface index
+                    ioctl(sockFD, SIOCGIFINDEX, &ifreq);
+
+                    printf("Using device %s with address "
+                           "%02x:%02x:%02x:%02x:%02x:%02x, interface index %u\n",
+                           ifreq.ifr_name,
+                           (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[0],
+                           (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[1],
+                           (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[2],
+                           (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[3],
+                           (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[4],
+                           (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[5],
+                           ifreq.ifr_ifindex);
+
+                    return ifreq.ifr_ifindex;
+                }
+
+            }
+
+        }
+
+    }
+
+    return NO_INT;
+*/
+
 }
 
 
 void list_interfaces() {
 
+    struct ifreq ifreq;
+    struct ifaddrs *ifaddr, *ifa;
+
+    int sockFD, counter;
+    sockFD = socket(AF_INET, SOCK_RAW, htons(ETH_P_ALL));
+
+    if (getifaddrs(&ifaddr)==-1)
+    {
+        perror("getifaddrs");
+        exit(EX_PROTOCOL);
+    }
+
+    for (ifa = ifaddr, counter = 0; ifa != NULL; ifa = ifa->ifa_next, counter++)
+    {
+
+        if (ifa->ifa_addr == NULL) {
+            continue;
+        }
+
+        // Does this interface sub address family support AF_PACKET
+        if (ifa->ifa_addr->sa_family==AF_PACKET)
+        {
+
+            // Set the ifreq by interface name
+            strncpy(ifreq.ifr_name,ifa->ifa_name,sizeof(ifreq.ifr_name));
+
+            // Does this device have a hardware address?
+            if (ioctl (sockFD, SIOCGIFHWADDR, &ifreq) == 0)
+            {
+
+                // Get the interface index
+                ioctl(sockFD, SIOCGIFINDEX, &ifreq);
+
+                // Print the current interface details
+                printf("Device %s with address %02x:%02x:%02x:%02x:%02x:%02x, "
+                       "interface index %u\n",
+                       ifreq.ifr_name,
+                       (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[0],
+                       (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[1],
+                       (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[2],
+                       (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[3],
+                       (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[4],
+                       (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[5],
+                       ifreq.ifr_ifindex);
+            }
+
+        }
+
+    }
+
+    return;
+/*
+    if (ioctl(sockFD, SIOCGIFCONF, &ifc) < 0)
+    {
+        printf("Error: No AF_INET (IPv4) compatible interfaces found: \n"
+               "ioctl(SIOCGIFCONF): %m\n");
+        return;
+    }
+*/
+
+/*
+    ifend = ifs + (ifc.ifc_len / sizeof(struct ifreq));
+    for (ifr = ifc.ifc_req; ifr < ifend; ifr++)
+    {
+
+            strncpy(ifreq.ifr_name,ifr->ifr_name,sizeof(ifreq.ifr_name));
+
+            ioctl (sockFD, SIOCGIFHWADDR, &ifreq);
+
+                ioctl(sockFD, SIOCGIFINDEX, &ifreq);
+
+
+                printf("Device %s with address %02x:%02x:%02x:%02x:%02x:%02x, "
+                       "interface index %u\n",
+                       ifreq.ifr_name,
+                       (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[0],
+                       (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[1],
+                       (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[2],
+                       (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[3],
+                       (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[4],
+                       (int) ((unsigned char *) &ifreq.ifr_hwaddr.sa_data)[5],
+                       ifreq.ifr_ifindex);
+
+    }
+*/
+
+/*
+    struct ifaddrs *ifaddr, *ifa;
+    int family, s, n;
+
+    if (getifaddrs(&ifaddr) == -1) {
+        perror("getifaddrs");
+        exit(EXIT_FAILURE);
+    }
+
+    for (ifa = ifaddr, n = 0; ifa != NULL; ifa = ifa->ifa_next, n++) {
+        if (ifa->ifa_addr == NULL) {
+            continue;
+         }
+         family = ifa->ifa_addr->sa_family;
+         printf("%-8s (%d)\n", ifa->ifa_name,family);
+    }
+*/
+
+
+/*
     struct ifreq *ifr, *ifend;
     struct ifreq ifreq;
     struct ifconf ifc;
     struct ifreq ifs[MAX_IFS];
     int sockFD;
-    sockFD = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+    sockFD = socket(AF_INET, SOCK_RAW, htons(ETH_P_ALL));
 
     ifc.ifc_len = sizeof(ifs);
     ifc.ifc_req = ifs;
@@ -401,7 +566,7 @@ void list_interfaces() {
         }
 
     }
-
+*/
 }
 
 
