@@ -67,7 +67,7 @@ const string version = "0.4.alpha 2014-08";
 // Maximum frame size on the wire (payload + 22 octets for QinQ headers)
 // Etherate will support, this is hard coded here because we have to allocate
 // send and receive buffers. 
-const int F_SIZE_MAX = 9022;
+const int F_SIZE_MAX = 10000;
 
 // Default frame payload size in bytes
 const int F_SIZE_DEF = 1500;
@@ -82,7 +82,7 @@ const long F_COUNT_DEF = 0;
 const long F_BYTES_DEF = 0;
 
 // Default max speed in bytes, 0 == no limit
-const long B_TX_SPEED_DEF = 0;
+const long B_TX_SPEED_MAX_DEF = 0;
 
 // Default PCP value
 const short PCP_DEF = 0;
@@ -129,10 +129,10 @@ unsigned char SOURCE_MAC[6];
 unsigned char DESTINATION_MAC[6];
 int ETHERTYPE;
 char* TX_BUFFER;
+char* TX_DATA;
 unsigned char* TX_ETHERNET_HEADER;
 struct ifreq ethreq;
 int ETH_HEADERS_LEN;
-char* TX_DATA;
 int SOCKET_FD;
 struct sockaddr_ll socket_address;
 char IF_NAME[IFNAMSIZ];

@@ -56,12 +56,13 @@ Development Plan
   These are features that will be in development after the beta 
   is released;
   
+  - Add continual “OWAMP” tests (currently just at the start)
   - Add L2 storm testing (broadcast and multicast without no RX host)
   - Add feature to load frame payload from a text file
   - Add BPDU & keepalive generation shortcuts
   - Report throughput if additional headers (IPv4/6/TCP/UDP) were present
   - Add max MTU scanning/sweeping test
-  - Simulate large MPLS label stacks (4/5/6 labels etc)
+  - Simulate large MPLS label stacks (8/9/10 labels etc)
   
   These are long term features I am still considering for development
   but further research is required;
@@ -77,21 +78,6 @@ Technical details:
   In the alpha stage Etherate is single threaded and only runs a single
   test between a transmitting and receiving host. Later development
   will see it turn to bidirectional more complex testing.
-
-
-Usage Examples:
-
-  "./etherate -x" will display some example of the CLI syntex.
-
-  The traffic is easily identified in Wireshark as Etherate uses MAC
-  addresses from the IANA unassigned space. The TX host is 01 and
-  the RX host is 02:
-
-  eth.addr == 00:00:5e:00:00:01 || eth.addr == 00:00:5e:00:00:02
-
-  or
-
-  eth.addr contains 00:00:5e:00:00
 
 
 More info:
