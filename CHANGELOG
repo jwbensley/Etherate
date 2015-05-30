@@ -1,4 +1,4 @@
------Etherarte 0.4 Alpha - 2014-08-18
+-----Etherarte 0.4 Alpha - 2015-05-29
 
 [FEATURE] Code for single VLAN tagging an priority codes is working (double tag/QinQ needs further research)
 
@@ -9,6 +9,8 @@
 [FEATURE] Added rate limit in bits per second using -M option (previously just -m for bytes per second)
 
 [FEATURE] Option to transmit without sync is coded, -g will skip strait to transmittion
+
+[FEATURE] Added MTU sweep feature
 
 [MAJOR] Finalised delay calculation code (calculates mean delay based on 5 samples)
 
