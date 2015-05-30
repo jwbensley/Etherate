@@ -76,14 +76,14 @@ void print_usage () {
             "\t-g\tTX host skips settings synchronisation with RX host\n"
             "\t\tand begins transmitting regardless of RX state.\n"
             "[Source]\n"
+            "\t-s\tWithout this we default to 00:00:5E:00:00:01\n"
+            "\t\tas the TX host and :02 as the RX host.\n"
             "\t\tSpecify a custom source MAC address, -s 11:22:33:44:55:66\n"
             "\t-i\tSet interface by name. Without this option we guess which\n"
             "\t\tinterface to use.\n"
             "\t-I\tSet interface by index. Without this option we guess which\n"
             "\t\tinterface to use.\n"
             "\t-l\tList interface indexes (then quit) for use with -i option.\n"
-            "\t-s\tWithout this we default to 00:00:5E:00:00:01\n"
-            "\t\tas the TX host and :02 as the RX host.\n"
             "[Options]\n"
             "\t-a\tAck mode, have the receiver ack each frame during the test\n"
             "\t\t(This will significantly reduce the speed of the test).\n"
@@ -114,10 +114,10 @@ void print_usage () {
             "\t\t0 will be used. If no outer Q-in-Q VLAN ID is supplied this\n"
             "\t\toption is ignored. -o 1 to -o 7 like the -p option above.\n"
             "\t\t#NOT IMPLEMENTED YET#\n"
-            "[Shortcuts]\n"
-            "\t-U\tSpecify a maximum MTU size in bytes and perform an\n"
-            "\t\tMTU sweep on the link towards the RX host to find the\n"
-            "\t\tmaximum size supported, such as -U 1500\n"
+            "[Addtional Tests]\n"
+            "\t-U\tSpecify a minimum and maximum MTU size in bytes then\n"
+            "\t\tperform an MTU sweep on the link towards the RX host to\n"
+            "\t\tfind the maximum size supported, such as -U 1400 1600\n"
             "\t\t#NOT IMPLEMENTED YET#\n"
             "[Other]\n"
             "\t-x\tDisplay examples.\n"
@@ -500,3 +500,4 @@ void build_headers(char* &TX_BUFFER, unsigned char (&DESTINATION_MAC)[6],
       ETH_HEADERS_LEN = BUFFER_OFFSET;
 
 }
+

@@ -2,11 +2,11 @@ Priority:
 Checking frame order
 Detect lost frames
 VARIABLE NAMES!!
+Settings are seperated with ":" using exploded, its using char count!
 finish ack and out of order frame counts and print out and in order frame counts at the end of the test
 Don't get count of in/out order frames when CTRL+C in the middle of a test
 Frames less than 60bytes are padded by Linux upto 60, is it OK to rely on the kernel to do this?
 
-Why when one end sends a double tagged from with 0x88a8 on the first etherype does the receiver of the frame always see it as two 0x8100 frames?
     // The displaid TX rate (19Mbps) on the TX host when testing with 20 byte frames is less than the RX host displaid RX rate (40Mbps)
 
     // No time out feature; for example, after 30 seconds the test should finish on the TX host (actually, this does happen sometimes?)
@@ -15,8 +15,8 @@ Why when one end sends a double tagged from with 0x88a8 on the first etherype do
 
 
 Medium:
+130 is ret val for sig_handle in funcs.cpp
 Change from using byte speed counters to bits or using -M will cause rounding inaccuracy when /8
-Start swapping out 'cout' for 'printf'
 Should we print non default settings to the screen when the user sets them before the test starts to show what will happen?
 Add the MEGA-DEBUG!!! option to the cli args?
 
@@ -42,8 +42,3 @@ Add feature to load frame payload from text file
 Add BPDU sending
 Add keepalive sending
 Report throughput if IPv4 or v6 was used, if UDP or TCP was used.
-Add max MTU size test
-Format output to go into a storable format like a DB, for stats gathering?
-
-
-Check out Pockethernet tester
