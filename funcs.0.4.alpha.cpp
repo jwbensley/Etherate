@@ -14,12 +14,12 @@
  * void signal_handler(int signal)
  * void print_usage ()
  * void string_explode(string str, string separator, vector<string>* results)
- * int get_sock_interface(int &sockFD)
- * int set_sock_interface_index(int &sockFD, int &ifIndex)
+ * int get_sock_interface(int &SOCKET_FD)
+ * int set_sock_interface_index(int &SOCKET_FD, int &IF_INDEX)
  * void list_interfaces()
- * void build_headers(char* &txBuffer, unsigned char (&destMAC)[6], 
-     unsigned char (&sourceMAC)[6], int &ethertype, short &PCP,
-     short &vlanID, short &qinqID, short &qinqPCP, int &headersLength)
+ * void build_headers(char* &TX_BUFFER, unsigned char (&DESTINATION_MAC)[6], 
+     unsigned char (&SOURCE_MAC)[6], int &ETHERTYPE, short &PCP,
+     short &VLAN_ID, short &QINQ_ID, short &QINQ_PCP, int &ETH_HEADERS_LEN)
  *
  */
 
@@ -33,16 +33,16 @@ void signal_handler(int signal) {
     std::stringstream ss;
     ss << "etheratedeath";
     param = ss.str();
-    strncpy(txData,param.c_str(), param.length());
-    sendResult = sendto(sockFD, txBuffer, headersLength+param.length(), 0, 
+    strncpy(TX_DATA,param.c_str(), param.length());
+    TX_REV_VAL = sendto(SOCKET_FD, TX_BUFFER, ETH_HEADERS_LEN+param.length(), 0, 
                  (struct sockaddr*)&socket_address, sizeof(socket_address));
 
 
     cout << "Leaving promiscuous mode" << endl;
 
-    strncpy(ethreq.ifr_name,ifName,IFNAMSIZ);
+    strncpy(ethreq.ifr_name,IF_NAME,IFNAMSIZ);
 
-    if (ioctl(sockFD,SIOCGIFFLAGS,&ethreq)==-1) {
+    if (ioctl(SOCKET_FD,SIOCGIFFLAGS,&ethreq)==-1) {
         cout << "Error getting socket flags, entering promiscuous mode failed."
              << endl;
         perror("ioctl() ");
@@ -50,12 +50,12 @@ void signal_handler(int signal) {
 
     ethreq.ifr_flags &= ~IFF_PROMISC;
 
-    if (ioctl(sockFD,SIOCSIFFLAGS,&ethreq)==-1) {
+    if (ioctl(SOCKET_FD,SIOCSIFFLAGS,&ethreq)==-1) {
         cout << "Error setting socket flags, promiscuous mode failed." << endl;
         perror("ioctl() ");
     }
 
-    close(sockFD);
+    close(SOCKET_FD);
 
     exit(130);
 
@@ -64,9 +64,10 @@ void signal_handler(int signal) {
 
 void print_usage () {
 
-    printf ("Usage info; [Mode] [Destination] [Source] [Options] [Other]\n"
-            "[Mode] By default run in transmit mode, not receive\n"
+    printf ("Usage info; [Mode] [Destination] [Source] [Transport] [Shortcuts] [Other]\n"
+            "[Mode]\n"
             "\t-r\tChange to receive (listening) mode.\n"
+            "\t\tDefault is transmit mode.\n"
             "[Destination]\n"
             "\t-d\tSpecify a custom desctination MAC address, \n"
             "\t\t-d 11:22:33:44:55:66\n"
@@ -92,13 +93,13 @@ void print_usage () {
             "\t\t-b overrides -c.\n"
             "\t-c\tNumber of frames to send, default is %ld, default behaviour\n"
             "\t\tis to wait for duration.\n"
-            "\t-e\tSet a custom ethertype value the default is 0x0800 (IPv4).\n"
+            "\t-e\tSet a custom ETHERTYPE value the default is 0x0800 (IPv4).\n"
             "\t-f\tFrame payload size in bytes, default is %d\n"
             "\t\t(%d bytes is the expected size on the wire with headers).\n"
             "\t-m\tMax bytes per/second to send, -m 125000 (1Mps).\n"
             "\t-M\tMax bits per/second to send. -M 1000000 (1Mbps).\n"
             "\t-t\tTransmition duration, integer in seconds, default is %ld.\n"
-            "[Other]\n"
+            "[Transport]\n"
             "\t-v\tAdd an 802.1q VLAN tag. None in the header by default.\n"
             "\t\tIf using a PCP value with -p a default VLAN of 0 is added.\n"
             "\t-p\tAdd an 802.1p PCP value from 1 to 7 using options -p 1 to\n"
@@ -113,12 +114,18 @@ void print_usage () {
             "\t\t0 will be used. If no outer Q-in-Q VLAN ID is supplied this\n"
             "\t\toption is ignored. -o 1 to -o 7 like the -p option above.\n"
             "\t\t#NOT IMPLEMENTED YET#\n"
+            "[Shortcuts]\n"
+            "\t-U\tSpecify a maximum MTU size in bytes and perform an\n"
+            "\t\tMTU sweep on the link towards the RX host to find the\n"
+            "\t\tmaximum size supported, such as -U 1500\n"
+            "\t\t#NOT IMPLEMENTED YET#\n"
+            "[Other]\n"
             "\t-x\tDisplay examples.\n"
             "\t\t#NOT IMPLEMENTED YET#\n"
             "\t-V|--version Display version\n"
             "\t-h|--help Display this help text\n",
-            fBytesDef, fCountDef, fSizeDef, (fSizeDef+headersLength),
-            fDurationDef);
+            F_BYTES_DEF, F_COUNT_DEF, F_SIZE_DEF, (F_SIZE_DEF+ETH_HEADERS_LEN),
+            F_DURATION_DEF);
 
 }
 
@@ -148,7 +155,7 @@ void string_explode(string str, string separator, vector<string>* results) {
 }
 
 
-int get_sock_interface(int &sockFD) {
+int get_sock_interface(int &SOCKET_FD) {
 // This function was gleaned from;
 // http://cboard.cprogramming.com/linux-programming/43261-ioctl-request-get
 // -hw-address.html
@@ -166,7 +173,7 @@ int get_sock_interface(int &sockFD) {
     ifc.ifc_len = sizeof(ifs);
     ifc.ifc_req = ifs;
 
-    if (ioctl(sockFD, SIOCGIFCONF, &ifc) < 0)
+    if (ioctl(SOCKET_FD, SIOCGIFCONF, &ifc) < 0)
     {
         printf("Error: No compatible interfaces found: ioctl(SIOCGIFCONF): %m\n");
         return NO_INT;
@@ -191,7 +198,7 @@ int get_sock_interface(int &sockFD) {
                 strncpy(ifreq.ifr_name,ifr->ifr_name,sizeof(ifreq.ifr_name));
 
                 // Does this device even have hardware address?
-                if (ioctl (sockFD, SIOCGIFHWADDR, &ifreq) != 0)
+                if (ioctl (SOCKET_FD, SIOCGIFHWADDR, &ifreq) != 0)
                 {
                     printf("Error: Device has no hardware address: \n"
                            "SIOCGIFHWADDR(%s): %m\n", ifreq.ifr_name);
@@ -199,10 +206,10 @@ int get_sock_interface(int &sockFD) {
                 }
 
                 // Get the interface index
-                ioctl(sockFD, SIOCGIFINDEX, &ifreq);
+                ioctl(SOCKET_FD, SIOCGIFINDEX, &ifreq);
 
                 // Get the interface name
-                strncpy(ifName,ifreq.ifr_name,IFNAMSIZ);
+                strncpy(IF_NAME,ifreq.ifr_name,IFNAMSIZ);
 
                 printf("Using device %s with address "
                        "%02x:%02x:%02x:%02x:%02x:%02x, interface index %u\n",
@@ -228,7 +235,7 @@ int get_sock_interface(int &sockFD) {
 }
 
 
-int set_sock_interface_index(int &sockFD, int &ifIndex) {
+int set_sock_interface_index(int &SOCKET_FD, int &IF_INDEX) {
 
     const int NO_INT = 0;
 
@@ -258,18 +265,18 @@ int set_sock_interface_index(int &sockFD, int &ifIndex) {
             strncpy(ifreq.ifr_name,ifa->ifa_name,sizeof(ifreq.ifr_name));
 
             // Does this device have a hardware address?
-            if (ioctl (sockFD, SIOCGIFHWADDR, &ifreq) == 0)
+            if (ioctl (SOCKET_FD, SIOCGIFHWADDR, &ifreq) == 0)
             {
 
                 // Get the interface index
-                ioctl(sockFD, SIOCGIFINDEX, &ifreq);
+                ioctl(SOCKET_FD, SIOCGIFINDEX, &ifreq);
 
                 // Check if this is the interface index the user specified
-                if (ifreq.ifr_ifindex==ifIndex)
+                if (ifreq.ifr_ifindex==IF_INDEX)
                 {
 
                     // Get the interface name
-                    strncpy(ifName,ifreq.ifr_name,IFNAMSIZ);
+                    strncpy(IF_NAME,ifreq.ifr_name,IFNAMSIZ);
 
                     printf("Using device %s with address "
                            "%02x:%02x:%02x:%02x:%02x:%02x, interface index %u\n",
@@ -296,7 +303,7 @@ int set_sock_interface_index(int &sockFD, int &ifIndex) {
 }
 
 
-int set_sock_interface_name(int &sockFD, char &ifName) {
+int set_sock_interface_name(int &SOCKET_FD, char &IF_NAME) {
 
     const int NO_INT = 0;
 
@@ -326,15 +333,15 @@ int set_sock_interface_name(int &sockFD, char &ifName) {
             strncpy(ifreq.ifr_name,ifa->ifa_name,sizeof(ifreq.ifr_name));
 
             // Does this device have a hardware address?
-            if (ioctl (sockFD, SIOCGIFHWADDR, &ifreq) == 0)
+            if (ioctl (SOCKET_FD, SIOCGIFHWADDR, &ifreq) == 0)
             {
 
                 // Check if this is the interface name the user specified
-                if (strcmp(ifreq.ifr_name,(char *)&ifName)==0)
+                if (strcmp(ifreq.ifr_name,(char *)&IF_NAME)==0)
                 {
 
                     // Get the interface index
-                    ioctl(sockFD, SIOCGIFINDEX, &ifreq);
+                    ioctl(SOCKET_FD, SIOCGIFINDEX, &ifreq);
 
                     printf("Using device %s with address "
                            "%02x:%02x:%02x:%02x:%02x:%02x, interface index %u\n",
@@ -366,8 +373,8 @@ void list_interfaces() {
     struct ifreq ifreq;
     struct ifaddrs *ifaddr, *ifa;
 
-    int sockFD, counter;
-    sockFD = socket(AF_INET, SOCK_RAW, htons(ETH_P_ALL));
+    int SOCKET_FD, counter;
+    SOCKET_FD = socket(AF_INET, SOCK_RAW, htons(ETH_P_ALL));
 
     if (getifaddrs(&ifaddr)==-1)
     {
@@ -390,11 +397,11 @@ void list_interfaces() {
             strncpy(ifreq.ifr_name,ifa->ifa_name,sizeof(ifreq.ifr_name));
 
             // Does this device have a hardware address?
-            if (ioctl (sockFD, SIOCGIFHWADDR, &ifreq) == 0)
+            if (ioctl (SOCKET_FD, SIOCGIFHWADDR, &ifreq) == 0)
             {
 
                 // Get the interface index
-                ioctl(sockFD, SIOCGIFINDEX, &ifreq);
+                ioctl(SOCKET_FD, SIOCGIFINDEX, &ifreq);
 
                 // Print the current interface details
                 printf("Device %s with address %02x:%02x:%02x:%02x:%02x:%02x, "
@@ -418,78 +425,78 @@ void list_interfaces() {
 }
 
 
-void build_headers(char* &txBuffer, unsigned char (&destMAC)[6], 
-     unsigned char (&sourceMAC)[6], int &ethertype, short &PCP,
-     short &vlanID, short &qinqID, short &qinqPCP, int &headersLength) {
+void build_headers(char* &TX_BUFFER, unsigned char (&DESTINATION_MAC)[6], 
+     unsigned char (&SOURCE_MAC)[6], int &ETHERTYPE, short &PCP,
+     short &VLAN_ID, short &QINQ_ID, short &QINQ_PCP, int &ETH_HEADERS_LEN) {
 
-    int offset = 0;
+    int BUFFER_OFFSET = 0;
     short TPI = 0;
     short TCI = 0;
     short *p = &TPI;
     short *c = &TCI;
-    short vlanIDtemp;
+    short VLAN_ID_TMP;
 
     // Copy the destination and source MAC addresses
-    memcpy((void*)txBuffer, (void*)destMAC, ETH_ALEN);
-    offset+=ETH_ALEN;
-    memcpy((void*)(txBuffer+offset), (void*)sourceMAC, ETH_ALEN);
-    offset+=ETH_ALEN;
+    memcpy((void*)TX_BUFFER, (void*)DESTINATION_MAC, ETH_ALEN);
+    BUFFER_OFFSET+=ETH_ALEN;
+    memcpy((void*)(TX_BUFFER+BUFFER_OFFSET), (void*)SOURCE_MAC, ETH_ALEN);
+    BUFFER_OFFSET+=ETH_ALEN;
 
     // Check to see if QinQ VLAN ID has been supplied
-    if(qinqPCP!=qinqPCPDef || qinqID!=qinqIDDef)
+    if(QINQ_PCP!=QINQ_PCP_DEF || QINQ_ID!=QINQ_ID_DEF)
     {
 
         // Add on the QinQ Tag Protocol Identifier
         // 0x88a8 == IEEE802.1ad, 0x9100 == older IEEE802.1QinQ
         TPI = htons(0x88a8);
-        memcpy((void*)(txBuffer+offset), p, sizeof(TPI));
-        offset+=sizeof(TPI);
+        memcpy((void*)(TX_BUFFER+BUFFER_OFFSET), p, sizeof(TPI));
+        BUFFER_OFFSET+=sizeof(TPI);
 
         // Now build the QinQ Tag Control Identifier:
-        vlanIDtemp = qinqID;
-        TCI = (qinqPCP & 0x07) << 5;
-        qinqID = qinqID >> 8;
-        TCI = TCI | (qinqID & 0x0f);
-        qinqID = vlanIDtemp;
-        qinqID = qinqID << 8;
-        TCI = TCI | (qinqID & 0xffff);
+        VLAN_ID_TMP = QINQ_ID;
+        TCI = (QINQ_PCP & 0x07) << 5;
+        QINQ_ID = QINQ_ID >> 8;
+        TCI = TCI | (QINQ_ID & 0x0f);
+        QINQ_ID = VLAN_ID_TMP;
+        QINQ_ID = QINQ_ID << 8;
+        TCI = TCI | (QINQ_ID & 0xffff);
 
-        memcpy((void*)(txBuffer+offset), c, sizeof(TCI));
-        offset+=sizeof(TCI);
+        memcpy((void*)(TX_BUFFER+BUFFER_OFFSET), c, sizeof(TCI));
+        BUFFER_OFFSET+=sizeof(TCI);
 
         // If an outer VLAN ID has been set, but not an inner one
         // (which would be a mistake) set it to 1 so the frame is still valid
-        if(vlanID==0) vlanID=1;
+        if(VLAN_ID==0) VLAN_ID=1;
 
     }
 
     // Check to see if a PCP value or VLAN ID has been supplier
     // for the main etherate frame header
-    if(PCP!=PCPDef || vlanID!=vlanIDDef)
+    if(PCP!=PCP_DEF || VLAN_ID!=VLAN_ID_DEF)
     {
 
         TPI = htons(0x8100);
-        memcpy((void*)(txBuffer+offset), p, sizeof(TPI));
-        offset+=sizeof(TPI);
+        memcpy((void*)(TX_BUFFER+BUFFER_OFFSET), p, sizeof(TPI));
+        BUFFER_OFFSET+=sizeof(TPI);
 
-        vlanIDtemp = vlanID;
+        VLAN_ID_TMP = VLAN_ID;
         TCI = (PCP & 0x07) << 5;
-        vlanID = vlanID >> 8;
-        TCI = TCI | (vlanID & 0x0f);
-        vlanID = vlanIDtemp;
-        vlanID = vlanID << 8;
-        TCI = TCI | (vlanID & 0xffff);
+        VLAN_ID = VLAN_ID >> 8;
+        TCI = TCI | (VLAN_ID & 0x0f);
+        VLAN_ID = VLAN_ID_TMP;
+        VLAN_ID = VLAN_ID << 8;
+        TCI = TCI | (VLAN_ID & 0xffff);
 
-        memcpy((void*)(txBuffer+offset), c, sizeof(TCI));
-        offset+=sizeof(TCI);
+        memcpy((void*)(TX_BUFFER+BUFFER_OFFSET), c, sizeof(TCI));
+        BUFFER_OFFSET+=sizeof(TCI);
 
     }
 
-      // Push on the ethertype for the Etherate payload
-      TPI = htons(ethertype);
-      memcpy((void*)(txBuffer+offset), p, sizeof(TPI));
-      offset+=sizeof(TPI);
+      // Push on the ETHERTYPE for the Etherate payload
+      TPI = htons(ETHERTYPE);
+      memcpy((void*)(TX_BUFFER+BUFFER_OFFSET), p, sizeof(TPI));
+      BUFFER_OFFSET+=sizeof(TPI);
 
-      headersLength = offset;
+      ETH_HEADERS_LEN = BUFFER_OFFSET;
 
 }
