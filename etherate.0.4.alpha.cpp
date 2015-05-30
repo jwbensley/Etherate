@@ -92,59 +92,59 @@ int main(int argc, char *argv[]) {
     bool txMode = true;
 
     // Interface index, default to -1 so we know later if the user changed it
-    int ifIndex = ifIndexDefault;
+    int IF_INDEX = IF_INDEX_DEF;
  
     // Source MAC address - Default is in IANA unassigned range
-    sourceMAC[0] = 0x00;
-    sourceMAC[1] = 0x00;
-    sourceMAC[2] = 0x5E;
-    sourceMAC[3] = 0x00;
-    sourceMAC[4] = 0x00;
-    sourceMAC[5] = 0x01;
+    SOURCE_MAC[0] = 0x00;
+    SOURCE_MAC[1] = 0x00;
+    SOURCE_MAC[2] = 0x5E;
+    SOURCE_MAC[3] = 0x00;
+    SOURCE_MAC[4] = 0x00;
+    SOURCE_MAC[5] = 0x01;
 
     // Destination MAC address - Default is in IANA unassigned range
-    destMAC[0] = 0x00;
-    destMAC[1] = 0x00;
-    destMAC[2] = 0x5E;
-    destMAC[3] = 0x00;
-    destMAC[4] = 0x00;
-    destMAC[5] = 0x02;
+    DESTINATION_MAC[0] = 0x00;
+    DESTINATION_MAC[1] = 0x00;
+    DESTINATION_MAC[2] = 0x5E;
+    DESTINATION_MAC[3] = 0x00;
+    DESTINATION_MAC[4] = 0x00;
+    DESTINATION_MAC[5] = 0x02;
 
     // This is the length of a frame header by default
-    headersLength = headersLengthDefault;
+    ETH_HEADERS_LEN = HEADERS_LEN_DEF;
 
-    // The ethertype for the Etherate payload
-    ethertype = ethertypeDefault;
+    // The ETHERTYPE for the Etherate payload
+    ETHERTYPE = ETHERTYPE_DEF;
 
     // Default 802.1p PCP/CoS value = 0
-    PCP = PCPDef;
+    PCP = PCP_DEF;
 
     // Default 802.1q VLAN ID = 0
-    vlanID = vlanIDDef;
+    VLAN_ID = VLAN_ID_DEF;
 
     // Default 802.1ad VLAN ID of QinQ outer frame = 0
-    qinqID = qinqIDDef;
+    QINQ_ID = QINQ_ID_DEF;
 
     // Default 802.1p PCP/CoS value of outer frame = 0
-    qinqPCP = qinqPCPDef;
+    QINQ_PCP = QINQ_PCP_DEF;
 
     // Frame payload in bytes
-    int fSize = fSizeDef;
+    int fSize = F_SIZE_DEF;
 
     // Total frame size including headers
-    int fSizeTotal = fSizeDef + headersLength;
+    int fSizeTotal = F_SIZE_DEF + ETH_HEADERS_LEN;
 
     // Duration in seconds
-    long long fDuration = fDurationDef;
+    long long fDuration = F_DURATION_DEF;
 
     // Number of frames to send
-    long long fCount = fCountDef; 
+    long long fCount = F_COUNT_DEF; 
 
     // Amount of data to transmit in bytes
-    long long fBytes = fBytesDef;
+    long long fBytes = F_BYTES_DEF;
 
     // Speed to transmit at (Max bytes per second)
-    long bTXSpeed = bTXSpeedDef;
+    long bTXSpeed = B_TX_SPEED_DEF;
 
     // How fast we were transmitting for the last second
     long bTXSpeedLast = 0;
@@ -233,6 +233,11 @@ int main(int argc, char *argv[]) {
     // A set of socket file descriptors for polling
     fd_set readfds;
 
+    // Indicator for MTU sweep mode
+    bool MTU_SWEEP = false;
+
+    // Maximum MTU size to try up to
+    int MTU_SWEEP_SIZE = 1500;
 
     /* 
       These variables are declared here and used over and over throughout;
@@ -270,19 +275,19 @@ int main(int argc, char *argv[]) {
             {
                 txMode = false;
 
-                sourceMAC[0] = 0x00;
-                sourceMAC[1] = 0x00;
-                sourceMAC[2] = 0x5E;
-                sourceMAC[3] = 0x00;
-                sourceMAC[4] = 0x00;
-                sourceMAC[5] = 0x02;
+                SOURCE_MAC[0] = 0x00;
+                SOURCE_MAC[1] = 0x00;
+                SOURCE_MAC[2] = 0x5E;
+                SOURCE_MAC[3] = 0x00;
+                SOURCE_MAC[4] = 0x00;
+                SOURCE_MAC[5] = 0x02;
 
-                destMAC[0] = 0x00;
-                destMAC[1] = 0x00;
-                destMAC[2] = 0x5E;
-                destMAC[3] = 0x00;
-                destMAC[4] = 0x00;
-                destMAC[5] = 0x01;
+                DESTINATION_MAC[0] = 0x00;
+                DESTINATION_MAC[1] = 0x00;
+                DESTINATION_MAC[2] = 0x5E;
+                DESTINATION_MAC[3] = 0x00;
+                DESTINATION_MAC[4] = 0x00;
+                DESTINATION_MAC[5] = 0x01;
 
 
             // Specifying a custom destination MAC address
@@ -304,8 +309,8 @@ int main(int argc, char *argv[]) {
                 // otherwise it would be atoi()
                 for(int i = 0; (i < 6) && (i < exploded.size()); ++i)
                 {
-                    destMAC[i] = (unsigned char)strtoul(exploded[i].c_str(), NULL, 16);
-                    cout << setw(2) << setfill('0') << hex << int(destMAC[i]) << ":";
+                    DESTINATION_MAC[i] = (unsigned char)strtoul(exploded[i].c_str(), NULL, 16);
+                    cout << setw(2) << setfill('0') << hex << int(DESTINATION_MAC[i]) << ":";
                 }
                 cout << dec << endl;
                 lCounter++;
@@ -332,8 +337,8 @@ int main(int argc, char *argv[]) {
 
                 for(int i = 0; (i < 6) && (i < exploded.size()); ++i)
                 {
-                    sourceMAC[i] = (unsigned char)strtoul(exploded[i].c_str(), NULL, 16);
-                    cout << setw(2) << setfill('0') << hex << int(sourceMAC[i]) << ":";
+                    SOURCE_MAC[i] = (unsigned char)strtoul(exploded[i].c_str(), NULL, 16);
+                    cout << setw(2) << setfill('0') << hex << int(SOURCE_MAC[i]) << ":";
                 }
                 cout << dec << endl;
                 lCounter++;
@@ -343,7 +348,7 @@ int main(int argc, char *argv[]) {
             } else if(strncmp(argv[lCounter],"-i",2)==0) {
                 if (argc>(lCounter+1))
                 {
-                    strncpy(ifName,argv[lCounter+1],sizeof(argv[lCounter+1]));
+                    strncpy(IF_NAME,argv[lCounter+1],sizeof(argv[lCounter+1]));
                     lCounter++;
                 } else {
                     cout << "Oops! Missing interface name" << endl
@@ -356,7 +361,7 @@ int main(int argc, char *argv[]) {
             } else if(strncmp(argv[lCounter],"-I",2)==0) {
                 if (argc>(lCounter+1))
                 {
-                    ifIndex = atoi(argv[lCounter+1]);
+                    IF_INDEX = atoi(argv[lCounter+1]);
                     lCounter++;
                 } else {
                     cout << "Oops! Missing interface index" << endl
@@ -477,7 +482,7 @@ int main(int argc, char *argv[]) {
             } else if(strncmp(argv[lCounter],"-v",2)==0) {
                 if (argc>(lCounter+1))
                 {
-                    vlanID = atoi(argv[lCounter+1]);
+                    VLAN_ID = atoi(argv[lCounter+1]);
                     lCounter++;
                 } else {
                     cout << "Oops! Missing 802.1p VLAN ID" << endl
@@ -490,7 +495,7 @@ int main(int argc, char *argv[]) {
             } else if(strncmp(argv[lCounter],"-q",2)==0) {
                 if (argc>(lCounter+1))
                 {
-                    qinqID = atoi(argv[lCounter+1]);
+                    QINQ_ID = atoi(argv[lCounter+1]);
                     lCounter++;
                 } else {
                     cout << "Oops! Missing 802.1ad QinQ outer VLAN ID" << endl
@@ -503,7 +508,7 @@ int main(int argc, char *argv[]) {
             } else if(strncmp(argv[lCounter],"-o",2)==0){
                 if (argc>(lCounter+1))
                 {
-                    qinqPCP = atoi(argv[lCounter+1]);
+                    QINQ_PCP = atoi(argv[lCounter+1]);
                     lCounter++;
                 } else {
                     cout << "Oops! Missing 802.1ad QinQ outer PCP value" << endl
@@ -512,14 +517,33 @@ int main(int argc, char *argv[]) {
                 }
 
 
-            // Set a custom ethertype
+            // Set a custom ETHERTYPE
             } else if(strncmp(argv[lCounter],"-e",2)==0){
                 if (argc>(lCounter+1))
                 {
-                    ethertype = (int)strtoul(argv[lCounter+1], NULL, 16);
+                    ETHERTYPE = (int)strtoul(argv[lCounter+1], NULL, 16);
                     lCounter++;
                 } else {
-                    cout << "Oops! Missing ethertype value" << endl
+                    cout << "Oops! Missing ETHERTYPE value" << endl
+                         << "Usage info: " << argv[0] << " -h" << endl;
+                    return EX_USAGE;
+                }
+
+
+            // Run an MTU sweet
+            } else if(strncmp(argv[lCounter],"-U",2)==0){
+                if (argc>(lCounter+1))
+                {
+                    MTU_SWEEP_SIZE = atoi(argv[lCounter+1]);
+                    if(MTU_SWEEP_SIZE > F_SIZE_MAX) { 
+                    	cout << "MTU size can not exceed the maximum hard"
+                    	     << " coded frame size: " << F_SIZE_MAX << endl;
+                    	     return EX_USAGE;
+                    }
+                    MTU_SWEEP = true;
+                    lCounter++;
+                } else {
+                    cout << "Oops! Missing max MTU size value" << endl
                          << "Usage info: " << argv[0] << " -h" << endl;
                     return EX_USAGE;
                 }
@@ -564,7 +588,7 @@ int main(int argc, char *argv[]) {
     }
 
 
-    sockFD = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+    SOCKET_FD = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
     /* Here we opened a socket with three arguments;
      * Communication Domain = AF_PACKET
      * Type/Communication Semantics = SOCK_RAW
@@ -572,20 +596,20 @@ int main(int argc, char *argv[]) {
      */
 
 
-    if (sockFD<0 )
+    if (SOCKET_FD<0 )
     {
       cout << "Error defining socket." << endl;
       perror("socket() ");
-      close(sockFD);
+      close(SOCKET_FD);
       return EX_SOFTWARE;
     }
 
 
     // If the user has supplied an interface index try to use that
-    if (ifIndex>0) {
+    if (IF_INDEX>0) {
 
-        ifIndex = set_sock_interface_index(sockFD, ifIndex);
-        if (ifIndex==0)
+        IF_INDEX = set_sock_interface_index(SOCKET_FD, IF_INDEX);
+        if (IF_INDEX==0)
         {
             cout << "Error: Couldn't set interface with index, "
                  << "returned index was 0." << endl;
@@ -593,10 +617,10 @@ int main(int argc, char *argv[]) {
         }
 
     // Or if the user has supplied an interface name try to use that        
-    } else if(strcmp(ifName,"")!=0) {
+    } else if(strcmp(IF_NAME,"")!=0) {
 
-        ifIndex = set_sock_interface_name(sockFD, *ifName);
-        if (ifIndex==0)
+        IF_INDEX = set_sock_interface_name(SOCKET_FD, *IF_NAME);
+        if (IF_INDEX==0)
         {
             cout << "Error: Couldn't set interface index from name, "
                  << "returned index was 0." << endl;
@@ -604,10 +628,10 @@ int main(int argc, char *argv[]) {
         }
 
     // Try and guess the best guess an interface
-    } else if (ifIndex==ifIndexDefault) {
+    } else if (IF_INDEX==IF_INDEX_DEF) {
 
-        ifIndex = get_sock_interface(sockFD);
-        if (ifIndex==0)
+        IF_INDEX = get_sock_interface(SOCKET_FD);
+        if (IF_INDEX==0)
         {
             cout << "Error: Couldn't find appropriate interface ID, returned ID was 0."
                  << "This is typically the loopback interface ID."
@@ -624,8 +648,8 @@ int main(int argc, char *argv[]) {
     // We don't use a protocol above ethernet layer so use anything here
     socket_address.sll_protocol = htons(ETH_P_IP);
     // Index of the network device
-    socket_address.sll_ifindex  = ifIndex;
-    // sock_address.sll_ifindex = if_nametoindex(your_interface_name);
+    socket_address.sll_ifindex  = IF_INDEX;
+    // sock_address.sll_IF_INDEX = if_nametoindex(your_interface_name);
     // ARP hardware identifier is ethernet
     socket_address.sll_hatype   = ARPHRD_ETHER;
     // Target is another host
@@ -633,32 +657,32 @@ int main(int argc, char *argv[]) {
     // Layer 2 address length
     socket_address.sll_halen    = ETH_ALEN;		
     // Destination MAC Address
-    socket_address.sll_addr[0]  = destMAC[0];		
-    socket_address.sll_addr[1]  = destMAC[1];
-    socket_address.sll_addr[2]  = destMAC[2];
-    socket_address.sll_addr[3]  = destMAC[3];
-    socket_address.sll_addr[4]  = destMAC[4];
-    socket_address.sll_addr[5]  = destMAC[5];
+    socket_address.sll_addr[0]  = DESTINATION_MAC[0];		
+    socket_address.sll_addr[1]  = DESTINATION_MAC[1];
+    socket_address.sll_addr[2]  = DESTINATION_MAC[2];
+    socket_address.sll_addr[3]  = DESTINATION_MAC[3];
+    socket_address.sll_addr[4]  = DESTINATION_MAC[4];
+    socket_address.sll_addr[5]  = DESTINATION_MAC[5];
      // Last 2 bytes not used in Ethernet
     socket_address.sll_addr[6]  = 0x00;
     socket_address.sll_addr[7]  = 0x00;
 
     //  RX buffer for incoming ethernet frames
-    char* rxBuffer = (char*)operator new(fSizeMax);
+    char* rxBuffer = (char*)operator new(F_SIZE_MAX);
 
     //  TX buffer for outgoing ethernet frames
-    txBuffer = (char*)operator new(fSizeMax);
+    TX_BUFFER = (char*)operator new(F_SIZE_MAX);
 
-    txEtherhead = (unsigned char*)txBuffer;
+    TX_ETHERNET_HEADER = (unsigned char*)TX_BUFFER;
 
-    build_headers(txBuffer, destMAC, sourceMAC, ethertype, PCP, vlanID, qinqID, qinqPCP, headersLength);
+    build_headers(TX_BUFFER, DESTINATION_MAC, SOURCE_MAC, ETHERTYPE, PCP, VLAN_ID, QINQ_ID, QINQ_PCP, ETH_HEADERS_LEN);
 
     // Userdata pointers in ethernet frames
-    char* rxData = rxBuffer + headersLength;
-    txData = txBuffer + headersLength;
+    char* rxData = rxBuffer + ETH_HEADERS_LEN;
+    TX_DATA = TX_BUFFER + ETH_HEADERS_LEN;
 
     // 0 is success exit code for sending frames
-    sendResult = 0;
+    TX_REV_VAL = 0;
     // Length of the received frame
     int rxLength = 0;
 
@@ -667,25 +691,25 @@ int main(int argc, char *argv[]) {
     cout << "Entering promiscuous mode" << endl;
 
     // Get the interface name
-    strncpy(ethreq.ifr_name,ifName,IFNAMSIZ);
+    strncpy(ethreq.ifr_name,IF_NAME,IFNAMSIZ);
 
     // Set the network card in promiscuos mode
 
-    if (ioctl(sockFD,SIOCGIFFLAGS,&ethreq)==-1) 
+    if (ioctl(SOCKET_FD,SIOCGIFFLAGS,&ethreq)==-1) 
     {
         cout << "Error getting socket flags, entering promiscuous mode failed." << endl;
         perror("ioctl() ");
-        close(sockFD);
+        close(SOCKET_FD);
         return EX_SOFTWARE;
     }
 
     ethreq.ifr_flags|=IFF_PROMISC;
 
-    if (ioctl(sockFD,SIOCSIFFLAGS,&ethreq)==-1)
+    if (ioctl(SOCKET_FD,SIOCSIFFLAGS,&ethreq)==-1)
     {
         cout << "Error setting socket flags, entering promiscuous mode failed." << endl;
         perror("ioctl() ");
-        close(sockFD);
+        close(SOCKET_FD);
         return EX_SOFTWARE;
     }
 
@@ -701,9 +725,9 @@ int main(int argc, char *argv[]) {
     signal (SIGINT,signal_handler);
 
     printf("Source MAC %02x:%02x:%02x:%02x:%02x:%02x\n",
-           sourceMAC[0],sourceMAC[1],sourceMAC[2],sourceMAC[3],sourceMAC[4],sourceMAC[5]);
+           SOURCE_MAC[0],SOURCE_MAC[1],SOURCE_MAC[2],SOURCE_MAC[3],SOURCE_MAC[4],SOURCE_MAC[5]);
     printf("Destination MAC %02x:%02x:%02x:%02x:%02x:%02x\n",
-           destMAC[0],destMAC[1],destMAC[2],destMAC[3],destMAC[4],destMAC[5]);
+           DESTINATION_MAC[0],DESTINATION_MAC[1],DESTINATION_MAC[2],DESTINATION_MAC[3],DESTINATION_MAC[4],DESTINATION_MAC[5]);
 
     /* 
      * Before any communication happens between the local host and remote host, we must 
@@ -715,38 +739,64 @@ int main(int argc, char *argv[]) {
      */
 
     unsigned char broadMAC[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-    build_headers(txBuffer, broadMAC, sourceMAC, ethertype, PCP, vlanID, qinqID, qinqPCP, headersLength);
-    rxData = rxBuffer + headersLength;
-    txData = txBuffer + headersLength;
+    build_headers(TX_BUFFER, broadMAC, SOURCE_MAC, ETHERTYPE, PCP, VLAN_ID, QINQ_ID, QINQ_PCP, ETH_HEADERS_LEN);
+    rxData = rxBuffer + ETH_HEADERS_LEN;
+    TX_DATA = TX_BUFFER + ETH_HEADERS_LEN;
 
     cout << "Sending gratuitous broadcasts..." << endl;
     for(lCounter=1; lCounter<=3; lCounter++)
     {
         param = "etheratepresence";
-        strncpy(txData,param.c_str(),param.length());
-        sendResult = sendto(sockFD, txBuffer, param.length()+headersLength, 0, 
+        strncpy(TX_DATA,param.c_str(),param.length());
+        TX_REV_VAL = sendto(SOCKET_FD, TX_BUFFER, param.length()+ETH_HEADERS_LEN, 0, 
                      (struct sockaddr*)&socket_address, sizeof(socket_address));
         sleep(1);
     }
 
-    build_headers(txBuffer, destMAC, sourceMAC, ethertype, PCP, vlanID, qinqID, qinqPCP, headersLength);
+    build_headers(TX_BUFFER, DESTINATION_MAC, SOURCE_MAC, ETHERTYPE, PCP, VLAN_ID, QINQ_ID, QINQ_PCP, ETH_HEADERS_LEN);
 
-    if(headersLength==18)
+    if(ETH_HEADERS_LEN==18)
     {
-        rxData = rxBuffer + (headersLength-4);
-        txData = txBuffer + headersLength;
-    } else if (headersLength==22) {
-        rxData = rxBuffer + headersLength-4;
-        txData = txBuffer + headersLength;
+        rxData = rxBuffer + (ETH_HEADERS_LEN-4);
+        TX_DATA = TX_BUFFER + ETH_HEADERS_LEN;
+    } else if (ETH_HEADERS_LEN==22) {
+        rxData = rxBuffer + (ETH_HEADERS_LEN-4);
+        TX_DATA = TX_BUFFER + ETH_HEADERS_LEN;
     } else {
-        rxData = rxBuffer + headersLength;
-        txData = txBuffer + headersLength;
+        rxData = rxBuffer + ETH_HEADERS_LEN;
+        TX_DATA = TX_BUFFER + ETH_HEADERS_LEN;
     }
-    fSizeTotal = fSize + headersLength;
+    fSizeTotal = fSize + ETH_HEADERS_LEN;
 
 
     /*
      ************************************************************** TX/RX SETUP
+     */
+
+
+
+    /*
+     ************************************************************** SHORTCUTS
+     */
+
+    if (MTU_SWEEP) {
+
+	    // Fill the test frame with some junk data
+	    int junk = 0;
+	    for (junk = 0; junk < fSize; junk++)
+	    {
+	        TX_DATA[junk] = (char)((int) 65); // ASCII 65 = A;
+	        //(255.0*rand()/(RAND_MAX+1.0)));
+	    }
+
+        for(lCounter=1;lCounter<=MTU_SWEEP_SIZE;lCounter++) {
+
+        	
+        }
+    }
+
+    /*
+     ************************************************************** SHORTCUTS
      */
 
 
@@ -763,101 +813,101 @@ int main(int argc, char *argv[]) {
         cout << "Running in TX mode, synchronising settings" << endl;
 
         // Testing with a custom frame size
-        if(ethertype!=ethertypeDefault)
+        if(ETHERTYPE!=ETHERTYPE_DEF)
         {
-            ss << "etherateethertype" << ethertype;
+            ss << "etherateETHERTYPE" << ETHERTYPE;
             param = ss.str();
-            strncpy(txData,param.c_str(),param.length());
-            sendResult = sendto(sockFD, txBuffer, param.length()+headersLength, 0, 
+            strncpy(TX_DATA,param.c_str(),param.length());
+            TX_REV_VAL = sendto(SOCKET_FD, TX_BUFFER, param.length()+ETH_HEADERS_LEN, 0, 
                    (struct sockaddr*)&socket_address, sizeof(socket_address));
-            printf("Ethertype set to 0x%X\n", ethertype);
+            printf("ETHERTYPE set to 0x%X\n", ETHERTYPE);
         }
 
         // Testing with a custom frame size
-        if(fSize!=fSizeDef)
+        if(fSize!=F_SIZE_DEF)
         {
             ss << "etheratesize" << fSize;
             param = ss.str();
-            strncpy(txData,param.c_str(),param.length());
-            sendResult = sendto(sockFD, txBuffer, param.length()+headersLength, 0, 
+            strncpy(TX_DATA,param.c_str(),param.length());
+            TX_REV_VAL = sendto(SOCKET_FD, TX_BUFFER, param.length()+ETH_HEADERS_LEN, 0, 
                    (struct sockaddr*)&socket_address, sizeof(socket_address));
             cout << "Frame size set to " << fSize << endl;
         }
 
 
         // Testing with a custom duration
-        if(fDuration!=fDurationDef)
+        if(fDuration!=F_DURATION_DEF)
         {
             ss << "etherateduration" << fDuration;
             param = ss.str();
-            strncpy(txData,param.c_str(),param.length());
-            sendResult = sendto(sockFD, txBuffer, param.length()+headersLength, 0, 
+            strncpy(TX_DATA,param.c_str(),param.length());
+            TX_REV_VAL = sendto(SOCKET_FD, TX_BUFFER, param.length()+ETH_HEADERS_LEN, 0, 
                    (struct sockaddr*)&socket_address, sizeof(socket_address));
             cout << "Test duration set to " << fDuration << endl;
         }
 
 
         // Testing with a custom frame count
-        if(fCount!=fCountDef) {
+        if(fCount!=F_COUNT_DEF) {
             ss << "etheratecount" << fCount;
             param = ss.str();
-            strncpy(txData,param.c_str(),param.length());
-            sendResult = sendto(sockFD, txBuffer, param.length()+headersLength, 0, 
+            strncpy(TX_DATA,param.c_str(),param.length());
+            TX_REV_VAL = sendto(SOCKET_FD, TX_BUFFER, param.length()+ETH_HEADERS_LEN, 0, 
                    (struct sockaddr*)&socket_address, sizeof(socket_address));
             cout << "Frame count set to " << fCount << endl;
         }
 
 
         // Testing with a custom byte limit
-        if(fBytes!=fBytesDef) {
+        if(fBytes!=F_BYTES_DEF) {
             ss << "etheratebytes" << fBytes;
             param = ss.str();
-            strncpy(txData,param.c_str(),param.length());
-            sendResult = sendto(sockFD, txBuffer, param.length()+headersLength, 0, 
+            strncpy(TX_DATA,param.c_str(),param.length());
+            TX_REV_VAL = sendto(SOCKET_FD, TX_BUFFER, param.length()+ETH_HEADERS_LEN, 0, 
                    (struct sockaddr*)&socket_address, sizeof(socket_address));
             cout << "Byte limit set to " << fBytes << endl;
         }
 
 
         // Testing with a custom max speed limit
-        if(bTXSpeed!=bTXSpeedDef)
+        if(bTXSpeed!=B_TX_SPEED_DEF)
         {
             ss << "etheratespeed" << bTXSpeed;
             param = ss.str();
-            strncpy(txData,param.c_str(),param.length());
-            sendResult = sendto(sockFD, txBuffer, param.length()+headersLength, 0, 
+            strncpy(TX_DATA,param.c_str(),param.length());
+            TX_REV_VAL = sendto(SOCKET_FD, TX_BUFFER, param.length()+ETH_HEADERS_LEN, 0, 
                    (struct sockaddr*)&socket_address, sizeof(socket_address));
             cout << "Max TX speed set to " << ((bTXSpeed*8)/1000/1000) << "Mbps" << endl;
         }
 
         // Testing with a custom inner VLAN PCP value
-        if(PCP!=PCPDef)
+        if(PCP!=PCP_DEF)
         {
             ss << "etheratepcp" << PCP;
             param = ss.str();
-            strncpy(txData,param.c_str(),param.length());
-            sendResult = sendto(sockFD, txBuffer, param.length()+headersLength, 0, 
+            strncpy(TX_DATA,param.c_str(),param.length());
+            TX_REV_VAL = sendto(SOCKET_FD, TX_BUFFER, param.length()+ETH_HEADERS_LEN, 0, 
                    (struct sockaddr*)&socket_address, sizeof(socket_address));
             cout << "Inner VLAN PCP value set to " << PCP << endl;
         }
 
         // Tesing with a custom QinQ PCP value
-        if(PCP!=PCPDef)
+        if(PCP!=PCP_DEF)
         {
-            ss << "etherateqinqpcp" << qinqPCP;
+            ss << "etherateQINQ_PCP" << QINQ_PCP;
             param = ss.str();
-            strncpy(txData,param.c_str(),param.length());
-            sendResult = sendto(sockFD, txBuffer, param.length()+headersLength, 0, 
+            strncpy(TX_DATA,param.c_str(),param.length());
+            TX_REV_VAL = sendto(SOCKET_FD, TX_BUFFER, param.length()+ETH_HEADERS_LEN, 0, 
                    (struct sockaddr*)&socket_address, sizeof(socket_address));
-            cout << "QinQ VLAN PCP value set to " << qinqPCP << endl;
+            cout << "QinQ VLAN PCP value set to " << QINQ_PCP << endl;
         }
 
         // Tell the receiver to run in ACK mode
         if(fACK==true)
         {
             param = "etherateack";
-            strncpy(txData,param.c_str(),param.length());
-            sendResult = sendto(sockFD, txBuffer, param.length()+headersLength, 0, 
+            strncpy(TX_DATA,param.c_str(),param.length());
+            TX_REV_VAL = sendto(SOCKET_FD, TX_BUFFER, param.length()+ETH_HEADERS_LEN, 0, 
                    (struct sockaddr*)&socket_address, sizeof(socket_address));
             cout << "ACK mode enabled" << endl;
         }
@@ -875,8 +925,8 @@ int main(int argc, char *argv[]) {
             ss.clear();
             ss<<"etheratetime"<<lCounter<<"1:"<<tsRTT.tv_sec<<":"<<tsRTT.tv_nsec;
             param = ss.str();
-            strncpy(txData,param.c_str(),param.length());
-            sendResult = sendto(sockFD, txBuffer, param.length()+headersLength, 0, 
+            strncpy(TX_DATA,param.c_str(),param.length());
+            TX_REV_VAL = sendto(SOCKET_FD, TX_BUFFER, param.length()+ETH_HEADERS_LEN, 0, 
                          (struct sockaddr*)&socket_address, sizeof(socket_address));
 
             clock_gettime(CLOCK_MONOTONIC_RAW, &tsRTT);
@@ -884,8 +934,8 @@ int main(int argc, char *argv[]) {
             ss.clear();
             ss<<"etheratetime"<<lCounter<<"2:"<<tsRTT.tv_sec<<":"<<tsRTT.tv_nsec;
             param = ss.str();
-            strncpy(txData,param.c_str(),param.length());
-            sendResult = sendto(sockFD, txBuffer, param.length()+headersLength, 0, 
+            strncpy(TX_DATA,param.c_str(),param.length());
+            TX_REV_VAL = sendto(SOCKET_FD, TX_BUFFER, param.length()+ETH_HEADERS_LEN, 0, 
                          (struct sockaddr*)&socket_address, sizeof(socket_address));
 
             // After sending the 2nd time value we wait for the returned delay;
@@ -897,7 +947,7 @@ int main(int argc, char *argv[]) {
 
             while (waiting)
             {
-                rxLength = recvfrom(sockFD, rxBuffer, fSizeTotal, 0, NULL, NULL);
+                rxLength = recvfrom(SOCKET_FD, rxBuffer, fSizeTotal, 0, NULL, NULL);
 
                 if(param.compare(0,param.size(),rxData,0,14)==0)
                 {
@@ -920,8 +970,8 @@ int main(int argc, char *argv[]) {
              ((delay[0]+delay[1]+delay[2]+delay[3]+delay[4])/5)*1000 << "ms" << endl;
         // Let the receiver know all settings have been sent
         param = "etherateallset";
-        strncpy(txData,param.c_str(),param.length());
-        sendResult = sendto(sockFD, txBuffer, param.length()+headersLength, 0, 
+        strncpy(TX_DATA,param.c_str(),param.length());
+        TX_REV_VAL = sendto(SOCKET_FD, TX_BUFFER, param.length()+ETH_HEADERS_LEN, 0, 
                (struct sockaddr*)&socket_address, sizeof(socket_address));
         cout << "Settings have been synchronised." << endl;
 
@@ -943,16 +993,16 @@ int main(int argc, char *argv[]) {
         while(waiting)
         {
 
-            rxLength = recvfrom(sockFD, rxBuffer, fSizeTotal, 0, NULL, NULL);
+            rxLength = recvfrom(SOCKET_FD, rxBuffer, fSizeTotal, 0, NULL, NULL);
 
-            // TX has sent a non-default ethertype
-            if(strncmp(rxData,"etherateethertype",17)==0)
+            // TX has sent a non-default ETHERTYPE
+            if(strncmp(rxData,"etherateETHERTYPE",17)==0)
             {
                 diff = (rxLength-17);
                 ss << rxData;
                 param = ss.str().substr(17,diff);
-                ethertype = strtol(param.c_str(),NULL,10);
-                printf("Ethertype set to 0x%X\n", ethertype);
+                ETHERTYPE = strtol(param.c_str(),NULL,10);
+                printf("ETHERTYPE set to 0x%X\n", ETHERTYPE);
 
             }
 
@@ -1011,13 +1061,13 @@ int main(int argc, char *argv[]) {
             }
 
             // TX has set a custom PCP value
-            if(strncmp(rxData,"etherateqinqpcp",15)==0)
+            if(strncmp(rxData,"etherateQINQ_PCP",15)==0)
             {
                 diff = (rxLength-15);
                 ss << rxData;
                 param = ss.str().substr(15,diff);
-                qinqPCP = strtoull(param.c_str(),0,10);
-                cout << "QinQ PCP value set to " << qinqPCP << endl;
+                QINQ_PCP = strtoull(param.c_str(),0,10);
+                cout << "QinQ PCP value set to " << QINQ_PCP << endl;
             }
 
             // TX has requested we run in ACK mode
@@ -1085,10 +1135,6 @@ int main(int argc, char *argv[]) {
                 // Calculate the delay
                 timeTXdiff = timeTX2-timeTX1;
                 timeTXdelay = (timeRX2-timeTXdiff)-timeRX1;
-                //cout << timeRX1 << " : " << timeTX1 << endl;
-                //cout << timeRX2 << " : " << timeTX2 << endl;
-                //cout << "timeTXdiff = " << timeTXdiff << endl;
-                //cout << "timeTXdelay = " << timeTXdelay << endl;
 
                 if(strncmp(rxData,"etheratetime02:",15)==0) delay[0] = timeTXdelay;
                 if(strncmp(rxData,"etheratetime12:",15)==0) delay[1] = timeTXdelay;
@@ -1107,8 +1153,8 @@ int main(int argc, char *argv[]) {
                 ss.str("");
                 ss << "etheratedelay." << timeTXdelay;
                 param = ss.str();
-                strncpy(txData,param.c_str(), param.length());
-                sendResult = sendto(sockFD, txBuffer, param.length()+headersLength, 0, 
+                strncpy(TX_DATA,param.c_str(), param.length());
+                TX_REV_VAL = sendto(SOCKET_FD, TX_BUFFER, param.length()+ETH_HEADERS_LEN, 0, 
                                     (struct sockaddr*)&socket_address,
                                     sizeof(socket_address));
             }
@@ -1124,8 +1170,8 @@ int main(int argc, char *argv[]) {
 
         // Rebuild the test frame headers in case any settings have been changed
         // by the TX host
-        build_headers(txBuffer, destMAC, sourceMAC, ethertype, PCP, vlanID,
-                      qinqID, qinqPCP, headersLength);
+        build_headers(TX_BUFFER, DESTINATION_MAC, SOURCE_MAC, ETHERTYPE, PCP, VLAN_ID,
+                      QINQ_ID, QINQ_PCP, ETH_HEADERS_LEN);
       
     } // TX or RX mode
 
@@ -1146,7 +1192,7 @@ int main(int argc, char *argv[]) {
     int junk = 0;
     for (junk = 0; junk < fSize; junk++)
     {
-        txData[junk] = (char)((int) 65); // ASCII 65 = A;
+        TX_DATA[junk] = (char)((int) 65); // ASCII 65 = A;
         //(255.0*rand()/(RAND_MAX+1.0)));
     }
 
@@ -1158,7 +1204,7 @@ int main(int argc, char *argv[]) {
     cout << fixed << setprecision(2);
 
     FD_ZERO(&readfds);
-    int sockFDCount = sockFD + 1;
+    int SOCKET_FDCount = SOCKET_FD + 1;
     int selectRetVal;
 
     if (txMode==true)
@@ -1214,12 +1260,12 @@ int main(int argc, char *argv[]) {
             // Poll the socket file descriptor with select() for incoming frames
             tvSelectDelay.tv_sec = 0;
             tvSelectDelay.tv_usec = 000000;
-            FD_SET(sockFD, &readfds);
-            selectRetVal = select(sockFDCount, &readfds, NULL, NULL, &tvSelectDelay);
+            FD_SET(SOCKET_FD, &readfds);
+            selectRetVal = select(SOCKET_FDCount, &readfds, NULL, NULL, &tvSelectDelay);
             if (selectRetVal > 0) {
-                if (FD_ISSET(sockFD, &readfds)) {
+                if (FD_ISSET(SOCKET_FD, &readfds)) {
 
-                    rxLength = recvfrom(sockFD, rxBuffer, fSizeTotal, 0, NULL, NULL);
+                    rxLength = recvfrom(SOCKET_FD, rxBuffer, fSizeTotal, 0, NULL, NULL);
                     if(fACK)
                     {
                         param = "etherateack";
@@ -1276,7 +1322,7 @@ int main(int argc, char *argv[]) {
                 if(!fWaiting) {
 
                     // A max speed has been set
-                    if(bTXSpeed!=bTXSpeedDef)
+                    if(bTXSpeed!=B_TX_SPEED_DEF)
                     {
 
                         // Check if sending another frame keeps us under the max speed limit
@@ -1287,8 +1333,8 @@ int main(int argc, char *argv[]) {
                             ss.str("");
                             ss << "etheratetest:" << (fTX+1) <<  ":";
                             param = ss.str();
-                            strncpy(txData,param.c_str(), param.length());
-                            sendResult = sendto(sockFD, txBuffer, fSizeTotal, 0, 
+                            strncpy(TX_DATA,param.c_str(), param.length());
+                            TX_REV_VAL = sendto(SOCKET_FD, TX_BUFFER, fSizeTotal, 0, 
                        	                        (struct sockaddr*)&socket_address,
                                                 sizeof(socket_address));
                             fTX++;
@@ -1304,8 +1350,8 @@ int main(int argc, char *argv[]) {
                         ss.str("");
                         ss << "etheratetest:" << (fTX+1) <<  ":";
                         param = ss.str();
-                        strncpy(txData,param.c_str(), param.length());
-                        sendResult = sendto(sockFD, txBuffer, fSizeTotal, 0, 
+                        strncpy(TX_DATA,param.c_str(), param.length());
+                        TX_REV_VAL = sendto(SOCKET_FD, TX_BUFFER, fSizeTotal, 0, 
                                             (struct sockaddr*)&socket_address,
                                             sizeof(socket_address));
                         fTX+=1;
@@ -1384,13 +1430,13 @@ int main(int argc, char *argv[]) {
             // check for incoming frames
             tvSelectDelay.tv_sec = 0;
             tvSelectDelay.tv_usec = 000000;
-            FD_SET(sockFD, &readfds);
-            selectRetVal = select(sockFDCount, &readfds, NULL, NULL, &tvSelectDelay);
+            FD_SET(SOCKET_FD, &readfds);
+            selectRetVal = select(SOCKET_FDCount, &readfds, NULL, NULL, &tvSelectDelay);
             if (selectRetVal > 0) {
-                if (FD_ISSET(sockFD, &readfds))
+                if (FD_ISSET(SOCKET_FD, &readfds))
                 {
 
-                    rxLength = recvfrom(sockFD, rxBuffer, fSizeTotal, 0, NULL, NULL);
+                    rxLength = recvfrom(SOCKET_FD, rxBuffer, fSizeTotal, 0, NULL, NULL);
 
                     // Check if this is an etherate test frame
                     param = "etheratetest";
@@ -1399,7 +1445,7 @@ int main(int argc, char *argv[]) {
 
                         // Update test stats
                         fRX++;
-                        bRX+=(rxLength-headersLength);
+                        bRX+=(rxLength-ETH_HEADERS_LEN);
 
                         // Get the index of the received frame
                         exploded.clear();
@@ -1428,8 +1474,8 @@ int main(int argc, char *argv[]) {
                             ss.str("");
                             ss << "etherateack" << fRX;
                             param = ss.str();
-                            strncpy(txData,param.c_str(), param.length());
-                            sendResult = sendto(sockFD, txBuffer, fSizeTotal, 0, 
+                            strncpy(TX_DATA,param.c_str(), param.length());
+                            TX_REV_VAL = sendto(SOCKET_FD, TX_BUFFER, fSizeTotal, 0, 
                                          (struct sockaddr*)&socket_address,
                                          sizeof(socket_address));
                             fTX++;
@@ -1470,7 +1516,7 @@ int main(int argc, char *argv[]) {
         timeNow = time(0);
         localtm = localtime(&timeNow);
         cout << endl << "Ending test on " << asctime(localtm) << endl;
-        close(sockFD);
+        close(SOCKET_FD);
         goto restart;
 
     }
@@ -1480,27 +1526,27 @@ int main(int argc, char *argv[]) {
 
     cout << "Leaving promiscuous mode" << endl;
 
-    strncpy(ethreq.ifr_name,ifName,IFNAMSIZ);
+    strncpy(ethreq.ifr_name,IF_NAME,IFNAMSIZ);
 
-    if (ioctl(sockFD,SIOCGIFFLAGS,&ethreq)==-1)
+    if (ioctl(SOCKET_FD,SIOCGIFFLAGS,&ethreq)==-1)
     {
         cout << "Error getting socket flags, entering promiscuous mode failed." << endl;
         perror("ioctl() ");
-        close(sockFD);
+        close(SOCKET_FD);
         return EX_SOFTWARE;
     }
 
     ethreq.ifr_flags &= ~IFF_PROMISC;
 
-    if (ioctl(sockFD,SIOCSIFFLAGS,&ethreq)==-1)
+    if (ioctl(SOCKET_FD,SIOCSIFFLAGS,&ethreq)==-1)
     {
         cout << "Error setting socket flags, promiscuous mode failed." << endl;
         perror("ioctl() ");
-        close(sockFD);
+        close(SOCKET_FD);
         return EX_SOFTWARE;
     }
 
-    close(sockFD);
+    close(SOCKET_FD);
 
 
     /*
