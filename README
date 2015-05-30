@@ -63,14 +63,6 @@ Development Plan
   - Add max MTU scanning/sweeping test
   - Simulate large MPLS label stacks (4/5/6 labels etc)
   
-  These are long term features I am still considering for development
-  but further research is required;
-  
-  - Add RFC2544 & ITU Y.1564 compliance (still reading the documents!)
-  - Add BERT (still researching bit patterns!)
-  - Add layer 1 / wire testing features like auto neg, duplex, speed etc
-  (still researching layer 1 coding possibilities)
-  
   
 Technical details:
 
