@@ -1274,6 +1274,9 @@ int main(int argc, char *argv[]) {
 
         cout << "Starting MTU sweep from "<<MTU_TX_MIN<<" to "<<MTU_TX_MAX<<endl;
 
+        FD_ZERO(&FD_READS);
+        SOCKET_FD_COUNT = SOCKET_FD + 1;
+
         if(TX_MODE) {
 
             // Fill the test frame with some junk data
@@ -1334,9 +1337,13 @@ int main(int argc, char *argv[]) {
                                 MTU_ACK_CURRENT = atoi(exploded[1].c_str());
 
                                 if (MTU_ACK_CURRENT>MTU_ACK_PREVIOUS) 
+                                {
                                     MTU_ACK_LARGEST = MTU_ACK_CURRENT;
+                                }
 
                                 MTU_ACK_PREVIOUS = MTU_ACK_CURRENT;
+
+                                cout << MTU_ACK_CURRENT << " " << MTU_ACK_PREVIOUS << " " << MTU_ACK_LARGEST << endl;
 
                             }
 
@@ -1351,20 +1358,19 @@ int main(int argc, char *argv[]) {
             // Wait now for the final ACK from RX confirming the largest MTU received
             bool MTU_TX_WAITING = true;
 
-            // Only wait 10 seconds for this
+            // Only wait 5 seconds for this
             clock_gettime(CLOCK_MONOTONIC_RAW, &TS_ELAPSED_TIME);
 
             while(MTU_TX_WAITING)
             {
 
-
                 // Get the current time
                 clock_gettime(CLOCK_MONOTONIC_RAW, &TS_CURRENT_TIME);
 
-                // 10 seconds have passed so we have missed/lost it
-                if((TS_CURRENT_TIME.tv_sec-TS_ELAPSED_TIME.tv_sec)>=10)
+                // 5 seconds have passed so we have missed/lost it
+                if((TS_CURRENT_TIME.tv_sec-TS_ELAPSED_TIME.tv_sec)>=5)
                 {
-                    cout << "No final MTU ACK form RX received"<<endl;
+                    cout << "No final MTU ACK from RX received"<<endl;
                     MTU_TX_WAITING = false;
                 }
 
@@ -1381,7 +1387,7 @@ int main(int argc, char *argv[]) {
                         RX_LEN = recvfrom(SOCKET_FD, RX_BUFFER, MTU_TX_MAX, 0,
                                           NULL, NULL);
 
-                        param = "etheratemtufinalack";
+                        param = "etheratemtuack";
 
                         if(strncmp(RX_DATA,param.c_str(),param.length())==0)
                         {
@@ -1395,7 +1401,8 @@ int main(int argc, char *argv[]) {
                             if (MTU_ACK_CURRENT>MTU_ACK_LARGEST)
                                 MTU_ACK_LARGEST = MTU_ACK_CURRENT;
 
-                            MTU_TX_WAITING = false;
+                            if (MTU_ACK_LARGEST==MTU_TX_MAX)
+                                MTU_TX_WAITING = false;
 
                         }
 
@@ -1404,7 +1411,7 @@ int main(int argc, char *argv[]) {
 
             } // End of MTU TX WAITING
 
-            cout << "Largest MTU ACK'ed by RX is "<<MTU_ACK_LARGEST<<endl<<endl;
+            cout << "Largest MTU ACK'ed from RX is "<<MTU_ACK_LARGEST<<endl<<endl;
 
 
         } else { // Running in RX mode
@@ -1416,14 +1423,12 @@ int main(int argc, char *argv[]) {
             bool MTU_RX_WAITING = true;
 
 
-            // Set up some counters such that if we go 10 seconds without receiving
-            // a frame, end the test
+            // Set up some counters such that if we go 3 seconds without receiving
+            // a frame, end the test (assume MTU has been exceeded)
             bool MTU_RX_ANY=false;
             clock_gettime(CLOCK_MONOTONIC_RAW, &TS_ELAPSED_TIME);
-
             while (MTU_RX_WAITING)
             {
-
                 // Check for largest ACK from RX host
                 TV_SELECT_DELAY.tv_sec = 0;
                 TV_SELECT_DELAY.tv_usec = 000000;
@@ -1442,6 +1447,7 @@ int main(int argc, char *argv[]) {
 
                         if(strncmp(RX_DATA,param.c_str(),param.length())==0)
                         {
+
 
                             MTU_RX_ANY = true;
 
@@ -1487,7 +1493,7 @@ int main(int argc, char *argv[]) {
                     // Signal back to TX the largest MTU we recieved at the end
                     ss.str("");
                     ss.clear();
-                    ss<<"etheratemtufinalack:"<<MTU_RX_LARGEST<<":";
+                    ss<<"etheratemtuackfinal:"<<MTU_RX_LARGEST<<":";
                     param = ss.str();
 
                     strncpy(TX_DATA,param.c_str(),param.length());
@@ -1501,21 +1507,22 @@ int main(int argc, char *argv[]) {
 
                     cout << "MTU sweep test complete"<<endl
                          << "Largest MTU received was "<<MTU_RX_LARGEST<<endl
-                         <<endl;
+                         << endl;
 
                 }
 
                 // Get the current time
                 clock_gettime(CLOCK_MONOTONIC_RAW, &TS_CURRENT_TIME);
 
-                // 10 seconds have passed so we have missed/lost it
-                if((TS_CURRENT_TIME.tv_sec-TS_ELAPSED_TIME.tv_sec)>=10)
+                // 3 seconds have passed without any sweep frames being receeved
+                if((TS_CURRENT_TIME.tv_sec-TS_ELAPSED_TIME.tv_sec)>=3)
                 {
 
                     if(MTU_RX_ANY==false)
                     {
-                        cout << "No MTU sweep frames received, ending the test"
-                        <<endl<<endl;
+                        cout << "Largest MTU received is less than sweep max, "
+                             << "ending the sweep"<<endl<<"Largest MTU received "
+                             << MTU_RX_LARGEST<<endl<<endl;
 
                         MTU_RX_WAITING = false;
                     } else {
