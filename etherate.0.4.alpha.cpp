@@ -38,9 +38,7 @@ using namespace std;
 // Also defines ETH_FRAME_LEN with default 1514
 // Also defines ETH_ALEN which is Ethernet Address Lenght in Octets (defined as 6)
 #include <linux/if_packet.h>
-//#include <linux/if.h>
 #include <linux/net.h> // Provides SOCK_RAW *Socket Type*
-//#include <net/if.h> // Provides if_indextoname/if_nametoindex
 #include <netinet/in.h> // Needed for htons() and htonl()
 #include <signal.h> // For use of signal() to catch SIGINT
 #include <sstream> // Stringstream objects and functions
@@ -663,7 +661,6 @@ int main(int argc, char *argv[]) {
     socket_address.sll_protocol = htons(ETH_P_IP);
     // Index of the network device
     socket_address.sll_ifindex  = IF_INDEX;
-    // sock_address.sll_ifindex = if_nametoindex(your_interface_name);
     // ARP hardware identifier is ethernet
     socket_address.sll_hatype   = ARPHRD_ETHER;
     // Target is another host
@@ -1272,14 +1269,17 @@ int main(int argc, char *argv[]) {
      ************************************************************* SINGLE TESTS
      */
 
-    // Run an max MTU sweep test from TX to RX
+    // Run a max MTU sweep test from TX to RX
     if (MTU_SWEEP_TEST) {
 
 
+        // Display the current interface MTU
+        int PHY_MTU = get_interface_mtu_by_name(SOCKET_FD, *IF_NAME);
+
+        if (MTU_TX_MAX>PHY_MTU) MTU_TX_MAX = PHY_MTU;
+
         cout << "Starting MTU sweep from "<<MTU_TX_MIN<<" to "<<MTU_TX_MAX<<endl;
 
-        // Display the current interface MTU
-        get_interface_mtu_by_index(SOCKET_FD, IF_INDEX);
 
         FD_ZERO(&FD_READS);
         SOCKET_FD_COUNT = SOCKET_FD + 1;
@@ -1287,10 +1287,10 @@ int main(int argc, char *argv[]) {
         if(TX_MODE) {
 
             // Fill the test frame with some junk data
-            int junk = 0;
-            for (junk = 0; junk < MTU_TX_MAX; junk++)
+            int PAYLOAD_INDEX = 0;
+            for (PAYLOAD_INDEX = 0; PAYLOAD_INDEX < MTU_TX_MAX; PAYLOAD_INDEX++)
             {
-                TX_DATA[junk] = (char)((int) 65); // ASCII 65 = A;
+                TX_DATA[PAYLOAD_INDEX] = (char)((255.0*rand()/(RAND_MAX+1.0)));
             }
 
             int MTU_TX_CURRENT=0;
@@ -1350,8 +1350,6 @@ int main(int argc, char *argv[]) {
 
                                 MTU_ACK_PREVIOUS = MTU_ACK_CURRENT;
 
-                                cout << MTU_ACK_CURRENT << " " << MTU_ACK_PREVIOUS << " " << MTU_ACK_LARGEST << endl;
-
                             }
 
                         }
@@ -1374,10 +1372,10 @@ int main(int argc, char *argv[]) {
                 // Get the current time
                 clock_gettime(CLOCK_MONOTONIC_RAW, &TS_CURRENT_TIME);
 
-                // 5 seconds have passed so we have missed/lost it
+                // 5 seconds have passed we have probably missed/lost it
                 if((TS_CURRENT_TIME.tv_sec-TS_ELAPSED_TIME.tv_sec)>=5)
                 {
-                    cout << "No final MTU ACK from RX received"<<endl;
+                    cout << "Timeout waiting for final MTU ACK from RX"<<endl;
                     MTU_TX_WAITING = false;
                 }
 
@@ -1430,12 +1428,13 @@ int main(int argc, char *argv[]) {
             bool MTU_RX_WAITING = true;
 
 
-            // Set up some counters such that if we go 3 seconds without receiving
+            // Set up some counters, if 3 seconds pass without receiving
             // a frame, end the test (assume MTU has been exceeded)
             bool MTU_RX_ANY=false;
             clock_gettime(CLOCK_MONOTONIC_RAW, &TS_ELAPSED_TIME);
             while (MTU_RX_WAITING)
             {
+
                 // Check for largest ACK from RX host
                 TV_SELECT_DELAY.tv_sec = 0;
                 TV_SELECT_DELAY.tv_usec = 000000;
@@ -1472,7 +1471,7 @@ int main(int argc, char *argv[]) {
                                 // ACK that back to TX as new largest MTU received
                                 ss.str("");
                                 ss.clear();
-                                ss<<"etheratemtuack:"<<MTU_RX_LARGEST<<":";
+                                ss<<"etheratemtuack:"<<MTU_RX_CURRENT<<":";
                                 param = ss.str();
 
                                 strncpy(TX_DATA,param.c_str(),param.length());
@@ -1492,7 +1491,7 @@ int main(int argc, char *argv[]) {
                     }
                 } // End of SELECT_RET_VAL
 
-                // If we have received the largest MTU TX was hoping to send,
+                // If we have received the largest MTU TX hoped to send,
                 // the MTU sweep test is over
                 if(MTU_RX_LARGEST==MTU_TX_MAX)
                 {
@@ -1500,7 +1499,7 @@ int main(int argc, char *argv[]) {
                     // Signal back to TX the largest MTU we recieved at the end
                     ss.str("");
                     ss.clear();
-                    ss<<"etheratemtuackfinal:"<<MTU_RX_LARGEST<<":";
+                    ss<<"etheratemtuack:"<<MTU_RX_LARGEST<<":";
                     param = ss.str();
 
                     strncpy(TX_DATA,param.c_str(),param.length());
@@ -1521,13 +1520,13 @@ int main(int argc, char *argv[]) {
                 // Get the current time
                 clock_gettime(CLOCK_MONOTONIC_RAW, &TS_CURRENT_TIME);
 
-                // 3 seconds have passed without any sweep frames being receeved
-                if((TS_CURRENT_TIME.tv_sec-TS_ELAPSED_TIME.tv_sec)>=3)
+                // 5 seconds have passed without any MTU sweep frames being receeved
+                if((TS_CURRENT_TIME.tv_sec-TS_ELAPSED_TIME.tv_sec)>=5)
                 {
 
                     if(MTU_RX_ANY==false)
                     {
-                        cout << "Largest MTU received is less than sweep max, "
+                        cout << "Timeout waiting for MTU sweep frames from TX, "
                              << "ending the sweep"<<endl<<"Largest MTU received "
                              << MTU_RX_LARGEST<<endl<<endl;
 
@@ -1548,6 +1547,8 @@ int main(int argc, char *argv[]) {
 
     } // End of MTU sweep test
 
+    return EXIT_SUCCESS;
+
 
     // Ethernet ping goes here
 
@@ -1564,11 +1565,10 @@ int main(int argc, char *argv[]) {
     
 
     // Fill the test frame with some junk data
-    int junk = 0;
-    for (junk = 0; junk < F_SIZE; junk++)
+    int PAYLOAD_INDEX = 0;
+    for (PAYLOAD_INDEX = 0; PAYLOAD_INDEX < MTU_TX_MAX; PAYLOAD_INDEX++)
     {
-        TX_DATA[junk] = (char)((int) 65); // ASCII 65 = A;
-        //(255.0*rand()/(RAND_MAX+1.0)));
+        TX_DATA[PAYLOAD_INDEX] = (char)((255.0*rand()/(RAND_MAX+1.0)));
     }
 
 
