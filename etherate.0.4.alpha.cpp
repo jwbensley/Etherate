@@ -818,7 +818,7 @@ int main(int argc, char *argv[]) {
 
     // Set up the test by communicating settings with the RX host receiver
     if(TX_MODE==true && TX_SYCN==true)
-    { // If we are the TX host...
+    {
 
         cout << "Running in TX mode, synchronising settings"<<endl;
 
@@ -1039,7 +1039,7 @@ int main(int argc, char *argv[]) {
                             0, (struct sockaddr*)&socket_address,
                             sizeof(socket_address));
 
-        cout << "Settings have been synchronised."<<endl<<endl;
+        cout << "Settings have been synchronised"<<endl<<endl;
 
 
     } else if (TX_MODE==false && TX_SYCN==true) {
@@ -1215,7 +1215,10 @@ int main(int argc, char *argv[]) {
 
                 // Calculate the delay
                 timeTXdiff = timeTX2-timeTX1;
-                timeTXdelay = (timeRX2-timeTXdiff)-timeRX1;
+                timeTXdelay = (timeRX2-timeRX1)-timeTXdiff;
+
+                cout << timeTX1 << " " << timeTX2 << " " << timeTXdiff << endl;
+                cout << timeRX1 << " " << timeRX2 << " " << (timeRX2-timeRX1) << " " << timeTXdelay << endl << endl;
 
                 if(strncmp(RX_DATA,"etheratetime02:",15)==0) DELAY_RESULTS[0] = timeTXdelay;
                 if(strncmp(RX_DATA,"etheratetime12:",15)==0) DELAY_RESULTS[1] = timeTXdelay;
@@ -1272,7 +1275,11 @@ int main(int argc, char *argv[]) {
     // Run an max MTU sweep test from TX to RX
     if (MTU_SWEEP_TEST) {
 
+
         cout << "Starting MTU sweep from "<<MTU_TX_MIN<<" to "<<MTU_TX_MAX<<endl;
+
+        // Display the current interface MTU
+        get_interface_mtu_by_index(SOCKET_FD, IF_INDEX);
 
         FD_ZERO(&FD_READS);
         SOCKET_FD_COUNT = SOCKET_FD + 1;
