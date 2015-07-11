@@ -1,3 +1,11 @@
+-----Etherarte 0.5 Beta - 2015-07-11
+
+[MINOR] Fixed MTU sweeps that are bigger than interface max MTU size
+
+[MINOR] Add bigger delay averages to account for interrupt coalescing
+
+
+
 -----Etherarte 0.4 Alpha - 2014-11-04
 
 [FEATURE] Code for single VLAN tagging an priority codes is working (double tag/QinQ needs further research)

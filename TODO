@@ -1,8 +1,6 @@
 Priority:
 Checking frame order
 Detect lost frames
-VARIABLE NAMES!!
-Settings are seperated with ":" using exploded, its using char count!
 finish ack and out of order frame counts and print out and in order frame counts at the end of the test
 Don't get count of in/out order frames when CTRL+C in the middle of a test
 Frames less than 60bytes are padded by Linux upto 60, is it OK to rely on the kernel to do this?
