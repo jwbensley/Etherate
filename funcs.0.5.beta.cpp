@@ -345,7 +345,6 @@ void print_usage () {
             "\t-U\tSpecify a minimum and maximum MTU size in bytes then\n"
             "\t\tperform an MTU sweep on the link towards the RX host to\n"
             "\t\tfind the maximum size supported, such as -U 1400 1600\n"
-            "\t\t#NOT IMPLEMENTED YET#\n"
             "[Other]\n"
             "\t-x\tDisplay examples.\n"
             "\t\t#NOT IMPLEMENTED YET#\n"

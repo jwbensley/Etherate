@@ -31,12 +31,10 @@ Why was it Made:
   Free Ethernet testing for all!
   
 
-Initial Features:
+Current Features:
 
-  In the initial alpha stages it has basic features whilst the initial
-  code is created. When the first beta is released (June 2014 +/-) it will allow
-  the user to generate traffic with varying properties (this is the
-  current development list for the beta release);
+  Now in the beta stages and out of alpha its time to start improving on the
+  original code and add more functions. This are the current working features:
   
   - Any EtherType
   - Any Source MAC and/or Destination MAC
@@ -49,7 +47,8 @@ Initial Features:
   - Optional frame payload size
   - Optional transfer limit in MBs/GBs
   - Optional test duration
-  
+  - Perform MTU sweeping test
+
   
 Development Plan
 
@@ -60,7 +59,6 @@ Development Plan
   - Add feature to load frame payload from a text file
   - Add BPDU & keepalive generation shortcuts
   - Report throughput if additional headers (IPv4/6/TCP/UDP) were present
-  - Add max MTU scanning/sweeping test
   - Simulate large MPLS label stacks (4/5/6 labels etc)
   
   
