@@ -44,6 +44,9 @@ int set_sock_interface_name(int &SOCKET_FD, char &IF_NAME);
 // List interfaces and hardware (MAC) address
 void list_interfaces();
 
+// Get the MTU of the interface used for the test
+void get_interface_mtu_by_index(int &SOCKET_FD, int &IF_INDEX);
+
 // Build the Ethernet headers for sending frames
 void build_headers(char* &TX_BUFFER, unsigned char (&DESTINATION_MAC)[6], 
      unsigned char (&SOURCE_MAC)[6], int &ETHERTYPE, short &PCP,

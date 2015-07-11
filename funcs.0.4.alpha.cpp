@@ -425,6 +425,26 @@ void list_interfaces() {
 }
 
 
+void get_interface_mtu_by_index(int &SOCKET_FD, int &IF_INDEX)
+{
+
+    struct ifreq    ifr;
+
+    ifr.ifr_ifindex = IF_INDEX;
+
+    cout << "hererererer" << endl;
+
+    cout << ioctl(SOCKET_FD, SIOCGIFMTU, &ifr) << endl;
+    if(ioctl(SOCKET_FD, SIOCGIFMTU, &ifr))
+    {
+        cout << "Interface MTU: " << ifr.ifr_mtu << endl;
+    }
+
+    return;
+
+}
+
+
 void build_headers(char* &TX_BUFFER, unsigned char (&DESTINATION_MAC)[6], 
      unsigned char (&SOURCE_MAC)[6], int &ETHERTYPE, short &PCP,
      short &VLAN_ID, short &QINQ_ID, short &QINQ_PCP, int &ETH_HEADERS_LEN) {
