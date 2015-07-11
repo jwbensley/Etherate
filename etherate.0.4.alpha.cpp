@@ -1,13 +1,36 @@
 /*
- * Etherate Main Body
+ * License:
  *
- * License: First rule of license club...
+ * Copyright (c) 2012-2015 James Bensley.
  *
- * Updates: https://github.com/jwbensley/Etherate and http://null.53bits.co.uk/index.php?page=etherate
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+ * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+ * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ *
+ * File: Etherate Main Body
+ *
+ * Updates: https://github.com/jwbensley/Etherate
+ * http://null.53bits.co.uk/index.php?page=etherate
  * Please send corrections, ideas and help to: jwbensley@gmail.com 
  * (I'm a beginner if that isn't obvious!)
  *
- * compile with: g++ -o etherate etherate.cpp -lrt
+ * Compile: g++ -o etherate etherate.cpp -lrt
  *
  * File Contents:
  *
@@ -68,8 +91,8 @@ using namespace std;
 #define CLOCK_MONOTONIC_RAW 4
 #endif
 
-#include "etherate.0.4.alpha.h"
-#include "funcs.0.4.alpha.cpp"
+#include "etherate.0.5.beta.h"
+#include "funcs.0.5.beta.cpp"
 
 
 /*
@@ -203,13 +226,16 @@ int main(int argc, char *argv[]) {
     timespec TS_ACK_TIMEOUT;
 
     // TX host waits to sync settings with RX or skip to transmit
-    bool TX_SYCN = true;
+    bool TX_SYNC = true;
 
     // These timespecs are used for calculating delay/RTT
     timespec TS_RTT;
 
-    // 5 doubles to calculate the delay between TX & RX 5 times, to get an average
-    double DELAY_RESULTS[5];
+    // Number of one way delay measurements to account for interrupt coalescing
+    const int DELAY_TEST_COUNT = 5000;
+
+    // Store Tx to Rx test results
+    double DELAY_RESULTS[DELAY_TEST_COUNT];
 
     // Two timers for timing the test and calculating stats
     timespec TS_CURRENT_TIME, TS_ELAPSED_TIME;
@@ -239,9 +265,9 @@ int main(int argc, char *argv[]) {
     // Indicator for MTU sweep mode
     bool MTU_SWEEP_TEST = false;
 
-    // Minmum and maximum MTU sizes for MTU sweep
+    // Default minmum and maximum MTU sizes for MTU sweep
     int MTU_TX_MIN = 1400;
-    int MTU_TX_MAX = 1600;
+    int MTU_TX_MAX = 1500;
 
 
     /* 
@@ -327,7 +353,7 @@ int main(int argc, char *argv[]) {
 
             // Disable settings sync between TX and RX
             } else if(strncmp(argv[LOOP_COUNTER],"-g",2)==0) {
-                TX_SYCN = false;
+                TX_SYNC = false;
 
 
             // Specifying a custom source MAC address
@@ -814,7 +840,7 @@ int main(int argc, char *argv[]) {
 
 
     // Set up the test by communicating settings with the RX host receiver
-    if(TX_MODE==true && TX_SYCN==true)
+    if(TX_MODE==true && TX_SYNC==true)
     {
 
         cout << "Running in TX mode, synchronising settings"<<endl;
@@ -965,11 +991,14 @@ int main(int argc, char *argv[]) {
         }
 
 
-        // Send over the time for delay calculation between hosts,
-        // We send it twice each time repeating this process multiple times to
-        // get an average;
+        // Send over the time for delay calculation between hosts, repeat the
+        // test DELAY_TEST_COUNT times for interrupt coalescing and to make an average
         cout << "Calculating delay between hosts..." << endl;
-        for(LOOP_COUNTER=0; LOOP_COUNTER<=4; LOOP_COUNTER++)
+
+        // Make sure the RX host is ready for us to begin the delay tests
+        sleep (2);
+
+        for(LOOP_COUNTER=1; LOOP_COUNTER<=DELAY_TEST_COUNT; LOOP_COUNTER++)
         {
             // The monotonic value is used here in case we are unlucky enough to
             // run this during and NTP update, so we stay consistent
@@ -1022,11 +1051,27 @@ int main(int argc, char *argv[]) {
 
             }
 
-        }
+        } // End delay TX loop
 
-        cout << "Tx to Rx delay calculated as "<<((DELAY_RESULTS[0]+DELAY_RESULTS[1]+
-                 DELAY_RESULTS[2]+DELAY_RESULTS[3]+DELAY_RESULTS[4])/5)*1000
-                 <<"ms"<<endl;
+
+        // Let the receiver know all delay values have been sent
+        param = "etheratedelayfinished";
+        strncpy(TX_DATA,param.c_str(),param.length());
+
+        TX_REV_VAL = sendto(SOCKET_FD, TX_BUFFER, param.length()+ETH_HEADERS_LEN,
+                            0, (struct sockaddr*)&socket_address,
+                            sizeof(socket_address));
+
+        double DELAY_AVERAGE = 0;
+
+        for(LOOP_COUNTER=1; LOOP_COUNTER<=DELAY_TEST_COUNT; LOOP_COUNTER++)
+        {
+            DELAY_AVERAGE += DELAY_RESULTS[LOOP_COUNTER];        }
+
+        DELAY_AVERAGE = (DELAY_AVERAGE/DELAY_TEST_COUNT);
+
+        cout << "Tx to Rx delay calculated as "<<DELAY_AVERAGE<<" seconds"<<endl;
+
 
         // Let the receiver know all settings have been sent
         param = "etherateallset";
@@ -1039,18 +1084,25 @@ int main(int argc, char *argv[]) {
         cout << "Settings have been synchronised"<<endl<<endl;
 
 
-    } else if (TX_MODE==false && TX_SYCN==true) {
+    } else if (TX_MODE==false && TX_SYNC==true) {
 
         cout << "Running in RX mode, awaiting TX host"<<endl;
         // In listening mode we start by waiting for each parameter to come through
         // So we start a loop until they have all been received
         bool SYNC_WAITING = true;
 
-        // Used for grabing sent values after the starting string in the received buffer
-        int diff;
+        ///// // Used for grabing sent values after the starting string in the received buffer
+        /////int diff;
 
         // These values are used to calculate the delay between TX and RX hosts
-        double timeTX1,timeRX1,timeTX2,timeRX2,timeTXdiff,timeRXdiff,timeTXdelay;
+        //double timeTX1,timeRX1,timeTX2,timeRX2,timeTXdiff,timeRXdiff,timeTXdelay;
+        double TIME_TX_1[DELAY_TEST_COUNT];
+        double TIME_TX_2[DELAY_TEST_COUNT];
+        double TIME_RX_1[DELAY_TEST_COUNT];
+        double TIME_RX_2[DELAY_TEST_COUNT];
+        double TIME_TX_DIFF[DELAY_TEST_COUNT];
+        double TIME_RX_DIFF[DELAY_TEST_COUNT];
+        int DELAY_INDEX=1;
 
         // In this loop we are grabbing each incoming frame and looking at the 
         // string that prefixes it, to state which variable the following value
@@ -1063,9 +1115,9 @@ int main(int argc, char *argv[]) {
             // TX has sent a non-default ethertype
             if(strncmp(RX_DATA,"etherateethertype",17)==0)
             {
-                diff = (RX_LEN-17);
+                /////diff = (RX_LEN-17);
                 ss << RX_DATA;
-                param = ss.str().substr(17,diff);
+                param = ss.str().substr(RX_LEN-17);;
                 ETHERTYPE = strtol(param.c_str(),NULL,10);
                 printf("ETHERTYPE set to 0x%X\n", ETHERTYPE);
 
@@ -1075,9 +1127,9 @@ int main(int argc, char *argv[]) {
             // TX has sent a non-default frame payload size
             if(strncmp(RX_DATA,"etheratesize",12)==0)
             {
-                diff = (RX_LEN-12);
+                /////diff = (RX_LEN-12);
                 ss << RX_DATA;
-                param = ss.str().substr(12,diff);
+                param = ss.str().substr(12,(RX_LEN-12));
                 F_SIZE = strtol(param.c_str(),NULL,10);
                 cout << "Frame size set to " << F_SIZE << endl;
             }
@@ -1086,9 +1138,9 @@ int main(int argc, char *argv[]) {
             // TX has sent a non-default transmition duration
             if(strncmp(RX_DATA,"etherateduration",16)==0)
             {
-                diff = (RX_LEN-16);
+                /////diff = (RX_LEN-16);
                 ss << RX_DATA;
-                param = ss.str().substr(16,diff);
+                param = ss.str().substr(16,(RX_LEN-16));
                 F_DURATION = strtoull(param.c_str(),0,10);
                 cout << "Test duration set to " << F_DURATION << endl;
             }
@@ -1097,9 +1149,9 @@ int main(int argc, char *argv[]) {
             // TX has sent a frame count to use instead of duration
             if(strncmp(RX_DATA,"etheratecount",13)==0)
             {
-                diff = (RX_LEN-13);
+                /////diff = (RX_LEN-13);
                 ss << RX_DATA;
-                param = ss.str().substr(13,diff);
+                param = ss.str().substr(13,(RX_LEN-13));
                 F_COUNT = strtoull(param.c_str(),0,10);
                 cout << "Frame count set to " << F_COUNT << endl;
             }
@@ -1108,9 +1160,9 @@ int main(int argc, char *argv[]) {
             // TX has sent a total bytes value to use instead of frame count
             if(strncmp(RX_DATA,"etheratebytes",13)==0)
             {
-                diff = (RX_LEN-13);
+                //////diff = (RX_LEN-13);
                 ss << RX_DATA;
-                param = ss.str().substr(13,diff);
+                param = ss.str().substr(13,(RX_LEN-13));
                 F_BYTES = strtoull(param.c_str(),0,10);
                 cout << "Byte limit set to " << F_BYTES << endl;
             }
@@ -1118,9 +1170,9 @@ int main(int argc, char *argv[]) {
             // TX has set a custom PCP value
             if(strncmp(RX_DATA,"etheratepcp",11)==0)
             {
-                diff = (RX_LEN-11);
+                /////diff = (RX_LEN-11);
                 ss << RX_DATA;
-                param = ss.str().substr(11,diff);
+                param = ss.str().substr(11,(RX_LEN-11));
                 PCP = strtoull(param.c_str(),0,10);
                 cout << "PCP value set to " << PCP << endl;
             }
@@ -1128,9 +1180,9 @@ int main(int argc, char *argv[]) {
             // TX has set a custom PCP value
             if(strncmp(RX_DATA,"etherateqinqpcp",15)==0)
             {
-                diff = (RX_LEN-15);
+                /////diff = (RX_LEN-15);
                 ss << RX_DATA;
-                param = ss.str().substr(15,diff);
+                param = ss.str().substr(15,(RX_LEN-15));
                 QINQ_PCP = strtoull(param.c_str(),0,10);
                 cout << "QinQ PCP value set to "<<QINQ_PCP<<endl;
             }
@@ -1159,86 +1211,93 @@ int main(int argc, char *argv[]) {
             // Several time values will be exchanged to estimate the delay between
             // the two. Then the process is repeated two more times so and average
             // can be taken, which is shared back with TX;
-            if( strncmp(RX_DATA,"etheratetime01:",15)==0 ||
-                strncmp(RX_DATA,"etheratetime11:",15)==0 ||
-                strncmp(RX_DATA,"etheratetime21:",15)==0 ||
-                strncmp(RX_DATA,"etheratetime31:",15)==0 ||
-                strncmp(RX_DATA,"etheratetime41:",15)==0  )
-            {
+            if (strncmp(RX_DATA,"etheratetime",12)==0) {
 
                 // Get the time we are receiving TX's sent time figure
                 clock_gettime(CLOCK_MONOTONIC_RAW, &TS_RTT);
-                ss.str("");
-                ss.clear();
-                ss << TS_RTT.tv_sec<<"."<<TS_RTT.tv_nsec;
-                ss >> timeRX1;
 
                 // Extract the sent time
                 exploded.clear();
                 explodestring = RX_DATA;
                 string_explode(explodestring, ":", &exploded);
 
-                ss.str("");
-                ss.clear();
-                ss << atol(exploded[1].c_str())<<"."<<atol(exploded[2].c_str());
-                ss >> timeTX1;
+                if (exploded[0].compare(exploded[0].length()-1,1,"1")==0)
+                {
 
-            }
+                    // Record the time we received this TX value
+                    ss.str("");
+                    ss.clear();
+                    ss << TS_RTT.tv_sec<<"."<<TS_RTT.tv_nsec;
+                    ss >> TIME_RX_1[DELAY_INDEX];
 
+                    // Record the TX value
+                    ss.str("");
+                    ss.clear();
+                    ss << atol(exploded[1].c_str())<<"."<<atol(exploded[2].c_str());
+                    ss >> TIME_TX_1[DELAY_INDEX];
 
-            if( strncmp(RX_DATA,"etheratetime02:",15)==0 ||
-                strncmp(RX_DATA,"etheratetime12:",15)==0 ||
-                strncmp(RX_DATA,"etheratetime22:",15)==0 ||
-                strncmp(RX_DATA,"etheratetime32:",15)==0 ||
-                strncmp(RX_DATA,"etheratetime42:",15)==0    )
-            {
+                }
+                  else if (exploded[0].compare(exploded[0].length()-1,1,"2")==0)
+                {
 
-                // Get the time we are receiving TXs 2nd sent time figure
-                clock_gettime(CLOCK_MONOTONIC_RAW, &TS_RTT);
-                ss.str("");
-                ss.clear();
-                ss << TS_RTT.tv_sec<<"."<<TS_RTT.tv_nsec;
-                ss >> timeRX2;
+                    // Record the time we received this TX value
+                    ss.str("");
+                    ss.clear();
+                    ss << TS_RTT.tv_sec<<"."<<TS_RTT.tv_nsec;
+                    ss >> TIME_RX_2[DELAY_INDEX];
 
-                // Extract the sent time
-                exploded.clear();
-                explodestring = RX_DATA;
-                string_explode(explodestring, ":", &exploded);
+                    // Record the TX value
+                    ss.clear();
+                    ss.str("");
+                    ss << atol(exploded[1].c_str())<<"."<<atol(exploded[2].c_str());
+                    ss >> TIME_TX_2[DELAY_INDEX];
 
-                ss.clear();
-                ss.str("");
-                ss << atol(exploded[1].c_str())<<"."<<atol(exploded[2].c_str());
-                ss >> timeTX2;
+                    // Calculate the delay
+                    TIME_TX_DIFF[DELAY_INDEX] = TIME_TX_2[DELAY_INDEX]-TIME_TX_1[DELAY_INDEX];
+                    TIME_RX_DIFF[DELAY_INDEX] = TIME_RX_2[DELAY_INDEX]-TIME_RX_1[DELAY_INDEX];
 
-                // Calculate the delay
-                timeTXdiff = timeTX2-timeTX1;
-                timeTXdelay = (timeRX2-timeRX1)-timeTXdiff;
+                    if (TIME_RX_DIFF[DELAY_INDEX]-TIME_TX_DIFF[DELAY_INDEX]>0) {
 
-                cout << timeTX1 << " " << timeTX2 << " " << timeTXdiff << endl;
-                cout << timeRX1 << " " << timeRX2 << " " << (timeRX2-timeRX1) << " " << timeTXdelay << endl << endl;
+                        DELAY_RESULTS[DELAY_INDEX] = TIME_RX_DIFF[DELAY_INDEX]-TIME_TX_DIFF[DELAY_INDEX];
 
-                if(strncmp(RX_DATA,"etheratetime02:",15)==0) DELAY_RESULTS[0] = timeTXdelay;
-                if(strncmp(RX_DATA,"etheratetime12:",15)==0) DELAY_RESULTS[1] = timeTXdelay;
-                if(strncmp(RX_DATA,"etheratetime22:",15)==0) DELAY_RESULTS[2] = timeTXdelay;
-                if(strncmp(RX_DATA,"etheratetime32:",15)==0) DELAY_RESULTS[3] = timeTXdelay;
-                if(strncmp(RX_DATA,"etheratetime42:",15)==0) 
-                { 
-                    DELAY_RESULTS[4] = timeTXdelay;
-                    cout << "Tx to Rx delay calculated as "<<((DELAY_RESULTS[0]+
-                         DELAY_RESULTS[1]+DELAY_RESULTS[2]+DELAY_RESULTS[3]+
-                         DELAY_RESULTS[4])/5)*1000<<"ms"<<endl;
+                    // This value has returned as minus and is invalid
+                    } else {
+                        DELAY_RESULTS[DELAY_INDEX] = 0;
+                    }
+
+                    // Send the delay back to the TX host
+                    ss.clear();
+                    ss.str("");
+                    ss << "etheratedelay."<<DELAY_RESULTS[DELAY_INDEX];
+                    param = ss.str();
+                    strncpy(TX_DATA,param.c_str(), param.length());
+                    TX_REV_VAL = sendto(SOCKET_FD, TX_BUFFER,
+                                        param.length()+ETH_HEADERS_LEN, 0,
+                                        (struct sockaddr*)&socket_address,
+                                        sizeof(socket_address));
+
+                    DELAY_INDEX++;
+
                 }
 
-                // Send it back to the TX host
-                ss.clear();
-                ss.str("");
-                ss << "etheratedelay."<<timeTXdelay;
-                param = ss.str();
-                strncpy(TX_DATA,param.c_str(), param.length());
-                TX_REV_VAL = sendto(SOCKET_FD, TX_BUFFER,
-                                    param.length()+ETH_HEADERS_LEN, 0, 
-                                    (struct sockaddr*)&socket_address,
-                                    sizeof(socket_address));
+
+            } // End if delay value
+
+
+            if(strncmp(RX_DATA,"etheratedelayfinished",21)==0)
+            {
+
+                double DELAY_AVERAGE = 0;
+
+                for(LOOP_COUNTER=1; LOOP_COUNTER<=DELAY_TEST_COUNT; LOOP_COUNTER++)
+                {
+                    DELAY_AVERAGE += DELAY_RESULTS[LOOP_COUNTER];
+                }
+
+                DELAY_AVERAGE = (DELAY_AVERAGE/DELAY_TEST_COUNT);
+
+                cout << "Tx to Rx delay calculated as "<<DELAY_AVERAGE<<" seconds"<<endl;
+
             }
 
             // All settings have been received
@@ -1276,9 +1335,14 @@ int main(int argc, char *argv[]) {
         // Display the current interface MTU
         int PHY_MTU = get_interface_mtu_by_name(SOCKET_FD, *IF_NAME);
 
-        if (MTU_TX_MAX>PHY_MTU) MTU_TX_MAX = PHY_MTU;
+        if (MTU_TX_MAX>PHY_MTU) {
+            cout << "Starting MTU sweep from "<<MTU_TX_MIN<<" to "<<PHY_MTU
+                 << " (interface max)"<<endl;
+            MTU_TX_MAX = PHY_MTU;
+        } else {
+            cout << "Starting MTU sweep from "<<MTU_TX_MIN<<" to "<<MTU_TX_MAX<<endl;
+        }
 
-        cout << "Starting MTU sweep from "<<MTU_TX_MIN<<" to "<<MTU_TX_MAX<<endl;
 
 
         FD_ZERO(&FD_READS);
@@ -1418,6 +1482,8 @@ int main(int argc, char *argv[]) {
 
             cout << "Largest MTU ACK'ed from RX is "<<MTU_ACK_LARGEST<<endl<<endl;
 
+            return EXIT_SUCCESS;
+
 
         } else { // Running in RX mode
 
@@ -1541,13 +1607,13 @@ int main(int argc, char *argv[]) {
 
             } // End of RX MTU WAITING
 
+            goto restart;
+
 
         } // End of TX/RX mode
 
 
     } // End of MTU sweep test
-
-    return EXIT_SUCCESS;
 
 
     // Ethernet ping goes here

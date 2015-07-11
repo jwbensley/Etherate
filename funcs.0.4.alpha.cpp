@@ -1,13 +1,36 @@
 /*
- * Etherate Functions
+ * License:
  *
- * License: First rule of license club...
+ * Copyright (c) 2012-2015 James Bensley.
  *
- * Updates: https://github.com/jwbensley/Etherate and http://null.53bits.co.uk
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+ * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+ * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * 
+ * 
+ * File: Etherate Functions
+ *
+ * Updates: https://github.com/jwbensley/Etherate
+ * http://null.53bits.co.uk/index.php?page=etherate
  * Please send corrections, ideas and help to: jwbensley@gmail.com 
  * (I'm a beginner if that isn't obvious!)
  *
- * compile with: g++ -o etherate etherate.cpp -lrt
+ * Compile: g++ -o etherate etherate.cpp -lrt
  * 
  * File Contents:
  *
@@ -22,7 +45,7 @@
  * int set_sock_interface_index(int &SOCKET_FD, int &IF_INDEX);
  * int set_sock_interface_name(int &SOCKET_FD, char &IF_NAME);
  * void signal_handler(int signal);
- * void string_explode(string str, string separator, vector<string>* results);// Try to open the passed socket on a user specified interface by index
+ * void string_explode(string str, string separator, vector<string>* results);
  *
  */
 
@@ -322,7 +345,6 @@ void print_usage () {
             "\t-U\tSpecify a minimum and maximum MTU size in bytes then\n"
             "\t\tperform an MTU sweep on the link towards the RX host to\n"
             "\t\tfind the maximum size supported, such as -U 1400 1600\n"
-            "\t\t#NOT IMPLEMENTED YET#\n"
             "[Other]\n"
             "\t-x\tDisplay examples.\n"
             "\t\t#NOT IMPLEMENTED YET#\n"
