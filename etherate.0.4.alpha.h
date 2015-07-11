@@ -23,17 +23,25 @@
  */
  
 
-// Signal handler to notify remote host of local application termiantion
-void signal_handler(int signal);
+// Build the Ethernet headers for sending frames
+void build_headers(char* &TX_BUFFER, unsigned char (&DESTINATION_MAC)[6], 
+     unsigned char (&SOURCE_MAC)[6], int &ETHERTYPE, short &PCP,
+     short &VLAN_ID, short &QINQ_ID, short &QINQ_PCP, int &ETH_HEADERS_LEN);
 
-// Print CLI args and usage
-void print_usage();
-
-// Explode a string into an array using a seperator value
-void string_explode(string str, string separator, vector<string>* results);
+// Get the MTU of the interface used for the test
+int get_interface_mtu_by_name(int &SOCKET_FD, char &IF_NAME);
 
 // Try to automatically chose an interface to run the test on
 int get_sock_interface(int &SOCKET_FD);
+
+// List interfaces and hardware (MAC) address
+void list_interfaces();
+
+// Print common CLI examples
+void print_examples ();
+
+// Print CLI args and usage
+void print_usage();
 
 // Try to open the passed socket on a user specified interface by index
 int set_sock_interface_index(int &SOCKET_FD, int &IF_INDEX);
@@ -41,16 +49,12 @@ int set_sock_interface_index(int &SOCKET_FD, int &IF_INDEX);
 // Try to open the passed socket on a user specified interface by name
 int set_sock_interface_name(int &SOCKET_FD, char &IF_NAME);
 
-// List interfaces and hardware (MAC) address
-void list_interfaces();
+// Signal handler to notify remote host of local application termiantion
+void signal_handler(int signal);
 
-// Get the MTU of the interface used for the test
-void get_interface_mtu_by_index(int &SOCKET_FD, int &IF_INDEX);
+// Explode a string into an array using a seperator value
+void string_explode(string str, string separator, vector<string>* results);
 
-// Build the Ethernet headers for sending frames
-void build_headers(char* &TX_BUFFER, unsigned char (&DESTINATION_MAC)[6], 
-     unsigned char (&SOURCE_MAC)[6], int &ETHERTYPE, short &PCP,
-     short &VLAN_ID, short &QINQ_ID, short &QINQ_PCP, int &ETH_HEADERS_LEN);
 
 
 /*
