@@ -1,4 +1,11 @@
 Priority:
+Move frame headers into TVLs with customer Ethertype
+Remove strncmp for "etherate" and use byte compare
+Remove all SS objects
+Add stats for highest speed and average speed
+Add unset to end of main and sigint function, as per valgrind, also free pDELAY_RESULTS
+Finish adding the ACK timeout with TS_ACK_TIMEOUT
+
 Checking frame order
 Detect lost frames
 finish ack and out of order frame counts and print out and in order frame counts at the end of the test
@@ -17,7 +24,7 @@ Medium:
 Change from using byte speed counters to bits or using -M will cause rounding inaccuracy when /8
 Should we print non default settings to the screen when the user sets them before the test starts to show what will happen?
 Add the MEGA-DEBUG!!! option to the cli args?
-
+QinQ needs fixing
 
 Low:
 Feature to randomise frame payload per frame
