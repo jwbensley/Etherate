@@ -49,22 +49,18 @@
 #include <cstring>           // memcpy()
 #include <ctime>             // timers
 #include <endian.h>          // __BYTE_ORDER
-/////#include <fcntl.h>           // fcntl()
 #include <sys/socket.h>      // AF_PACKET *Address Family*
-/////#include <sys/select.h>
 #include <ifaddrs.h>
 #include <linux/if_arp.h>
 #include <linux/if_ether.h>  // ETH_P_ALL [Ether type 0x003 (ALL PACKETS)]
                              // ETH_FRAME_LEN  (default 1514)
                              // ETH_ALEN (default 6)
-/////#include <linux/if_packet.h>
 #include <linux/net.h>       // SOCK_RAW
 #include <math.h>            // roundl()
 #include <netinet/in.h>      // htonl(), htons(), ntohl(), ntohs()
 #include <signal.h>          // signal()
 #include <stdio.h>           // perror(), printf()
 #include <stdlib.h>          // atoi(), calloc(), free(), malloc(), strtoul(), strtoull()
-/////#include <stdbool.h>         // bool/_Bool ///// CAN WE REMOVE THIS FOR SHORT?
 #include <string.h>          // strncmp()
 #define MAX_IFS 64
 #include "sysexits.h"        // EX_USAGE 64 - cli error
@@ -79,9 +75,9 @@
 #define CLOCK_MONOTONIC_RAW 4
 #endif
 
-#include "etherate.0.5.beta.h"
-#include "etherate.0.5.beta.funcs.cpp"
-#include "etherate.0.5.beta.tests.cpp"
+#include "etherate.h"
+#include "funcs.cpp"
+#include "tests.cpp"
 
 
 int main(int argc, char *argv[]) {
@@ -461,4 +457,4 @@ int main(int argc, char *argv[]) {
 
     return EXIT_SUCCESS;
 
-} // End of main()
+}
