@@ -1080,7 +1080,7 @@ void sync_settings(struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HE
                   struct TEST_INTERFACE *TEST_INTERFACE, struct TEST_PARAMS * TEST_PARAMS,
                   struct MTU_TEST *MTU_TEST, struct QM_TEST *QM_TEST)
 {
-printf ("TEST_PARAMS->B_TX_SPEED_MAX: %lu\n", TEST_PARAMS->B_TX_SPEED_MAX);
+
     int TX_RET_VAL;
     int RX_LEN;
 
