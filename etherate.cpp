@@ -91,8 +91,8 @@ using namespace std;
 #define CLOCK_MONOTONIC_RAW 4
 #endif
 
-#include "etherate.0.5.beta.h"
-#include "funcs.0.5.beta.cpp"
+#include "etherate.h"
+#include "funcs.cpp"
 
 
 /*
