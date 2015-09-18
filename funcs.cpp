@@ -870,6 +870,7 @@ void print_usage ()
             "\t-q\tSpecify an echo interval and timeout value in millis\n"
             "\t\tthen measure link quality (RTT, jitter, loss), using\n"
             "\t\t-q 1000 1000 (default duration is %llu, see -t).\n"
+            "\t\t#NOT IMPLEMENTED YET#\n"
             "[Other]\n"
             "\t-x\tDisplay examples.\n"
             "\t\t#NOT IMPLEMENTED YET#\n"
