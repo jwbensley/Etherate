@@ -49,6 +49,21 @@
  *
  */
 
+#include <sys/socket.h> // Provides AF_PACKET *Address Family*
+#include <sys/select.h>
+#include <ifaddrs.h>
+#include <linux/if_arp.h>
+#include <linux/if_ether.h> // Defines ETH_P_ALL [Ether type 0x003 (ALL PACKETS!)]
+// Also defines ETH_FRAME_LEN with default 1514
+// Also defines ETH_ALEN which is Ethernet Address Lenght in Octets (defined as 6)
+#include <linux/if_packet.h>
+#include <linux/net.h> // Provides SOCK_RAW *Socket Type*
+#include <netinet/in.h> // Needed for htons() and htonl()
+
+#include <stdio.h> //perror()
+#include <stdlib.h> //malloc() itoa()
+#include <stdbool.h> // bool/_Bool
+#include <string.h>
 
 void build_headers(char* &TX_BUFFER, unsigned char (&DESTINATION_MAC)[6], 
      unsigned char (&SOURCE_MAC)[6], int &ETHERTYPE, short &PCP,
