@@ -1,3 +1,23 @@
+-----Etherate 0.6 Beta - 2015-09-13
+
+[MAJOR] Rewrite to structs and functions to improve efficiency (major becasue this was 10G performance impacting)
+
+[MAJOR] Moved to a TLV based header (major because this was 10G performance impacting)
+
+[MAJOR] Added htonll() and ntohll() function (major becasue this was 10G performance impacting)
+
+[MINOR] Fixed minor memory leaks
+
+[MINOR] Removed most of the nasty global variables
+
+[MINOR] Fixed code, comment and documentation typos
+
+[MINOR] General code tidy up to improve readability
+
+[MINOR] Fixed rounding and display errors when using -m and -M
+
+
+
 -----Etherarte 0.5 Beta - 2015-07-11
 
 [MINOR] Fixed MTU sweeps that are bigger than interface max MTU size
@@ -35,6 +55,7 @@
 [MINOR] Non test frame receive count is fixed
 
 
+
 -----Etherate 0.3 Alpha - 2014-01-10
 
 [FEATURE] Add code for testing with VLAN tagging, priority codes, QinQ tagging and QinQ priorities, -v 25 -p 3 -q 2025 -o 4
@@ -49,7 +70,7 @@
 
 [MINOR] Standardise changelog tags;
 [FEATURE]  == New working feature added to etherate
-[MAJOR]    == Fixed a bug in Etherate code that effects the operations of the program or one of the test modes or test results
+[MAJOR]    == Fixed a bug in Etherate code that affects the operations of the program or one of the test modes or test results
 [MINOR]    == Fixed a bug that doesn't stop Etherate from running properly like typos, formatting, documentation errata, code tidies
 
 
@@ -70,5 +91,5 @@
 
 -----Etherate 0.1 Alpha - 2013-03
 
-Code isn't even finished or tested yet. We can send and receive data and measure the speed with basic speed, frame size and frame count options.
+Code isn't even finished or tested yet. We can send and receive data and measure the speed with basic max speed, frame size and frame count limit options.
 
