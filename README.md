@@ -85,4 +85,4 @@ Etherate
 
 #### Who made it (where to send your hate mail)
 
-  James Bensley <jwbensley at gmail dot com>
+  James Bensley [jwbensley at gmail dot com]
