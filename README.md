@@ -2,6 +2,7 @@ Etherate
 ========
 
 [![Build Status](https://travis-ci.org/jwbensley/Etherate.svg?branch=master)](https://travis-ci.org/jwbensley/Etherate)
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/jwbensley/etherate/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
 
 What is it:
 
