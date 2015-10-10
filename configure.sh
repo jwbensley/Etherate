@@ -6,4 +6,3 @@ automake --add-missing
 
 autoconf && automake
 ./configure --enable-debug
-
