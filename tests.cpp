@@ -187,15 +187,17 @@ void delay_test(struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HEADE
             if (ntohs(*FRAME_HEADERS->RX_SUB_TLV_TYPE) == TYPE_DELAY1)
             {
 
-                // Get the time we are receiving TX's sent time figure
+                // Get the time RX is receiving TX's sent time figure
                 clock_gettime(CLOCK_MONOTONIC_RAW, &QM_TEST->TS_RTT);
 
-                // Record the time we received this TX value
+                // Record the time RX received this TX value
                 TIME_RX_1[DELAY_INDEX] = QM_TEST->TS_RTT.tv_sec + ((double)QM_TEST->TS_RTT.tv_nsec*1e-9);
                 // Record the TX value received
                 TIME_TX_1[DELAY_INDEX] = (ntohll(*FRAME_HEADERS->RX_SUB_TLV_VALUE)/1000000000.0);
 
+
             } else if (ntohs(*FRAME_HEADERS->RX_SUB_TLV_TYPE) == TYPE_DELAY2) {
+
 
                 clock_gettime(CLOCK_MONOTONIC_RAW, &QM_TEST->TS_RTT);
                 TIME_RX_2[DELAY_INDEX] = QM_TEST->TS_RTT.tv_sec + ((double)QM_TEST->TS_RTT.tv_nsec*1e-9);
@@ -205,6 +207,7 @@ void delay_test(struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HEADE
                 TIME_TX_DIFF[DELAY_INDEX] = TIME_TX_2[DELAY_INDEX]-TIME_TX_1[DELAY_INDEX];
                 TIME_RX_DIFF[DELAY_INDEX] = TIME_RX_2[DELAY_INDEX]-TIME_RX_1[DELAY_INDEX];
 
+
                 if (TIME_RX_DIFF[DELAY_INDEX]-TIME_TX_DIFF[DELAY_INDEX] > 0) {
 
                     QM_TEST->pDELAY_RESULTS[DELAY_INDEX] = TIME_RX_DIFF[DELAY_INDEX]-TIME_TX_DIFF[DELAY_INDEX];
@@ -213,6 +216,7 @@ void delay_test(struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HEADE
                 } else {
                     QM_TEST->pDELAY_RESULTS[DELAY_INDEX] = 0;
                 }
+
 
                 // Send the calculated delay back to the TX host
                 build_sub_tlv(FRAME_HEADERS, htons(TYPE_DELAY),
@@ -227,6 +231,7 @@ void delay_test(struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HEADE
 
 
             } // End if delay value
+
 
             if (ntohl(*FRAME_HEADERS->RX_TLV_VALUE) == VALUE_DELAY_END)
             {
@@ -245,13 +250,13 @@ void delay_test(struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HEADE
 
             }
 
+
         } // End of WAITING
 
     }
 
     return;
 }
-
 
 
 
@@ -285,11 +290,11 @@ void mtu_sweep_test(struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_H
 
     if (APP_PARAMS->TX_MODE) {
 
-        int MTU_TX_CURRENT =   0;
+        int MTU_TX_CURRENT   = 0;
         int MTU_ACK_PREVIOUS = 0;
-        int MTU_ACK_CURRENT =  0;
-        int MTU_ACK_LARGEST =  0;
-        char WAITING =         true;
+        int MTU_ACK_CURRENT  = 0;
+        int MTU_ACK_LARGEST  = 0;
+        char WAITING         = true;
 
         for (MTU_TX_CURRENT = MTU_TEST->MTU_TX_MIN; MTU_TX_CURRENT <= MTU_TEST->MTU_TX_MAX; MTU_TX_CURRENT++)
         {
@@ -409,9 +414,9 @@ void mtu_sweep_test(struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_H
     } else {
 
         unsigned int MTU_RX_PREVIOUS = 0;
-        unsigned int MTU_RX_CURRENT =  0;
-        unsigned int MTU_RX_LARGEST =  0;
-        char WAITING =                 true;
+        unsigned int MTU_RX_CURRENT  = 0;
+        unsigned int MTU_RX_LARGEST  = 0;
+        char WAITING                 = true;
 
         // If 5 seconds pass without receiving a frame, end the MTU sweep test
         // (assume MTU has been exceeded)
@@ -505,12 +510,12 @@ void mtu_sweep_test(struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_H
             } // End of TEST_INTERFACE->SELECT_RET_VAL
 
 
-            // If we have received the largest MTU TX hoped to send,
+            // If RX has received the largest MTU TX hoped to send,
             // the MTU sweep test is over
             if (MTU_RX_LARGEST == MTU_TEST->MTU_TX_MAX)
             {
 
-                // Signal back to TX the largest MTU we recieved at the end
+                // Signal back to TX the largest MTU RX recieved at the end
                 WAITING = false;
 
                 printf("MTU sweep test complete\n"
@@ -566,150 +571,464 @@ void mtu_sweep_test(struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_H
 }
 
 
+
 void latency_test(struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HEADERS,
                   struct TEST_INTERFACE *TEST_INTERFACE, struct TEST_PARAMS *TEST_PARAMS,
                   struct QM_TEST *QM_TEST)
 {
 
- /*   if (QM_TEST.ENABLED)
+    APP_PARAMS->TS_NOW =   time(0);
+    APP_PARAMS->TM_LOCAL = localtime(&APP_PARAMS->TS_NOW);
+    printf("Starting latency test on %s\n", asctime(APP_PARAMS->TM_LOCAL));
+
+    FD_ZERO(&TEST_INTERFACE->FD_READS);
+    TEST_INTERFACE->SOCKET_FD_COUNT = TEST_INTERFACE->SOCKET_FD + 1;
+
+    build_tlv(FRAME_HEADERS, htons(TYPE_TESTFRAME), htonl(VALUE_TEST_SUB_TLV));
+
+    int         TX_RET_VAL   = 0;
+    int         RX_LEN       = 0;
+    long double UPTIME_1     = 0.0;
+    long double UPTIME_2     = 0.0;
+    long double UPTIME_RX    = 0.0;
+    long double RTT          = 0.0;
+    long double RTT_PREV     = 0.0;
+    long double JITTER       = 0.0;
+    long double INTERVAL     = 0.0;
+    long long   TX_UPTIME    = 0;
+    long long   RX_UPTIME    = 0;
+    char        WAITING      = false;
+    char        ECHO_WAITING = false;
+
+
+    unsigned long long *testBase, *testMax;
+
+
+    if (APP_PARAMS->TX_MODE == true)
     {
 
+        if (TEST_PARAMS->F_COUNT > 0) {   
+            // Testing until X RTT measurements
+            testMax = &TEST_PARAMS->F_COUNT;
+            testBase = &TEST_PARAMS->F_TX_COUNT;
 
-        FD_ZERO(&TEST_INTERFACE->FD_READS);
-        TEST_INTERFACE->SOCKET_FD_COUNT = TEST_INTERFACE->SOCKET_FD + 1;
+        } else {
+            // Testing until X seconds have passed
+            if (TEST_PARAMS->F_DURATION > 0) TEST_PARAMS->F_DURATION--;
+            testMax = (unsigned long long*)&TEST_PARAMS->F_DURATION;
+            testBase = (unsigned long long*)&TEST_PARAMS->S_ELAPSED;
+        }
 
 
-        if (TX_MODE)
+        clock_gettime(CLOCK_MONOTONIC_RAW, &QM_TEST->TS_START);
+
+        printf("RTT\t\tJitter\n");
+
+        while (*testBase<=*testMax)
         {
+            
+            clock_gettime(CLOCK_MONOTONIC_RAW, &TEST_PARAMS->TS_CURRENT_TIME);
 
-            // Fill the test frame with some junk data
-            int PAYLOAD_INDEX = 0;
-            for (PAYLOAD_INDEX = 0; PAYLOAD_INDEX < F_SIZE; PAYLOAD_INDEX++)
+            UPTIME_1 = TEST_PARAMS->TS_CURRENT_TIME.tv_sec + ((double)TEST_PARAMS->TS_CURRENT_TIME.tv_nsec*1e-9);
+            TX_UPTIME = roundl(UPTIME_1*1000000000.0);
+
+            build_sub_tlv(FRAME_HEADERS, ntohs(TYPE_PING), htonll(TX_UPTIME));
+
+            TX_RET_VAL = sendto(TEST_INTERFACE->SOCKET_FD,
+                                FRAME_HEADERS->TX_BUFFER,
+                                FRAME_HEADERS->LENGTH+FRAME_HEADERS->SUB_TLV_SIZE, 0, 
+                                (struct sockaddr*)&TEST_INTERFACE->SOCKET_ADDRESS,
+                                sizeof(TEST_INTERFACE->SOCKET_ADDRESS));
+
+            TEST_PARAMS->F_TX_COUNT++;
+
+            WAITING = true;
+            ECHO_WAITING = true;
+
+            while (WAITING)
             {
-                FRAME_HEADERS->TX_DATA[PAYLOAD_INDEX] = (char)((255.0*rand()/(RAND_MAX+1.0)));
-            }
 
-            long QM_TX_INDEX = 0;
+                // Get the current time
+                clock_gettime(CLOCK_MONOTONIC_RAW, &TEST_PARAMS->TS_ELAPSED_TIME);
 
-            long QM_RX_INDEX;
+                // Poll the socket for incoming frames
+                TEST_INTERFACE->TV_SELECT_DELAY.tv_sec = 0;
+                TEST_INTERFACE->TV_SELECT_DELAY.tv_usec = 000000;
+                FD_SET(TEST_INTERFACE->SOCKET_FD, &TEST_INTERFACE->FD_READS);
+                TEST_INTERFACE->SELECT_RET_VAL = select(TEST_INTERFACE->SOCKET_FD_COUNT,
+                                                        &TEST_INTERFACE->FD_READS,
+                                                        NULL, NULL,
+                                                        &TEST_INTERFACE->TV_SELECT_DELAY);
 
-            char WAITING = false;
-
-            clock_gettime(CLOCK_MONOTONIC_RAW, &TEST_PARAMS->TS_ELAPSED_TIME);
-
-            while (S_ELAPSED <= F_DURATION)
-            {
-
-                // Increment the echo frame sequence number
-                QM_TX_INDEX++;
-
-                // Send the current clock time to the RX host
-                clock_gettime(CLOCK_MONOTONIC_RAW, &QM_TEST->TR_RTT);
-
-                ss.str("");
-                ss.clear();
-                ss<<"etherateecho:"<<QM_TX_INDEX<<":"<<QM_TEST->TR_RTT.tv_sec<<":"<<QM_TEST->TR_RTT.tv_nsec;
-                param = ss.str();
-                strncpy(FRAME_HEADERS->TX_DATA,param.c_str(),param.length());
-
-                TX_RET_VAL = sendto(TEST_INTERFACE->SOCKET_FD, FRAME_HEADERS->TX_BUFFER, param.length()+FRAME_HEADERS->LENGTH,
-                                    0, (struct sockaddr*)&TEST_INTERFACE->SOCKET_ADDRESS,
-                                    sizeof(TEST_INTERFACE->SOCKET_ADDRESS));
-
-                QM_WAITING = true;
-
-                if (WAITING)
+                if ( TEST_INTERFACE->SELECT_RET_VAL > 0 &&
+                     FD_ISSET(TEST_INTERFACE->SOCKET_FD, &TEST_INTERFACE->FD_READS) ) 
                 {
 
-                    // Get the current time
-                    clock_gettime(CLOCK_MONOTONIC_RAW, &TEST_PARAMS->TS_CURRENT_TIME);
+                    RX_LEN = recvfrom(TEST_INTERFACE->SOCKET_FD,
+                                      FRAME_HEADERS->RX_BUFFER,
+                                      TEST_PARAMS->F_SIZE_TOTAL, 0, NULL, NULL);
 
+                    // Received and echo reply/pong
+                    if (ntohl(*FRAME_HEADERS->RX_TLV_VALUE) == VALUE_TEST_SUB_TLV &&
+                        ntohs(*FRAME_HEADERS->RX_SUB_TLV_TYPE) == TYPE_PONG)
+                    {
 
-                    // Poll the socket file descriptor with select() for incoming frames
-                    TEST_INTERFACE->TV_SELECT_DELAY.tv_sec = 0;
-                    TEST_INTERFACE->TV_SELECT_DELAY.tv_usec = 000000;
-                    FD_SET(TEST_INTERFACE->SOCKET_FD, &TEST_INTERFACE->FD_READS);
-                    TEST_INTERFACE->SELECT_RET_VAL = select(TEST_INTERFACE->SOCKET_FD_COUNT, &TEST_INTERFACE->FD_READS, NULL, NULL, &TEST_INTERFACE->TV_SELECT_DELAY);
+                        UPTIME_2 = TEST_PARAMS->TS_ELAPSED_TIME.tv_sec + 
+                                   ((double)TEST_PARAMS->TS_ELAPSED_TIME.tv_nsec*1e-9);
 
-                    if (TEST_INTERFACE->SELECT_RET_VAL > 0) {
-                        if (FD_ISSET(TEST_INTERFACE->SOCKET_FD, &TEST_INTERFACE->FD_READS)) {
+                        // Check it's the time value originally sent
+                        UPTIME_RX = (double)ntohll(*FRAME_HEADERS->RX_SUB_TLV_VALUE)/1000000000.0;
 
-                            RX_LEN = recvfrom(TEST_INTERFACE->SOCKET_FD, FRAME_HEADERS->RX_BUFFER, F_SIZE_TOTAL, 0, NULL, NULL);
+                        if (UPTIME_RX == UPTIME_1)
+                        {
 
-                            param = "etherateecho";
+                            RTT = UPTIME_2-UPTIME_1;
 
-                            if (strncmp(FRAME_HEADERS->RX_DATA,param.c_str(),param.length()) == 0)
+                            if (RTT < QM_TEST->RTT_MIN)
                             {
-
-                                // Get echo frame sequence number
-                                exploded.clear();
-                                explodestring = FRAME_HEADERS->RX_DATA;
-                                string_explode(explodestring, ":", &exploded);
-                                QM_RX_INDEX = atoi(exploded[1].c_str());
-
-                                // This is the frame TX is waiting for,
-                                // and not an early/late one
-                                if (QM_RX_INDEX == QM_INDEX)
-                                {
-
-                                }
-
+                                QM_TEST->RTT_MIN = RTT;
+                            } else if (RTT > QM_TEST->RTT_MAX) {
+                                QM_TEST->RTT_MAX = RTT;
                             }
 
+                            JITTER = fabsl(RTT-RTT_PREV);
+
+                            if (JITTER < QM_TEST->JITTER_MIN)
+                            {
+                                QM_TEST->JITTER_MIN = JITTER;
+                            } else if (JITTER > QM_TEST->JITTER_MAX) {
+                                QM_TEST->JITTER_MAX = JITTER;
+                            }
+
+                            printf ("%.9Lfs\t%.9Lfs\n", RTT, JITTER);
+
+                            RTT_PREV = RTT;
+
+                            ECHO_WAITING = false;
+
+                            TEST_PARAMS->F_RX_COUNT++;
+
+                        } else {
+                            TEST_PARAMS->F_RX_OTHER++;
                         }
+
+
+                    } else {
+
+                        TEST_PARAMS->F_RX_OTHER++;
+
                     }
 
 
-                    // Check if 1 second has passed
-                    if ((TEST_PARAMS->TS_CURRENT_TIME.tv_sec-TEST_PARAMS->TS_ELAPSED_TIME.tv_sec) >= 1) {
+                    // Check if TX host has quit/died;
+                    if (ntohl(*FRAME_HEADERS->RX_TLV_VALUE) == VALUE_DYINGGASP)
+                    {
+                        APP_PARAMS->TS_NOW = time(0);
+                        APP_PARAMS->TM_LOCAL = localtime(&APP_PARAMS->TS_NOW);
 
-                            S_ELAPSED++;
+                        printf("TX host has quit\n"
+                               "Ending test and resetting on %s\n",
+                               asctime(APP_PARAMS->TM_LOCAL));
 
-                            TEST_PARAMS->TS_ELAPSED_TIME.tv_sec = TEST_PARAMS->TS_CURRENT_TIME.tv_sec;
-                            TEST_PARAMS->TS_ELAPSED_TIME.tv_nsec = TEST_PARAMS->TS_CURRENT_TIME.tv_nsec;
+                        return;
                     }
 
-                    // Check if the echo reply has timed out
-                    if ((TEST_PARAMS->TS_CURRENT_TIME.tv_sec-TEST_PARAMS->TS_ELAPSED_TIME.tv_sec) >= QM_TIMEOUT_SEC) {
-                        if (TEST_PARAMS->TS_CURRENT_TIME.tv_nsec-TEST_PARAMS->TS_ELAPSED_TIME.tv_nsec) >= QM_TIMEOUT_NSEC) {
+
+                } // RET_VAL > 0
 
 
-                            WAITING = false;
+                // If TX is waiting for echo reply, check if the echo reply has timed out
+                if (ECHO_WAITING) {
+                    if ( (TEST_PARAMS->TS_ELAPSED_TIME.tv_sec-
+                          TEST_PARAMS->TS_CURRENT_TIME.tv_sec >= QM_TEST->TIMEOUT_SEC)
+                         &&
+                         (TEST_PARAMS->TS_ELAPSED_TIME.tv_nsec-
+                          TEST_PARAMS->TS_CURRENT_TIME.tv_nsec >= QM_TEST->TIMEOUT_NSEC) )
+                    {
 
-                        }
+                        ECHO_WAITING = false;
+                        printf("*\n");
+                        QM_TEST->TIMEOUT_COUNT++;
+
                     }
-
-                } // End of WAITING
-
-
-            } // F_DURATION
+                }
 
 
+                // Check if the echo interval has passed (time to send another ping)
+                if ( (TEST_PARAMS->TS_ELAPSED_TIME.tv_sec-
+                     TEST_PARAMS->TS_CURRENT_TIME.tv_sec >= QM_TEST->INTERVAL_SEC)
+                    &&
+                    (TEST_PARAMS->TS_ELAPSED_TIME.tv_nsec-
+                     TEST_PARAMS->TS_CURRENT_TIME.tv_nsec >= QM_TEST->INTERVAL_NSEC) )
+                {
 
-        // Else this is the RX host
+                    TEST_PARAMS->TS_CURRENT_TIME.tv_sec = TEST_PARAMS->TS_ELAPSED_TIME.tv_sec;
+                    TEST_PARAMS->TS_CURRENT_TIME.tv_nsec = TEST_PARAMS->TS_ELAPSED_TIME.tv_nsec;
+
+                    ECHO_WAITING = false;
+                    WAITING = false;
+
+                }
+
+
+                // Check if 1 second has passed to increment test duration
+                if (TEST_PARAMS->TS_ELAPSED_TIME.tv_sec-
+                    QM_TEST->TS_START.tv_sec >= 1) {
+
+                    clock_gettime(CLOCK_MONOTONIC_RAW, &QM_TEST->TS_START);
+
+                    TEST_PARAMS->S_ELAPSED++;
+
+                }
+
+
+            } // End of WAITING
+
+
+        } // testBase<=testMax
+
+        printf("Test frames transmitted: %llu\n"
+               "Test frames received: %llu\n"
+               "Non test or out-of-order frames received: %llu\n"
+               "Number of timeouts: %lu\n"
+               "Min/Max RTT during test: %.9Lfs/%.9Lfs\n"
+               "Min/Max jitter during test: %.9Lfs/%.9Lfs\n",
+               TEST_PARAMS->F_TX_COUNT,
+               TEST_PARAMS->F_RX_COUNT,
+               TEST_PARAMS->F_RX_OTHER,
+               QM_TEST->TIMEOUT_COUNT++,
+               QM_TEST->RTT_MIN,
+               QM_TEST->RTT_MAX,
+               QM_TEST->JITTER_MIN,
+               QM_TEST->JITTER_MAX);
+
+        APP_PARAMS->TS_NOW = time(0);
+        APP_PARAMS->TM_LOCAL = localtime(&APP_PARAMS->TS_NOW);
+        printf ("Ending link quality test on %s\n", asctime(APP_PARAMS->TM_LOCAL));
+
+
+    // Else, RX mode
+    } else {
+
+
+        if (TEST_PARAMS->F_COUNT > 0) {   
+            // Testing until X RTT measurements
+            testMax = &TEST_PARAMS->F_COUNT;
+            testBase = &TEST_PARAMS->F_RX_COUNT;
+
         } else {
+            // Testing until X seconds have passed
+            if (TEST_PARAMS->F_DURATION > 0) TEST_PARAMS->F_DURATION--;
+            testMax = (unsigned long long*)&TEST_PARAMS->F_DURATION;
+            testBase = (unsigned long long*)&TEST_PARAMS->S_ELAPSED;
+        }
+
+        // Wait for the first test frame to be received before starting the test loop
+        char FIRST_FRAME = false;
+        while (!FIRST_FRAME)
+        {
+
+            RX_LEN = recvfrom(TEST_INTERFACE->SOCKET_FD, FRAME_HEADERS->RX_BUFFER,
+                              TEST_PARAMS->F_SIZE_TOTAL, MSG_PEEK, NULL, NULL);
+
+            // Check if this is an etherate test frame
+            if (ntohl(*FRAME_HEADERS->RX_TLV_VALUE) == VALUE_TEST_SUB_TLV &&
+                ntohs(*FRAME_HEADERS->RX_SUB_TLV_TYPE) == TYPE_PING)
+            {
+                FIRST_FRAME = true;
+            }
+
+        }
 
 
+        clock_gettime(CLOCK_MONOTONIC_RAW, &QM_TEST->TS_START);
 
-        } // End of TX/RX
+        printf("Echo Interval\n");
 
-    } */
+
+        // RX test loop
+        while (*testBase<=*testMax)
+        {
+
+
+            clock_gettime(CLOCK_MONOTONIC_RAW, &TEST_PARAMS->TS_CURRENT_TIME);
+
+
+            WAITING = true;
+            ECHO_WAITING = true;
+
+            while (WAITING)
+            {
+
+                // Get the current time
+                clock_gettime(CLOCK_MONOTONIC_RAW, &TEST_PARAMS->TS_ELAPSED_TIME);
+
+                // Poll for incoming frames
+                TEST_INTERFACE->TV_SELECT_DELAY.tv_sec = 0;
+                TEST_INTERFACE->TV_SELECT_DELAY.tv_usec = 000000;
+                FD_SET(TEST_INTERFACE->SOCKET_FD, &TEST_INTERFACE->FD_READS);
+
+                TEST_INTERFACE->SELECT_RET_VAL = select(TEST_INTERFACE->SOCKET_FD_COUNT,
+                                                        &TEST_INTERFACE->FD_READS,
+                                                        NULL, NULL,
+                                                        &TEST_INTERFACE->TV_SELECT_DELAY);
+
+                if ( TEST_INTERFACE->SELECT_RET_VAL > 0 &&
+                     FD_ISSET(TEST_INTERFACE->SOCKET_FD, &TEST_INTERFACE->FD_READS) )
+                {
+
+                    RX_LEN = recvfrom(TEST_INTERFACE->SOCKET_FD, FRAME_HEADERS->RX_BUFFER,
+                                      TEST_PARAMS->F_SIZE_TOTAL, 0, NULL, NULL);
+
+                    if ( ntohl(*FRAME_HEADERS->RX_TLV_VALUE) == VALUE_TEST_SUB_TLV &&
+                         ntohs(*FRAME_HEADERS->RX_SUB_TLV_TYPE) == TYPE_PING )
+                    {
+
+                        // Time RX received this value
+                        UPTIME_2 = TEST_PARAMS->TS_ELAPSED_TIME.tv_sec + 
+                                   ((double)TEST_PARAMS->TS_ELAPSED_TIME.tv_nsec*1e-9);
+
+                        // Send the TX uptime value back to the TX host
+                        build_sub_tlv(FRAME_HEADERS, ntohs(TYPE_PONG), *FRAME_HEADERS->RX_SUB_TLV_VALUE);
+
+                        TX_RET_VAL = sendto(TEST_INTERFACE->SOCKET_FD,
+                                            FRAME_HEADERS->TX_BUFFER,
+                                            FRAME_HEADERS->LENGTH+FRAME_HEADERS->SUB_TLV_SIZE, 0, 
+                                            (struct sockaddr*)&TEST_INTERFACE->SOCKET_ADDRESS,
+                                            sizeof(TEST_INTERFACE->SOCKET_ADDRESS));
+
+                        TEST_PARAMS->F_TX_COUNT++;
+
+                        INTERVAL = fabsl(UPTIME_2-UPTIME_1);
+
+                        // Interval between receiving this uptime value and the last
+                        if (UPTIME_1!=0.0)
+                        {
+                            printf ("%.9Lfs\n", INTERVAL);
+                        } else {
+                            printf("0.0s\n");
+                        }
+                        UPTIME_1 = UPTIME_2;
+
+                        if (INTERVAL < QM_TEST->INTERVAL_MIN)
+                        {
+                            QM_TEST->INTERVAL_MIN = INTERVAL;
+                        } else if (INTERVAL > QM_TEST->INTERVAL_MAX) {
+                            QM_TEST->INTERVAL_MAX = INTERVAL;
+                        }
+
+                        ECHO_WAITING = false;
+
+                        TEST_PARAMS->F_RX_COUNT++;
+
+                    } else {
+
+                        TEST_PARAMS->F_RX_OTHER++;
+
+                    }
+
+                } // End RET_VAL
+
+
+                // Check if the echo request has timed out
+                if(ECHO_WAITING) {
+                    if ( (TEST_PARAMS->TS_ELAPSED_TIME.tv_sec-
+                          TEST_PARAMS->TS_CURRENT_TIME.tv_sec >= QM_TEST->INTERVAL_SEC)
+                         &&
+                         (TEST_PARAMS->TS_ELAPSED_TIME.tv_nsec-
+                          TEST_PARAMS->TS_CURRENT_TIME.tv_nsec >= QM_TEST->INTERVAL_NSEC) )
+                    {
+
+                        printf("*\n");
+                        QM_TEST->TIMEOUT_COUNT++;
+                        WAITING = false;
+
+                    }
+                }
+
+
+                // Check if the echo interval has passed (time to receive another ping)
+                if ( (TEST_PARAMS->TS_ELAPSED_TIME.tv_sec-
+                     TEST_PARAMS->TS_CURRENT_TIME.tv_sec >= QM_TEST->INTERVAL_SEC)
+                    &&
+                    (TEST_PARAMS->TS_ELAPSED_TIME.tv_nsec-
+                     TEST_PARAMS->TS_CURRENT_TIME.tv_nsec >= QM_TEST->INTERVAL_NSEC) )
+                {
+
+                    TEST_PARAMS->TS_CURRENT_TIME.tv_sec = TEST_PARAMS->TS_ELAPSED_TIME.tv_sec;
+                    TEST_PARAMS->TS_CURRENT_TIME.tv_nsec = TEST_PARAMS->TS_ELAPSED_TIME.tv_nsec;
+
+                    ECHO_WAITING = false;
+                    WAITING = false;
+
+                }
+
+
+                // Check if 1 second has passed to increment test duration
+                if (TEST_PARAMS->TS_ELAPSED_TIME.tv_sec-
+                    QM_TEST->TS_START.tv_sec >= 1) {
+
+                    clock_gettime(CLOCK_MONOTONIC_RAW, &QM_TEST->TS_START);
+
+                    TEST_PARAMS->S_ELAPSED++;
+
+                }
+
+
+                // Check if TX host has quit/died;
+                if (ntohl(*FRAME_HEADERS->RX_TLV_VALUE) == VALUE_DYINGGASP)
+                {
+                    APP_PARAMS->TS_NOW = time(0);
+                    APP_PARAMS->TM_LOCAL = localtime(&APP_PARAMS->TS_NOW);
+
+                    printf("TX host has quit\n"
+                           "Ending test and resetting on %s\n",
+                           asctime(APP_PARAMS->TM_LOCAL));
+
+                    return;
+                }
+
+
+            } // WAITING
+
+
+        } // testBase<=testMax
+
+        printf("Test frames transmitted: %llu\n"
+               "Test frames received: %llu\n"
+               "Non test frames received: %llu\n"
+               "Number of timeouts: %lu\n"
+               "Min/Max interval during test %.9Lfs/%.9Lfs\n",
+               TEST_PARAMS->F_TX_COUNT,
+               TEST_PARAMS->F_RX_COUNT,
+               TEST_PARAMS->F_RX_OTHER,
+               QM_TEST->TIMEOUT_COUNT,
+               QM_TEST->INTERVAL_MIN,
+               QM_TEST->INTERVAL_MAX);
+
+        APP_PARAMS->TS_NOW = time(0);
+        APP_PARAMS->TM_LOCAL = localtime(&APP_PARAMS->TS_NOW);
+        printf ("Ending link quality test on %s\n", asctime(APP_PARAMS->TM_LOCAL));
+
+    } // End of TX/RX
+
 
      return;
+
  }
 
 
 
 void speed_test(struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HEADERS,
                 struct TEST_INTERFACE *TEST_INTERFACE, struct TEST_PARAMS *TEST_PARAMS)
- {
+{
 
     APP_PARAMS->TS_NOW =   time(0);
     APP_PARAMS->TM_LOCAL = localtime(&APP_PARAMS->TS_NOW);
     printf("Starting speed test on %s\n", asctime(APP_PARAMS->TM_LOCAL));
 
     int TX_RET_VAL = 0;
-    int RX_LEN =     0;
+    int RX_LEN     = 0;
 
     FD_ZERO(&TEST_INTERFACE->FD_READS);
     TEST_INTERFACE->SOCKET_FD_COUNT = TEST_INTERFACE->SOCKET_FD + 1;
@@ -725,17 +1044,17 @@ void speed_test(struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HEADE
 
         if (TEST_PARAMS->F_BYTES > 0)
         {    
-            // We are testing until X bytes received
+            // Testing until X bytes received
             testMax = &TEST_PARAMS->F_BYTES;
             testBase = &TEST_PARAMS->B_TX;
 
         } else if (TEST_PARAMS->F_COUNT > 0) {   
-            // We are testing until X frames received
+            // Testing until X frames received
             testMax = &TEST_PARAMS->F_COUNT;
             testBase = &TEST_PARAMS->F_TX_COUNT;
 
         } else if (TEST_PARAMS->F_DURATION > 0) {
-            // We are testing until X seconds has passed
+            // Testing until X seconds has passed
             TEST_PARAMS->F_DURATION--;
             testMax = (unsigned long long*)&TEST_PARAMS->F_DURATION;
             testBase = (unsigned long long*)&TEST_PARAMS->S_ELAPSED;
@@ -746,7 +1065,7 @@ void speed_test(struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HEADE
         clock_gettime(CLOCK_MONOTONIC_RAW, &TEST_PARAMS->TS_TX_LIMIT);
         clock_gettime(CLOCK_MONOTONIC_RAW, &TEST_PARAMS->TS_ELAPSED_TIME);
 
-        // Main TX test loop
+        // TX test loop
         while (*testBase<=*testMax)
         {
 
@@ -939,25 +1258,25 @@ void speed_test(struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HEADE
         printf ("Ending speed test on %s\n", asctime(APP_PARAMS->TM_LOCAL));
 
 
-    // Else, we are in RX mode
+    // Else, RX mode
     } else {
 
         printf("Seconds\t\tMbps RX\t\tMBs Rx\t\tFrmRX/s\t\tFrames RX\n");
 
         unsigned long long *testBase, *testMax;
 
-        // Are we testing until X bytes transmitted
+        // Testing until X bytes transmitted
         if (TEST_PARAMS->F_BYTES > 0)
         {
             testMax = &TEST_PARAMS->F_BYTES;
             testBase = &TEST_PARAMS->B_RX;
 
-        // Or are we testing until X frames transmitted
+        // Testing until X frames transmitted
         } else if (TEST_PARAMS->F_COUNT > 0) {
             testMax = &TEST_PARAMS->F_COUNT;
             testBase = &TEST_PARAMS->F_RX_COUNT;
 
-        // Or are we testing until X seconds have passed
+        // Testing until X seconds have passed
         } else if (TEST_PARAMS->F_DURATION > 0) {
             TEST_PARAMS->F_DURATION--;
             testMax = (unsigned long long*)&TEST_PARAMS->F_DURATION;
@@ -965,9 +1284,26 @@ void speed_test(struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HEADE
         }
 
 
+        // Wait for the first test frame to be received before starting the test loop
+        char FIRST_FRAME = false;
+        while (!FIRST_FRAME)
+        {
+
+            RX_LEN = recvfrom(TEST_INTERFACE->SOCKET_FD, FRAME_HEADERS->RX_BUFFER,
+                              TEST_PARAMS->F_SIZE_TOTAL, MSG_PEEK, NULL, NULL);
+
+            // Check if this is an etherate test frame
+            if (ntohl(*FRAME_HEADERS->RX_TLV_VALUE) == VALUE_TEST_SUB_TLV &&
+                ntohs(*FRAME_HEADERS->RX_SUB_TLV_TYPE) == TYPE_FRAMEINDEX)
+            {
+                FIRST_FRAME = true;
+            }
+
+        }
+
         clock_gettime(CLOCK_MONOTONIC_RAW, &TEST_PARAMS->TS_ELAPSED_TIME);
 
-        // Main RX test loop
+        // RX test loop
         while (*testBase<=*testMax)
         {
 
@@ -1036,7 +1372,7 @@ void speed_test(struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HEADE
                         TEST_PARAMS->F_RX_LATE++;
                     }
 
-                    // If running in ACK mode we need to ACK to TX host
+                    // If running in ACK mode RX needs to ACK to TX host
                     if (TEST_PARAMS->F_ACK)
                     {
 

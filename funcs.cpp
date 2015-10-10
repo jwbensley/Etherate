@@ -26,29 +26,21 @@
  * File: Etherate Gerneral Functions
  *
  * File Contents:
- * void build_headers(struct FRAME_HEADERS *FRAME_HEADERS);
- * void build_tlv(struct FRAME_HEADERS *FRAME_HEADERS, short TLV_TYPE,
-                  unsigned long TLV_VALUE);
- * void build_sub_tlv(struct FRAME_HEADERS *FRAME_HEADERS, short SUB_TLV_TYPE,
-                      unsigned long long SUB_TLV_VALUE);
- * int cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
-             struct FRAME_HEADERS *FRAME_HEADERS, struct TEST_INTERFACE *TEST_INTERFACE,
-             struct TEST_PARAMS *TEST_PARAMS, struct MTU_TEST *MTU_TEST,
-             struct QM_TEST *QM_TEST);
- * int explode_char(char *string, char *delim, char *tokens[]);
- * int get_interface_mtu_by_name(struct TEST_INTERFACE *TEST_INTERFACE);
- * int get_sock_interface(struct TEST_INTERFACE *TEST_INTERFACE);
- * unsigned long long htonll(unsigned long long v);
- * void list_interfaces();
- * unsigned long long ntohll(unsigned long long v);
- * void print_examples ();
- * void print_usage();
- * int set_sock_interface_index(struct TEST_INTERFACE *TEST_INTERFACE);
- * int set_sock_interface_name(struct TEST_INTERFACE *TEST_INTERFACE);
- * void signal_handler(int signal);
- * void sync_settings(struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HEADERS,
-                  struct TEST_INTERFACE *TEST_INTERFACE, struct TEST_PARAMS * TEST_PARAMS,
-                  struct MTU_TEST *MTU_TEST, struct QM_TEST *QM_TEST);
+ * build_headers()
+ * build_tlv()
+ * build_sub_tlv()
+ * cli_args()
+ * explode_char()
+ * get_interface_mtu_by_name()
+ * get_sock_interface()
+ * htonll()
+ * list_interfaces()
+ * ntohll()
+ * print_usage()
+ * set_sock_interface_index()
+ * set_sock_interface_name()
+ * signal_handler()
+ * sync_settings()
  *
  */
 
@@ -87,11 +79,8 @@ void list_interfaces();
 
 unsigned long long ntohll(unsigned long long val);
 
-// Print common CLI examples
-void print_examples ();
-
 // Print CLI args and usage
-void print_usage();
+void print_usage(struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HEADERS);
 
 // Try to open the passed socket on a user specified interface by index
 int set_sock_interface_index(struct TEST_INTERFACE *TEST_INTERFACE);
@@ -258,19 +247,19 @@ void build_sub_tlv(struct FRAME_HEADERS *FRAME_HEADERS, unsigned short SUB_TLV_T
 
 
 int cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
-             struct FRAME_HEADERS *FRAME_HEADERS, struct TEST_INTERFACE *TEST_INTERFACE,
+             struct FRAME_HEADERS *FRAME_HEADERS,struct TEST_INTERFACE *TEST_INTERFACE,
              struct TEST_PARAMS *TEST_PARAMS, struct MTU_TEST *MTU_TEST,
              struct QM_TEST *QM_TEST)
 {
 
-    int RET_EXIT_APP = -2;
-    int RET_EX_USAGE = -1;
+    int RET_EXIT_APP =    -2;
+    int RET_EX_USAGE =    -1;
     int RET_EXIT_SUCCESS = 0;
 
     if (argc > 1) 
     {
 
-        for (int i=1; i<argc; i++) 
+        for (int i = 1; i < argc; i++) 
         {
 
             // Change to receive mode
@@ -506,7 +495,7 @@ int cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
 
 
             // Set 802.1ad QinQ outer PCP value
-            } else if (strncmp(argv[i], "-o", 2)==0){
+            } else if (strncmp(argv[i], "-o", 2)==0) {
                 if (argc > (i+1))
                 {
                     FRAME_HEADERS->QINQ_PCP = (unsigned short)atoi(argv[i+1]);
@@ -519,7 +508,7 @@ int cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
 
 
             // Set a custom ethertype
-            } else if (strncmp(argv[i], "-e", 2)==0){
+            } else if (strncmp(argv[i], "-e", 2)==0) {
                 if (argc > (i+1))
                 {
                     FRAME_HEADERS->ETHERTYPE = (unsigned short)strtol(argv[i+1], NULL, 16);
@@ -531,8 +520,8 @@ int cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                 }
 
 
-            // Run an MTU sweep test
-            } else if (strncmp(argv[i], "-u", 2)==0){
+            // Enable the MTU sweep test
+            } else if (strncmp(argv[i], "-U", 2)==0) {
                 if (argc > (i+1))
                 {
                     MTU_TEST->MTU_TX_MIN = (unsigned short)atoi(argv[i+1]);
@@ -551,8 +540,8 @@ int cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                 }
 
 
-            // Perform the link quality measurement
-            } else if (strncmp(argv[i], "-q", 2)==0){
+            // Enable the link quality measurement tests
+            } else if (strncmp(argv[i], "-Q", 2)==0) {
                 if (argc > (i+1))
                 {
                     QM_TEST->INTERVAL = (unsigned int)atoi(argv[i+1]);
@@ -587,8 +576,15 @@ int cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
             } else if (strncmp(argv[i], "-h", 2)==0 ||
                        strncmp(argv[i], "--help", 6)==0) {
 
-                print_usage();
+                print_usage(APP_PARAMS, FRAME_HEADERS);
                 return RET_EXIT_APP;
+
+
+            // Else the user entered an invalid argument
+            } else {
+                    printf("Oops! Invalid argument %s\n"
+                           "Usage info: %s -h\n", argv[i], argv[0]);
+                    return RET_EX_USAGE;
             }
 
 
@@ -806,10 +802,8 @@ unsigned long long ntohll(unsigned long long val)
 
 
 
-void print_usage ()
+void print_usage (struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HEADERS)
 {
-
-    struct FRAME_HEADERS *FRAME_HEADERS = pFRAME_HEADERS;
 
     printf ("Usage info; [Mode] [Destination] [Source] [Transport] [Shortcuts] [Other]\n"
             "[Mode]\n"
@@ -833,7 +827,7 @@ void print_usage ()
             "\t-I\tSet interface by index. Without this option we guess which\n"
             "\t\tinterface to use.\n"
             "\t-l\tList interface indexes (then quit) for use with -i option.\n"
-            "[Options]\n"
+            "[Test Options]\n"
             "\t-a\tAck mode, have the receiver ack each frame during the test\n"
             "\t\t(This will significantly reduce the speed of the test).\n"
             "\t-b\tNumber of bytes to send, default is %lu, default behaviour\n"
@@ -847,7 +841,9 @@ void print_usage ()
             "\t\t(excluding headers, %u bytes on the wire).\n"
             "\t-m\tMax bytes per/second to send, -m 125000 (1Mps).\n"
             "\t-M\tMax bits per/second to send. -M 1000000 (1Mbps).\n"
-            "\t-t\tTransmition duration, integer in seconds, default is %llu.\n"
+            "\t-u\tHow frequently the screen shall be updated during a test,\n"
+            "\t\tseconds as integer, default is %d\n"
+            "\t-t\tTransmition duration, seconds as integer, default is %llu.\n"
             "[Transport]\n"
             "\t-v\tAdd an 802.1q VLAN tag. None in the header by default.\n"
             "\t\tIf using a PCP value with -p a default VLAN of 0 is added.\n"
@@ -857,23 +853,18 @@ void print_usage ()
             "\t\t(If no 802.1q tag is set the VLAN 0 will be used).\n"
             "\t-q\tAdd an outter Q-in-Q tag. If used without -v, 1 is used\n"
             "\t\tfor the inner VLAN ID.\n"
-            "\t\t#NOT IMPLEMENTED YET#\n"
             "\t-o\tAdd an 802.1p PCP value to the outer Q-in-Q VLAN tag.\n"
             "\t\tIf no PCP value is specified and a Q-in-Q VLAN ID is,\n"
             "\t\t0 will be used. If no outer Q-in-Q VLAN ID is supplied this\n"
             "\t\toption is ignored. -o 1 to -o 7 like the -p option above.\n"
-            "\t\t#NOT IMPLEMENTED YET#\n"
-            "[Addtional Tests]\n"
-            "\t-u\tSpecify a minimum and maximum MTU size in bytes then\n"
+            "[Additonal Tests]\n"
+            "\t-U\tSpecify a minimum and maximum MTU size in bytes then\n"
             "\t\tperform an MTU sweep on the link towards the RX host to\n"
-            "\t\tfind the maximum size supported, -u 1400 1600\n"
-            "\t-q\tSpecify an echo interval and timeout value in millis\n"
-            "\t\tthen measure link quality (RTT, jitter, loss), using\n"
-            "\t\t-q 1000 1000 (default duration is %llu, see -t).\n"
-            "\t\t#NOT IMPLEMENTED YET#\n"
+            "\t\tfind the maximum size supported, -U 1400 1600\n"
+            "\t-Q\tSpecify an echo interval and timeout value in millis\n"
+            "\t\tthen measure link quality (RTT and jitter), using\n"
+            "\t\t-Q 1000 1000 (default duration is %llu, see -t).\n"
             "[Other]\n"
-            "\t-x\tDisplay examples.\n"
-            "\t\t#NOT IMPLEMENTED YET#\n"
             "\t-V|--version Display version\n"
             "\t-h|--help Display this help text\n",
             F_BYTES_DEF,
@@ -881,6 +872,7 @@ void print_usage ()
             ETHERTYPE_DEF,
             F_SIZE_DEF,
             (F_SIZE_DEF+FRAME_HEADERS->LENGTH),
+            APP_PARAMS->STATS_DELAY,
             F_DURATION_DEF,
             F_DURATION_DEF);
 
@@ -1090,7 +1082,22 @@ void sync_settings(struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HE
     if (APP_PARAMS->TX_MODE == true && APP_PARAMS->TX_SYNC == true)
     {
 
-        printf("Synchronising settings with RX host\n");
+        printf("\nSynchronising settings with RX host\n");
+
+        // Disable the delay calculation
+        if (APP_PARAMS->TX_DELAY != TX_DELAY_DEF)
+        {
+
+            build_sub_tlv(FRAME_HEADERS, htons(TYPE_TXDELAY), htonll(APP_PARAMS->TX_DELAY));
+
+            TX_RET_VAL = sendto(TEST_INTERFACE->SOCKET_FD, FRAME_HEADERS->TX_BUFFER,
+                                FRAME_HEADERS->LENGTH+FRAME_HEADERS->SUB_TLV_SIZE,
+                                0,(struct sockaddr*)&TEST_INTERFACE->SOCKET_ADDRESS,
+                                sizeof(TEST_INTERFACE->SOCKET_ADDRESS));
+
+            printf("TX to RX delay calculation disabled\n");
+
+        }
 
         // Testing with a custom ethertype
         if (FRAME_HEADERS->ETHERTYPE != ETHERTYPE_DEF)
@@ -1255,6 +1262,35 @@ void sync_settings(struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HE
         
         }
 
+        // Tell RX the link quality tests will be performed
+        if(QM_TEST->ENABLED)
+        {
+
+            build_sub_tlv(FRAME_HEADERS, htons(TYPE_QMTEST), htonll(QM_TEST->ENABLED));
+
+            TX_RET_VAL = sendto(TEST_INTERFACE->SOCKET_FD, FRAME_HEADERS->TX_BUFFER,
+                                FRAME_HEADERS->LENGTH+FRAME_HEADERS->SUB_TLV_SIZE,
+                                0,(struct sockaddr*)&TEST_INTERFACE->SOCKET_ADDRESS,
+                                sizeof(TEST_INTERFACE->SOCKET_ADDRESS));
+
+            build_sub_tlv(FRAME_HEADERS, htons(TYPE_QMINTERVAL), htonll(QM_TEST->INTERVAL));
+
+            TX_RET_VAL = sendto(TEST_INTERFACE->SOCKET_FD, FRAME_HEADERS->TX_BUFFER,
+                                FRAME_HEADERS->LENGTH+FRAME_HEADERS->SUB_TLV_SIZE,
+                                0,(struct sockaddr*)&TEST_INTERFACE->SOCKET_ADDRESS,
+                                sizeof(TEST_INTERFACE->SOCKET_ADDRESS));
+
+            build_sub_tlv(FRAME_HEADERS, htons(TYPE_QMTIMEOUT), htonll(QM_TEST->TIMEOUT));
+
+            TX_RET_VAL = sendto(TEST_INTERFACE->SOCKET_FD, FRAME_HEADERS->TX_BUFFER,
+                                FRAME_HEADERS->LENGTH+FRAME_HEADERS->SUB_TLV_SIZE,
+                                0,(struct sockaddr*)&TEST_INTERFACE->SOCKET_ADDRESS,
+                                sizeof(TEST_INTERFACE->SOCKET_ADDRESS));
+
+            printf("Link quality tests enabled\n");
+
+        }
+
         // Let the receiver know all settings have been sent
         build_tlv(FRAME_HEADERS, htons(TYPE_SETTING), htonl(VALUE_SETTING_END));
 
@@ -1265,13 +1301,11 @@ void sync_settings(struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HE
 
         printf("Settings have been synchronised\n\n");
 
-        // Pause to allow the RX host to process the sent settings
-        sleep(1);
 
     } else if (APP_PARAMS->TX_MODE == false && APP_PARAMS->TX_SYNC == true) {
 
 
-        printf("Waiting for settings from TX host\n");
+        printf("\nWaiting for settings from TX host\n");
 
         // In listening mode RX waits for each parameter to come through,
         // Until TX signals all settings have been sent
@@ -1289,6 +1323,12 @@ void sync_settings(struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HE
 
                 WAITING = false;
                 printf("Settings have been synchronised\n\n");
+
+            // TX has disabled the TX to RX one way delay calculation
+            } else if (ntohs(*FRAME_HEADERS->RX_SUB_TLV_TYPE) == TYPE_TXDELAY) {
+
+                APP_PARAMS->TX_DELAY = (unsigned char)ntohll(*FRAME_HEADERS->RX_SUB_TLV_VALUE);
+                printf("TX to RX delay calculation disabled\n");
 
             // TX has sent a non-default ethertype
             } else if (ntohs(*FRAME_HEADERS->RX_SUB_TLV_TYPE) == TYPE_ETHERTYPE) {
@@ -1343,24 +1383,43 @@ void sync_settings(struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HE
                 TEST_PARAMS->F_ACK = true;
                 printf("ACK mode enabled\n");
 
-            // Tx has requested MTU sweep test
+            // TX has requested MTU sweep test
             } else if (ntohs(*FRAME_HEADERS->RX_SUB_TLV_TYPE) == TYPE_MTUTEST) {
 
                 MTU_TEST->ENABLED = true;
                 printf("MTU sweep test enabled\n");
 
-            // Tx has set MTU sweep test minimum MTU size
+            // TX has set MTU sweep test minimum MTU size
             } else if (ntohs(*FRAME_HEADERS->RX_SUB_TLV_TYPE) == TYPE_MTUMIN) {
 
                 MTU_TEST->MTU_TX_MIN = (unsigned short)ntohll(*FRAME_HEADERS->RX_SUB_TLV_VALUE);
                 printf("Minimum MTU set to %u\n", MTU_TEST->MTU_TX_MIN);
 
-            // Tx has set MTU sweep test maximum MTU size
+            // TX has set MTU sweep test maximum MTU size
             } else if (ntohs(*FRAME_HEADERS->RX_SUB_TLV_TYPE) == TYPE_MTUMAX) {
 
                 MTU_TEST->MTU_TX_MAX = (unsigned short)ntohll(*FRAME_HEADERS->RX_SUB_TLV_VALUE);
                 printf("Maximum MTU set to %u\n", MTU_TEST->MTU_TX_MAX);
 
+            // TX has enabled link quality tests
+            } else if (ntohs(*FRAME_HEADERS->RX_SUB_TLV_TYPE) == TYPE_QMTEST) {
+
+                QM_TEST->ENABLED = true;
+                printf("Link quality tests enabled\n");
+
+            // TX has set echo interval
+            } else if (ntohs(*FRAME_HEADERS->RX_SUB_TLV_TYPE) == TYPE_QMINTERVAL) {
+
+                // Convert to ns for use with timespec
+                QM_TEST->INTERVAL_NSEC = (ntohll(*FRAME_HEADERS->RX_SUB_TLV_VALUE)*1000000)%1000000000;
+                QM_TEST->INTERVAL_SEC =  ((ntohll(*FRAME_HEADERS->RX_SUB_TLV_VALUE)*1000000)-QM_TEST->INTERVAL_NSEC)/1000000000;
+                
+            // TX has set echo timeout
+            } else if (ntohs(*FRAME_HEADERS->RX_SUB_TLV_TYPE) == TYPE_QMTIMEOUT) {
+
+                QM_TEST->TIMEOUT_NSEC =  (ntohll(*FRAME_HEADERS->RX_SUB_TLV_VALUE)*1000000)%1000000000;
+                QM_TEST->TIMEOUT_SEC =   ((ntohll(*FRAME_HEADERS->RX_SUB_TLV_VALUE)*1000000)-QM_TEST->TIMEOUT_NSEC)/1000000000;
+                
             }
 
         } // WAITING

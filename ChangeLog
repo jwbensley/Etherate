@@ -1,3 +1,15 @@
+-----Etherate 0.7 Beta - 2015-10-10
+
+[FEATURE] First draft of the link quality test is implemented
+
+[MINOR] Added a pause on the RX host for the first test frame to come though (so the hosts are in sync)
+
+[MINOR] I was a very naughty boy and used a goto, this has now been removed
+
+[MINOR] Fixed code, comment and documenation typos
+
+
+
 -----Etherate 0.6 Beta - 2015-09-13
 
 [MAJOR] Rewrite to structs and functions to improve efficiency (major becasue this was 10G performance impacting)
