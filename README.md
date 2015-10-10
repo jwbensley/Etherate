@@ -3,6 +3,8 @@ Etherate
 
 [![Build Status](https://travis-ci.org/jwbensley/Etherate.svg?branch=master)](https://travis-ci.org/jwbensley/Etherate)
 [![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/jwbensley/etherate/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+[![PayPal Donate](https://img.shields.io/badge/paypal-donate-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=james%40bensley%2eme&lc=GB&item_name=Etherate&currency_code=GBP)
+
 
 What is it:
 
