@@ -86,7 +86,3 @@ Etherate
 #### Who made it (where to send your hate mail)
 
   James Bensley [jwbensley at gmail dot com]
-
-
-[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/jwbensley/etherate/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
-
