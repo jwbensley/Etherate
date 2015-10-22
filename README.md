@@ -71,7 +71,7 @@ Etherate
 #### Technical details
 
     Etherate is a single threaded application, despite this 10G throughput
-    can be achieved one a 2.4Ghz Intel CPU with 10G Intel NIC. Etherate is
+    can be achieved on a 2.4Ghz Intel CPU with 10G Intel NIC. Etherate is
     not currently using NetMap or the similar framework released by Google
     as it is still in beta performance tuning is still ongoing. This may
     become a future development (if the desired performance levels can't
@@ -85,4 +85,4 @@ Etherate
 
 #### Who made it (where to send your hate mail)
 
-  James Bensley <jwbensley at gmail dot com>
+  James Bensley [jwbensley at gmail dot com]
