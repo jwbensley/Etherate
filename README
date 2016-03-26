@@ -11,11 +11,11 @@ What is it:
   Programs such as iPerf/jPerf/Ostinato/PathEth/Scapy (to name just a few) 
   are mostly excellent. They can saturate a link to measure throughput or 
   simulate congestion, but they usually operate at layer 3 or 4 of the OSI
-  model using either TCP or UDP for data transport, using sockets defined
-  by the OS.
+  model using either TCP or UDP for data transport, some of them use 
+  sockets defined by the OS that rely on the convoluted OS TCP stack.
 
-  This is fine for testing over a layer 3 boundary such as across the
-  Internet, home broadband or tail circuit diagnostics etc. Etherate uses
+  These programs are great for testing over a layer 3 boundary such as across
+  the Internet, home broadband, tail circuit diagnostics etc. Etherate uses
   raw sockets operating directly over layer 2 Ethernet to provide low level
   network analysis for Ethernet and MPLS connections.
 
@@ -55,7 +55,8 @@ Current Features:
   - One way delay measurement
   - Perform MTU sweeping test
   - Perform link quality tests (RTT & jitter)
-
+  - Simulate MPLS label stacks
+  - Insert MPLS pseudowire control word
   
 Development Plan
 
@@ -64,7 +65,6 @@ Development Plan
   - Add feature to load frame payload from a text file
   - Add BPDU & keepalive generation shortcuts
   - Report throughput if additional headers (IPv4/6/TCP/UDP) were present
-  - Simulate MPLS label stacks
 
 
 Technical details:

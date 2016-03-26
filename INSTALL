@@ -1,0 +1,19 @@
+1. Full compile
+
+For a complete check and compile install, install any missing dependancies with the following (adjust to your OS as required):
+
+sudo apt-get install automake autoconf libtool
+
+The simply run:
+
+./configure.sh
+
+
+
+
+
+2. Stand alone binary compile
+
+To just compile the binary in the local directory use the following:
+
+g++ -o etherate etherate.cpp -lrt

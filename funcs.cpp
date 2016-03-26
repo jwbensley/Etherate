@@ -1,7 +1,7 @@
 /*
  * License:
  *
- * Copyright (c) 2012-2015 James Bensley.
+ * Copyright (c) 2012-2016 James Bensley.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -101,28 +101,81 @@ void sync_settings(struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HE
 void build_headers(struct FRAME_HEADERS *FRAME_HEADERS)
 {
 
-    int BUFFER_OFFSET = 0;
-    short TPI = 0;
-    short TCI = 0;
-    short *pTPI = &TPI;
-    short *pTCI = &TCI;
+    int MPLS_OFFSET          = 0;
+    int ETHERNET_OFFSET      = 0;
+    unsigned int MPLS_HEADER = 0;
+    short TPI                = 0;
+    short TCI                = 0;
+    short *pTPI              = &TPI;
+    short *pTCI              = &TCI;
     short VLAN_ID_TMP;
 
-    // Copy the destination and source MAC addresses
-    memcpy((void*)FRAME_HEADERS->TX_BUFFER, (void*)FRAME_HEADERS->DESTINATION_MAC, ETH_ALEN);
-    BUFFER_OFFSET+=ETH_ALEN;
-    memcpy((void*)(FRAME_HEADERS->TX_BUFFER+BUFFER_OFFSET), (void*)FRAME_HEADERS->SOURCE_MAC, ETH_ALEN);
-    BUFFER_OFFSET+=ETH_ALEN;
 
-    // Check to see if QinQ VLAN ID has been supplied
+    // Check if transporting over MPLS
+    if (FRAME_HEADERS->MPLS_LABELS > 0) {
+
+        // Copy the destination and source LSR MAC addresses
+        memcpy((void*)FRAME_HEADERS->TX_BUFFER, (void*)FRAME_HEADERS->LSP_DEST_MAC, ETH_ALEN);
+        MPLS_OFFSET+=ETH_ALEN;
+        memcpy((void*)(FRAME_HEADERS->TX_BUFFER+MPLS_OFFSET), (void*)FRAME_HEADERS->LSP_SOURCE_MAC, ETH_ALEN);
+        MPLS_OFFSET+=ETH_ALEN;
+
+        // Push on the ethertype for unicast MPLS
+        TPI = htons(0x8847);
+        memcpy((void*)(FRAME_HEADERS->TX_BUFFER+MPLS_OFFSET), pTPI, sizeof(TPI));
+        MPLS_OFFSET+=sizeof(TPI);
+
+        // For each MPLS label copy it onto the stack
+        int i = 0;
+        while (i < FRAME_HEADERS->MPLS_LABELS) {
+
+            MPLS_HEADER = (FRAME_HEADERS->MPLS_LABEL[i] & 0xFFFFF) << 12;
+            MPLS_HEADER = MPLS_HEADER | (FRAME_HEADERS->MPLS_EXP[i] & 0x07) << 9;
+
+            // BoS bit
+            if (i == FRAME_HEADERS->MPLS_LABELS - 1) {
+                MPLS_HEADER = MPLS_HEADER | 1 << 8;
+            } else {
+                MPLS_HEADER = MPLS_HEADER | 0 << 8;
+            }
+
+            MPLS_HEADER = MPLS_HEADER | (FRAME_HEADERS->MPLS_TTL[i] & 0xFF);
+
+            MPLS_HEADER = htonl(MPLS_HEADER);
+
+            memcpy((void*)(FRAME_HEADERS->TX_BUFFER+MPLS_OFFSET), &MPLS_HEADER, sizeof(MPLS_HEADER));
+            MPLS_OFFSET+=sizeof(MPLS_HEADER);
+
+            MPLS_HEADER = 0;
+
+            i++;
+        }
+
+        // Check if we need to push on a pseudowire control word
+        if (FRAME_HEADERS->PWE_CONTROL_WORD == 1){
+            memset((void*)(FRAME_HEADERS->TX_BUFFER+MPLS_OFFSET), 0, 4);
+            MPLS_OFFSET+=4;
+        }
+
+    }
+
+    ETHERNET_OFFSET+=MPLS_OFFSET;
+
+    // Copy the destination and source MAC addresses
+    memcpy((void*)(FRAME_HEADERS->TX_BUFFER+ETHERNET_OFFSET), (void*)FRAME_HEADERS->DEST_MAC, ETH_ALEN);
+    ETHERNET_OFFSET+=ETH_ALEN;
+    memcpy((void*)(FRAME_HEADERS->TX_BUFFER+ETHERNET_OFFSET), (void*)FRAME_HEADERS->SOURCE_MAC, ETH_ALEN);
+    ETHERNET_OFFSET+=ETH_ALEN;
+
+    // Check if QinQ VLAN ID has been supplied
     if (FRAME_HEADERS->QINQ_PCP != QINQ_PCP_DEF || FRAME_HEADERS->QINQ_ID != QINQ_ID_DEF)
     {
 
         // Add on the QinQ Tag Protocol Identifier
         // 0x88a8 == IEEE802.1ad, 0x9100 == older IEEE802.1QinQ
         TPI = htons(0x88a8);
-        memcpy((void*)(FRAME_HEADERS->TX_BUFFER+BUFFER_OFFSET), pTPI, sizeof(TPI));
-        BUFFER_OFFSET+=sizeof(TPI);
+        memcpy((void*)(FRAME_HEADERS->TX_BUFFER+ETHERNET_OFFSET), pTPI, sizeof(TPI));
+        ETHERNET_OFFSET+=sizeof(TPI);
 
         // Now build the QinQ Tag Control Identifier:
         VLAN_ID_TMP = FRAME_HEADERS->QINQ_ID;
@@ -132,12 +185,13 @@ void build_headers(struct FRAME_HEADERS *FRAME_HEADERS)
         FRAME_HEADERS->QINQ_ID = VLAN_ID_TMP;
         FRAME_HEADERS->QINQ_ID = FRAME_HEADERS->QINQ_ID << 8;
         TCI = TCI | (FRAME_HEADERS->QINQ_ID & 0xffff);
+        FRAME_HEADERS->QINQ_ID = VLAN_ID_TMP;
 
-        memcpy((void*)(FRAME_HEADERS->TX_BUFFER+BUFFER_OFFSET), pTCI, sizeof(TCI));
-        BUFFER_OFFSET+=sizeof(TCI);
+        memcpy((void*)(FRAME_HEADERS->TX_BUFFER+ETHERNET_OFFSET), pTCI, sizeof(TCI));
+        ETHERNET_OFFSET+=sizeof(TCI);
 
         // If an outer VLAN ID has been set, but not an inner one
-        // (which would be a mistake) set it to 1 so the frame is still valid
+        // (assume to be a mistake) set it to 1 so the frame is still valid
         if (FRAME_HEADERS->VLAN_ID == 0) FRAME_HEADERS->VLAN_ID = 1;
 
     }
@@ -147,8 +201,8 @@ void build_headers(struct FRAME_HEADERS *FRAME_HEADERS)
     {
 
         TPI = htons(0x8100);
-        memcpy((void*)(FRAME_HEADERS->TX_BUFFER+BUFFER_OFFSET), pTPI, sizeof(TPI));
-        BUFFER_OFFSET+=sizeof(TPI);
+        memcpy((void*)(FRAME_HEADERS->TX_BUFFER+ETHERNET_OFFSET), pTPI, sizeof(TPI));
+        ETHERNET_OFFSET+=sizeof(TPI);
 
         VLAN_ID_TMP = FRAME_HEADERS->VLAN_ID;
         TCI = (FRAME_HEADERS->PCP & 0x07) << 5;
@@ -157,35 +211,36 @@ void build_headers(struct FRAME_HEADERS *FRAME_HEADERS)
         FRAME_HEADERS->VLAN_ID = VLAN_ID_TMP;
         FRAME_HEADERS->VLAN_ID = FRAME_HEADERS->VLAN_ID << 8;
         TCI = TCI | (FRAME_HEADERS->VLAN_ID & 0xffff);
+        FRAME_HEADERS->VLAN_ID = VLAN_ID_TMP;
 
-        memcpy((void*)(FRAME_HEADERS->TX_BUFFER+BUFFER_OFFSET), pTCI, sizeof(TCI));
-        BUFFER_OFFSET+=sizeof(TCI);
+        memcpy((void*)(FRAME_HEADERS->TX_BUFFER+ETHERNET_OFFSET), pTCI, sizeof(TCI));
+        ETHERNET_OFFSET+=sizeof(TCI);
 
     }
 
     // Push on the ethertype for the Etherate payload
     TPI = htons(FRAME_HEADERS->ETHERTYPE);
-    memcpy((void*)(FRAME_HEADERS->TX_BUFFER+BUFFER_OFFSET), pTPI, sizeof(TPI));
-    BUFFER_OFFSET+=sizeof(TPI);
+    memcpy((void*)(FRAME_HEADERS->TX_BUFFER+ETHERNET_OFFSET), pTPI, sizeof(TPI));
+    ETHERNET_OFFSET+=sizeof(TPI);
 
-    FRAME_HEADERS->LENGTH = BUFFER_OFFSET;
+    FRAME_HEADERS->LENGTH = ETHERNET_OFFSET;
+
 
     // Pointers to the payload section of the frame
-    FRAME_HEADERS->RX_DATA = FRAME_HEADERS->RX_BUFFER + FRAME_HEADERS->LENGTH;
     FRAME_HEADERS->TX_DATA = FRAME_HEADERS->TX_BUFFER + FRAME_HEADERS->LENGTH;
-
-    // When receiving a single tagged frame the Kernel strips off the VLAN tag,
-    // so RX_DATA buffer starts 4 bytes earlier in the receive buffer than in
-    // it does in the transit buffer
-    if (FRAME_HEADERS->LENGTH == 18)
+/*    if (FRAME_HEADERS->MPLS_IGNORE == 1) {
+        FRAME_HEADERS->RX_DATA = FRAME_HEADERS->RX_BUFFER + FRAME_HEADERS->LENGTH;
+    } else {
+        FRAME_HEADERS->RX_DATA = FRAME_HEADERS->RX_BUFFER + ETHERNET_OFFSET;
+    }*/
+    FRAME_HEADERS->RX_DATA = FRAME_HEADERS->RX_BUFFER + FRAME_HEADERS->LENGTH;
+    // When receiving a VLAN tagged frame (one or more VLAN tags) the Linux
+    // Kernel is stripping off the outer most VLAN, so for the RX buffer the
+    // data starts 4 bytes earlier, see this post:
+    // http://stackoverflow.com/questions/24355597/linux-when-sending-ethernet-
+    // frames-the-ethertype-is-being-re-written
+    if (FRAME_HEADERS->VLAN_ID != VLAN_ID_DEF || FRAME_HEADERS->QINQ_ID != QINQ_ID_DEF)
     {
-        FRAME_HEADERS->RX_DATA -= 4;
-    // When receiving a double tagged frame, the Kernel as above strips off the
-    // outter VLAN tag, but not any inner tags, so again the RX_DATA buffer
-    // starts 4 bytes earlier in the receive buffer than does in the transmit buffer
-    } else if (FRAME_HEADERS->LENGTH == 22) {
-        // http://stackoverflow.com/questions/24355597/
-        // linux-when-sending-ethernet-frames-the-ethertype-is-being-re-written
         FRAME_HEADERS->RX_DATA -=4;
     }
 
@@ -205,7 +260,7 @@ void build_tlv(struct FRAME_HEADERS *FRAME_HEADERS, unsigned short TLV_TYPE, uns
     memcpy(BUFFER_OFFSET, &TLV_LENGTH, sizeof(TLV_LENGTH));
     
     BUFFER_OFFSET += sizeof(TLV_LENGTH);
-    memcpy(BUFFER_OFFSET, &TLV_VALUE, (int)TLV_LENGTH);
+    memcpy(BUFFER_OFFSET, &TLV_VALUE, sizeof(TLV_VALUE));
 
     FRAME_HEADERS->RX_TLV_TYPE  = (unsigned short*)FRAME_HEADERS->RX_DATA;
 
@@ -230,10 +285,10 @@ void build_sub_tlv(struct FRAME_HEADERS *FRAME_HEADERS, unsigned short SUB_TLV_T
     memcpy(BUFFER_OFFSET, &SUB_TLV_LENGTH, sizeof(SUB_TLV_LENGTH));
     
     BUFFER_OFFSET += sizeof(SUB_TLV_LENGTH);
-    memcpy(BUFFER_OFFSET, &SUB_TLV_VALUE, (int)SUB_TLV_LENGTH);
+    memcpy(BUFFER_OFFSET, &SUB_TLV_VALUE, sizeof(SUB_TLV_VALUE));
 
     FRAME_HEADERS->RX_SUB_TLV_TYPE  = (unsigned short*) (FRAME_HEADERS->RX_DATA +
-                                                FRAME_HEADERS->TLV_SIZE);
+                                                         FRAME_HEADERS->TLV_SIZE);
 
     FRAME_HEADERS->RX_SUB_TLV_VALUE = (unsigned long long*) (FRAME_HEADERS->RX_DATA +
                                                              FRAME_HEADERS->TLV_SIZE +
@@ -274,12 +329,12 @@ int cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                 FRAME_HEADERS->SOURCE_MAC[4] = 0x00;
                 FRAME_HEADERS->SOURCE_MAC[5] = 0x02;
 
-                FRAME_HEADERS->DESTINATION_MAC[0] = 0x00;
-                FRAME_HEADERS->DESTINATION_MAC[1] = 0x00;
-                FRAME_HEADERS->DESTINATION_MAC[2] = 0x5E;
-                FRAME_HEADERS->DESTINATION_MAC[3] = 0x00;
-                FRAME_HEADERS->DESTINATION_MAC[4] = 0x00;
-                FRAME_HEADERS->DESTINATION_MAC[5] = 0x01;
+                FRAME_HEADERS->DEST_MAC[0]   = 0x00;
+                FRAME_HEADERS->DEST_MAC[1]   = 0x00;
+                FRAME_HEADERS->DEST_MAC[2]   = 0x5E;
+                FRAME_HEADERS->DEST_MAC[3]   = 0x00;
+                FRAME_HEADERS->DEST_MAC[4]   = 0x00;
+                FRAME_HEADERS->DEST_MAC[5]   = 0x01;
 
 
             // Specifying a custom destination MAC address
@@ -292,7 +347,7 @@ int cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                 if (count == 6) {
                     for (int j = 0; j < 6; j++)
                     {
-                        FRAME_HEADERS->DESTINATION_MAC[j] = (unsigned char)strtoul(tokens[j],NULL, 16);
+                        FRAME_HEADERS->DEST_MAC[j] = (unsigned char)strtoul(tokens[j],NULL, 16);
                     }
 
                 } else {
@@ -429,6 +484,19 @@ int cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                 TEST_PARAMS->F_ACK = true;
 
 
+            // Specify the max frames per second rate
+            } else if (strncmp(argv[i], "-F", 2)==0) {
+                if (argc > (i+1))
+                {
+                    TEST_PARAMS->F_TX_SPEED_MAX = strtoul(argv[i+1], NULL, 0);
+                    i++;
+                } else {
+                    printf("Oops! Missing max frame rate\n"
+                           "Usage info: %s -h\n", argv[0]);
+                    return RET_EX_USAGE;
+                }
+
+
             // Limit TX rate to max bytes per second
             } else if (strncmp(argv[i], "-m", 2)==0) {
                 if (argc > (i+1))
@@ -520,6 +588,82 @@ int cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                 }
 
 
+            // Destination and source MAC for next-hop MPLS LSR
+            } else if (strncmp(argv[i], "-D", 2)==0) {
+                int count;
+                char *tokens[6];
+                char delim[] = ":";
+
+                count = explode_char(argv[i+1], delim, tokens);
+                if (count == 6) {
+                    for (int j = 0; j < 6; j++)
+                    {
+                        FRAME_HEADERS->LSP_DEST_MAC[j] = (unsigned char)strtoul(tokens[j],NULL, 16);
+                    }
+
+                } else {
+                    printf("Error: Invalid destination LSR MAC address!\n"
+                           "Usage info: %s -h\n", argv[0]);
+                    return RET_EX_USAGE;
+                }
+                i++;
+
+                count = explode_char(argv[i+1], delim, tokens);
+                if (count == 6) {
+                    for (int j = 0; j < 6; j++)
+                    {
+                        FRAME_HEADERS->LSP_SOURCE_MAC[j] = (unsigned char)strtoul(tokens[j],NULL, 16);
+                    }
+
+                } else {
+                    printf("Error: Invalid source LSR MAC address!\n"
+                           "Usage info: %s -h\n", argv[0]);
+                    return RET_EX_USAGE;
+                }
+                i++;
+
+
+            // Push an MPLS label onto the stack
+            } else if (strncmp(argv[i], "-L", 2)==0) {
+                if (FRAME_HEADERS->MPLS_LABELS < MPLS_LABELS_MAX) {
+
+                    if((unsigned int)atoi(argv[i+1]) > 1048575) {
+                        printf("Oops! MPLS label higher than 1,048,575\n");
+                        return RET_EX_USAGE;
+                    }
+
+                    if((unsigned short)atoi(argv[i+2]) > 7) {
+                        printf("Oops! MPLS EXP higher than 7\n");
+                        return RET_EX_USAGE;
+                    }
+
+                    if((unsigned short)atoi(argv[i+3]) > 255) {
+                        printf("Oops! MPLS TTL higher than 255\n");
+                        return RET_EX_USAGE;
+                    }
+
+                    FRAME_HEADERS->MPLS_LABEL[FRAME_HEADERS->MPLS_LABELS] = (unsigned int)atoi(argv[i+1]);
+                    FRAME_HEADERS->MPLS_EXP[FRAME_HEADERS->MPLS_LABELS]   = (unsigned short)atoi(argv[i+2]);
+                    FRAME_HEADERS->MPLS_TTL[FRAME_HEADERS->MPLS_LABELS]   = (unsigned short)atoi(argv[i+3]);
+                    FRAME_HEADERS->MPLS_LABELS++;
+                    i+=3;
+                } else {
+                    printf("Oops! You have exceeded the maximum number of MPLS"
+                           "labels (%d)\n", MPLS_LABELS_MAX);
+                    return RET_EX_USAGE;
+                }
+
+
+            // Push pseudowire control word atop the label stack
+            } else if (strncmp(argv[i], "-P", 2)==0) {
+                FRAME_HEADERS->PWE_CONTROL_WORD = 1;
+
+
+            // Ignore any MPLS headers and control world in received frames
+            } else if (strncmp(argv[i], "-A", 2)==0) {
+                FRAME_HEADERS->MPLS_IGNORE = 1;
+
+
             // Enable the MTU sweep test
             } else if (strncmp(argv[i], "-U", 2)==0) {
                 if (argc > (i+1))
@@ -527,8 +671,8 @@ int cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                     MTU_TEST->MTU_TX_MIN = (unsigned short)atoi(argv[i+1]);
                     MTU_TEST->MTU_TX_MAX = (unsigned short)atoi(argv[i+2]);
                     if (MTU_TEST->MTU_TX_MAX > F_SIZE_MAX) { 
-                        printf("MTU size can not exceed the maximum hard "
-                               "coded frame size: %u\n", F_SIZE_MAX);
+                        printf("MTU size can not exceed the maximum hard coded"
+                               " size: %u\n", F_SIZE_MAX);
                              return RET_EX_USAGE;
                     }
                     MTU_TEST->ENABLED = true;
@@ -679,9 +823,9 @@ int get_sock_interface(struct TEST_INTERFACE *TEST_INTERFACE)
 
             // Try to get a typical ethernet adapter, not a bridge virt interface
             if (strncmp(ifr->ifr_name, "eth", 3)==0 ||
-               strncmp(ifr->ifr_name, "en", 2)==0 ||
-               strncmp(ifr->ifr_name, "em", 3)==0 ||
-               strncmp(ifr->ifr_name, "wlan", 4)==0)
+                strncmp(ifr->ifr_name, "en", 2)==0 ||
+                strncmp(ifr->ifr_name, "em", 3)==0 ||
+                strncmp(ifr->ifr_name, "wlan", 4)==0)
             {
 
                 strncpy(ifreq.ifr_name,ifr->ifr_name,sizeof(ifreq.ifr_name));
@@ -694,10 +838,7 @@ int get_sock_interface(struct TEST_INTERFACE *TEST_INTERFACE)
                     return NO_INT;
                 }
 
-                // Get the interface index
                 ioctl(TEST_INTERFACE->SOCKET_FD, SIOCGIFINDEX, &ifreq);
-
-                // Get the interface name
                 strncpy(TEST_INTERFACE->IF_NAME,ifreq.ifr_name,IFNAMSIZ);
 
                 printf("Using device %s with address "
@@ -727,8 +868,10 @@ int get_sock_interface(struct TEST_INTERFACE *TEST_INTERFACE)
 
 unsigned long long htonll(unsigned long long val)
 {
+
     if (__BYTE_ORDER == __BIG_ENDIAN) return (val);
     else return __bswap_64(val);
+
 }
 
 
@@ -796,8 +939,10 @@ void list_interfaces()
 
 unsigned long long ntohll(unsigned long long val)
 {
+
     if (__BYTE_ORDER == __BIG_ENDIAN) return (val);
     else return __bswap_64(val);
+
 }
 
 
@@ -812,8 +957,6 @@ void print_usage (struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HEA
             "[Destination]\n"
             "\t-d\tSpecify a custom desctination MAC address, \n"
             "\t\t-d 11:22:33:44:55:66\n"
-            "\t\tWithout this we default to 00:00:5E:00:00:02\n"
-            "\t\tas the TX host and :01 as the RX host.\n"
             "\t-g\tTX host skips settings synchronisation with RX host\n"
             "\t\tand begins transmitting regardless of RX state.\n"
             "\t-G\tTX host skips delay calcuation towards RX host\n"
@@ -826,7 +969,7 @@ void print_usage (struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HEA
             "\t\tinterface to use.\n"
             "\t-I\tSet interface by index. Without this option we guess which\n"
             "\t\tinterface to use.\n"
-            "\t-l\tList interface indexes (then quit) for use with -i option.\n"
+            "\t-l\tList interface indexes (then quit) for use with -I option.\n"
             "[Test Options]\n"
             "\t-a\tAck mode, have the receiver ack each frame during the test\n"
             "\t\t(This will significantly reduce the speed of the test).\n"
@@ -839,13 +982,12 @@ void print_usage (struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HEA
             "\t-e\tSet a custom ethertype, the default is 0x%04x.\n"
             "\t-f\tFrame payload size in bytes, default is %u\n"
             "\t\t(excluding headers, %u bytes on the wire).\n"
+            "\t-F\tMax frames per/second to send, -F 83 (1Mbps).\n"
             "\t-m\tMax bytes per/second to send, -m 125000 (1Mps).\n"
-            "\t-M\tMax bits per/second to send. -M 1000000 (1Mbps).\n"
-            "\t-u\tHow frequently the screen shall be updated during a test,\n"
-            "\t\tseconds as integer, default is %d\n"
+            "\t-M\tMax bits per/second to send, -M 1000000 (1Mbps).\n"
             "\t-t\tTransmition duration, seconds as integer, default is %llu.\n"
             "[Transport]\n"
-            "\t-v\tAdd an 802.1q VLAN tag. None in the header by default.\n"
+            "\t-v\tAdd an 802.1q VLAN tag. Not in the header by default.\n"
             "\t\tIf using a PCP value with -p a default VLAN of 0 is added.\n"
             "\t-p\tAdd an 802.1p PCP value from 1 to 7 using options -p 1 to\n"
             "\t\t-p 7. If more than one value is given, the highest is used.\n"
@@ -857,6 +999,15 @@ void print_usage (struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HEA
             "\t\tIf no PCP value is specified and a Q-in-Q VLAN ID is,\n"
             "\t\t0 will be used. If no outer Q-in-Q VLAN ID is supplied this\n"
             "\t\toption is ignored. -o 1 to -o 7 like the -p option above.\n"
+            "\t-D\tSpecify a destination and source MAC for sending MPLS\n"
+            "\t\ttagged frames to the next-hop LSR:\n"
+            "\t\t-D 00:11:22:33:44:55 66:77:88:99:AA:BB\n"
+            "\t-L\tPush an MPLS label onto the frame. The label, EXP value\n"
+            "\t\tand TTL must be specified: -L 1122 0 255. Repeat the \n"
+            "\t\toption to create a label stack from top to bottom. The last\n"
+            "\t\tlabel will automatically have the bottom of stack bit set.\n"
+            "\t-P\tPush a pseudowire control world on top of the MPLS\n"
+            "\t\tlabel stack to emulate an Ethernet pseudowire.\n"
             "[Additonal Tests]\n"
             "\t-U\tSpecify a minimum and maximum MTU size in bytes then\n"
             "\t\tperform an MTU sweep on the link towards the RX host to\n"
@@ -872,7 +1023,6 @@ void print_usage (struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HEA
             ETHERTYPE_DEF,
             F_SIZE_DEF,
             (F_SIZE_DEF+FRAME_HEADERS->LENGTH),
-            APP_PARAMS->STATS_DELAY,
             F_DURATION_DEF,
             F_DURATION_DEF);
 
@@ -891,7 +1041,7 @@ int set_sock_interface_index(struct TEST_INTERFACE *TEST_INTERFACE)
     if (getifaddrs(&ifaddr)==-1)
     {
         perror("getifaddrs");
-        exit(EX_PROTOCOL);
+        return(NO_INT);
     }
 
     for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next)
@@ -1316,6 +1466,7 @@ void sync_settings(struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HE
 
             RX_LEN = recvfrom(TEST_INTERFACE->SOCKET_FD, FRAME_HEADERS->RX_BUFFER,
                               TEST_PARAMS->F_SIZE_TOTAL, 0, NULL, NULL);
+
 
             // All settings have been received
             if (ntohs(*FRAME_HEADERS->RX_TLV_TYPE) == TYPE_SETTING &&
