@@ -175,6 +175,8 @@ void delay_test(struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HEADE
         memset(TIME_RX_DIFF, 0, sizeof(TIME_RX_DIFF));
 
         int DELAY_INDEX = 0;
+        
+        WAITING = true;
 
         WAITING = true;
 
