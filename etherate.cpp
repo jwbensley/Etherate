@@ -1,7 +1,7 @@
 /*
  * License:
  *
- * Copyright (c) 2012-2015 James Bensley.
+ * Copyright (c) 2012-2016 James Bensley.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -34,14 +34,11 @@
  * CALCULATE DELAY
  * MAIN TEST PHASE
  *
- * Updates:
- * https://github.com/jwbensley/Etherate
- * http://null.53bits.co.uk/index.php?page=etherate
- * Please send corrections, ideas and help to: jwbensley@gmail.com 
- * (I'm a beginner if that isn't obvious!)
- *
- * Compile: g++ -o etherate etherate.cpp -lrt
- *
+ */
+
+
+
+ /*
  ********************************************************************** HEADERS
  */
 
@@ -69,7 +66,7 @@
 #include <time.h>            // clock_gettime(), struct timeval, time_t,
                              // struct tm
 #include "unistd.h"          // getuid(), sleep()
-
+#include <poll.h> /////
 #ifndef CLOCK_MONOTONIC_RAW
 #define CLOCK_MONOTONIC_RAW 4
 #endif
@@ -98,33 +95,58 @@ int main(int argc, char *argv[]) {
          ******************************************************* DEFAULT VALUES
          */
 
-        pFRAME_HEADERS = &FRAME_HEADERS;
-        FRAME_HEADERS.SOURCE_MAC[0]      = 0x00;
-        FRAME_HEADERS.SOURCE_MAC[1]      = 0x00;
-        FRAME_HEADERS.SOURCE_MAC[2]      = 0x5E;
-        FRAME_HEADERS.SOURCE_MAC[3]      = 0x00;
-        FRAME_HEADERS.SOURCE_MAC[4]      = 0x00;
-        FRAME_HEADERS.SOURCE_MAC[5]      = 0x01;
-        FRAME_HEADERS.DESTINATION_MAC[0] = 0x00;
-        FRAME_HEADERS.DESTINATION_MAC[1] = 0x00;
-        FRAME_HEADERS.DESTINATION_MAC[2] = 0x5E;
-        FRAME_HEADERS.DESTINATION_MAC[3] = 0x00;
-        FRAME_HEADERS.DESTINATION_MAC[4] = 0x00;
-        FRAME_HEADERS.DESTINATION_MAC[5] = 0x02;
-        FRAME_HEADERS.LENGTH             = HEADERS_LEN_DEF;
-        FRAME_HEADERS.ETHERTYPE          = ETHERTYPE_DEF;
-        FRAME_HEADERS.PCP                = PCP_DEF;
-        FRAME_HEADERS.VLAN_ID            = VLAN_ID_DEF;
-        FRAME_HEADERS.QINQ_ID            = QINQ_ID_DEF;
-        FRAME_HEADERS.QINQ_PCP           = QINQ_PCP_DEF;
-        FRAME_HEADERS.TLV_SIZE           = sizeof(char) + sizeof(short) +
-                                           sizeof(unsigned long);
-        FRAME_HEADERS.SUB_TLV_SIZE       = FRAME_HEADERS.TLV_SIZE + 
-                                           sizeof(char) + sizeof(short) + 
-                                           sizeof(unsigned long long);
+        pFRAME_HEADERS                  = &FRAME_HEADERS;
+        FRAME_HEADERS.SOURCE_MAC[0]     = 0x00;
+        FRAME_HEADERS.SOURCE_MAC[1]     = 0x00;
+        FRAME_HEADERS.SOURCE_MAC[2]     = 0x5E;
+        FRAME_HEADERS.SOURCE_MAC[3]     = 0x00;
+        FRAME_HEADERS.SOURCE_MAC[4]     = 0x00;
+        FRAME_HEADERS.SOURCE_MAC[5]     = 0x01;
+        FRAME_HEADERS.DEST_MAC[0]       = 0x00;
+        FRAME_HEADERS.DEST_MAC[1]       = 0x00;
+        FRAME_HEADERS.DEST_MAC[2]       = 0x5E;
+        FRAME_HEADERS.DEST_MAC[3]       = 0x00;
+        FRAME_HEADERS.DEST_MAC[4]       = 0x00;
+        FRAME_HEADERS.DEST_MAC[5]       = 0x02;
+        FRAME_HEADERS.LENGTH            = HEADERS_LEN_DEF;
+        FRAME_HEADERS.ETHERTYPE         = ETHERTYPE_DEF;
+        FRAME_HEADERS.PCP               = PCP_DEF;
+        FRAME_HEADERS.VLAN_ID           = VLAN_ID_DEF;
+        FRAME_HEADERS.QINQ_ID           = QINQ_ID_DEF;
+        FRAME_HEADERS.QINQ_PCP          = QINQ_PCP_DEF;
+        FRAME_HEADERS.LSP_SOURCE_MAC[0] = 0x00;
+        FRAME_HEADERS.LSP_SOURCE_MAC[1] = 0x00;
+        FRAME_HEADERS.LSP_SOURCE_MAC[2] = 0x00;
+        FRAME_HEADERS.LSP_SOURCE_MAC[3] = 0x00;
+        FRAME_HEADERS.LSP_SOURCE_MAC[4] = 0x00;
+        FRAME_HEADERS.LSP_SOURCE_MAC[5] = 0x00;
+        FRAME_HEADERS.LSP_SOURCE_MAC[6] = 0x00;
+        FRAME_HEADERS.LSP_DEST_MAC[0]   = 0x00;
+        FRAME_HEADERS.LSP_DEST_MAC[1]   = 0x00;
+        FRAME_HEADERS.LSP_DEST_MAC[2]   = 0x00;
+        FRAME_HEADERS.LSP_DEST_MAC[3]   = 0x00;
+        FRAME_HEADERS.LSP_DEST_MAC[4]   = 0x00;
+        FRAME_HEADERS.LSP_DEST_MAC[5]   = 0x00;
+        FRAME_HEADERS.LSP_DEST_MAC[6]   = 0x00;
+        FRAME_HEADERS.MPLS_LABELS       = 0;
+        for (int i = 0; i<MPLS_LABELS_MAX; i++) {
+            FRAME_HEADERS.MPLS_LABEL[i] = 0;
+            FRAME_HEADERS.MPLS_EXP[i]   = 0;
+            FRAME_HEADERS.MPLS_TTL[i]   = 0;
+        }
+        FRAME_HEADERS.PWE_CONTROL_WORD  = 0;
+        FRAME_HEADERS.MPLS_IGNORE       = 0;
+        FRAME_HEADERS.TLV_SIZE          = sizeof(char) + sizeof(short) +
+                                          sizeof(unsigned long);
+        FRAME_HEADERS.SUB_TLV_SIZE      = FRAME_HEADERS.TLV_SIZE + 
+                                          sizeof(char) + sizeof(short) + 
+                                          sizeof(unsigned long long);
 
         pTEST_INTERFACE         = &TEST_INTERFACE;
         TEST_INTERFACE.IF_INDEX = IF_INDEX_DEF;
+        for (int i = 0; i<IFNAMSIZ; i++) {
+            TEST_INTERFACE.IF_NAME[i] = 0;
+        }
 
         TEST_PARAMS.F_SIZE          = F_SIZE_DEF;
         TEST_PARAMS.F_SIZE_TOTAL    = F_SIZE_DEF + FRAME_HEADERS.LENGTH;
@@ -136,6 +158,7 @@ int main(int argc, char *argv[]) {
         TEST_PARAMS.B_TX_SPEED_PREV = 0;
         TEST_PARAMS.F_TX_COUNT      = 0;
         TEST_PARAMS.F_TX_COUNT_PREV = 0;
+        TEST_PARAMS.F_TX_SPEED_MAX  = F_TX_SPEED_MAX_DEF;
         TEST_PARAMS.B_TX            = 0;
         TEST_PARAMS.B_TX_PREV       = 0;
         TEST_PARAMS.F_RX_COUNT      = 0;
@@ -157,7 +180,7 @@ int main(int argc, char *argv[]) {
         MTU_TEST.MTU_TX_MIN = 1400;
         MTU_TEST.MTU_TX_MAX = 1500;
 
-        pQM_TEST = &QM_TEST;
+        pQM_TEST                 = &QM_TEST;
         QM_TEST.ENABLED          = false;
         QM_TEST.INTERVAL         = 1000;
         QM_TEST.INTERVAL_SEC     = 0;
@@ -179,8 +202,7 @@ int main(int argc, char *argv[]) {
         APP_PARAMS.TX_MODE     = true;
         APP_PARAMS.TX_SYNC     = true;
         APP_PARAMS.TX_DELAY    = TX_DELAY_DEF;
-        APP_PARAMS.STATS_DELAY = 1;
-
+        
 
 
         /*
@@ -192,21 +214,16 @@ int main(int argc, char *argv[]) {
                                    &QM_TEST);
 
         if (CLI_RET_VAL == -2) {
-
             return EXIT_SUCCESS;
-
         } else if (CLI_RET_VAL == -1) {
-
             return EX_USAGE;
         }
 
 
         // Check for root privs because low level socket access is required
         if (getuid() != 0) {
-
             printf("Must be root to use this program!\n");
             return EX_NOPERM;
-
         }
 
 
@@ -220,6 +237,10 @@ int main(int argc, char *argv[]) {
 
         TEST_INTERFACE.SOCKET_FD = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 
+///// Monitor sock1 for input
+TEST_INTERFACE.fds[0].fd = TEST_INTERFACE.SOCKET_FD;
+TEST_INTERFACE.fds[0].events = POLLIN;
+TEST_INTERFACE.fds[0].revents = 0;
 
         if (TEST_INTERFACE.SOCKET_FD < 0 )
         {
@@ -231,7 +252,7 @@ int main(int argc, char *argv[]) {
 
 
         // If the user has supplied an interface index try to use that
-        if (TEST_INTERFACE.IF_INDEX > 0) {
+        if (TEST_INTERFACE.IF_INDEX != IF_INDEX_DEF) {
 
             TEST_INTERFACE.IF_INDEX = set_sock_interface_index(&TEST_INTERFACE);
             if (TEST_INTERFACE.IF_INDEX == -1)
@@ -242,7 +263,7 @@ int main(int argc, char *argv[]) {
             }
 
         // Or if the user has supplied an interface name try to use that        
-        } else if (strcmp(TEST_INTERFACE.IF_NAME,"") != 0) {
+        } else if (strcmp(TEST_INTERFACE.IF_NAME, "") != 0) {
 
             TEST_INTERFACE.IF_INDEX = set_sock_interface_name(&TEST_INTERFACE);
             if (TEST_INTERFACE.IF_INDEX == -1)
@@ -274,21 +295,43 @@ int main(int argc, char *argv[]) {
         TEST_INTERFACE.SOCKET_ADDRESS.sll_hatype   = ARPHRD_ETHER;
         TEST_INTERFACE.SOCKET_ADDRESS.sll_pkttype  = PACKET_OTHERHOST;
         TEST_INTERFACE.SOCKET_ADDRESS.sll_halen    = ETH_ALEN;		
-        TEST_INTERFACE.SOCKET_ADDRESS.sll_addr[0]  = FRAME_HEADERS.DESTINATION_MAC[0];		
-        TEST_INTERFACE.SOCKET_ADDRESS.sll_addr[1]  = FRAME_HEADERS.DESTINATION_MAC[1];
-        TEST_INTERFACE.SOCKET_ADDRESS.sll_addr[2]  = FRAME_HEADERS.DESTINATION_MAC[2];
-        TEST_INTERFACE.SOCKET_ADDRESS.sll_addr[3]  = FRAME_HEADERS.DESTINATION_MAC[3];
-        TEST_INTERFACE.SOCKET_ADDRESS.sll_addr[4]  = FRAME_HEADERS.DESTINATION_MAC[4];
-        TEST_INTERFACE.SOCKET_ADDRESS.sll_addr[5]  = FRAME_HEADERS.DESTINATION_MAC[5];
+        TEST_INTERFACE.SOCKET_ADDRESS.sll_addr[0]  = FRAME_HEADERS.DEST_MAC[0];		
+        TEST_INTERFACE.SOCKET_ADDRESS.sll_addr[1]  = FRAME_HEADERS.DEST_MAC[1];
+        TEST_INTERFACE.SOCKET_ADDRESS.sll_addr[2]  = FRAME_HEADERS.DEST_MAC[2];
+        TEST_INTERFACE.SOCKET_ADDRESS.sll_addr[3]  = FRAME_HEADERS.DEST_MAC[3];
+        TEST_INTERFACE.SOCKET_ADDRESS.sll_addr[4]  = FRAME_HEADERS.DEST_MAC[4];
+        TEST_INTERFACE.SOCKET_ADDRESS.sll_addr[5]  = FRAME_HEADERS.DEST_MAC[5];
         TEST_INTERFACE.SOCKET_ADDRESS.sll_addr[6]  = 0x00;
         TEST_INTERFACE.SOCKET_ADDRESS.sll_addr[7]  = 0x00;
 
         // Send and receive buffers for incoming/outgoing ethernet frames
         FRAME_HEADERS.RX_BUFFER = (char*)calloc(1, F_SIZE_MAX);
         FRAME_HEADERS.TX_BUFFER = (char*)calloc(1, F_SIZE_MAX);
-        
+
         build_headers(&FRAME_HEADERS);
 
+        // Total size of the frame data (paylod size+headers), this excludes the
+        // preamble & start frame delimiter, FCS and inter frame gap
+        TEST_PARAMS.F_SIZE_TOTAL = TEST_PARAMS.F_SIZE + FRAME_HEADERS.LENGTH;
+
+
+        int PHY_MTU = get_interface_mtu_by_name(&TEST_INTERFACE);
+        
+        if (PHY_MTU==-1) {
+
+            printf("\nPhysical interface MTU unknown, "
+                   "test might exceed physical MTU!\n\n");
+
+        } else if (TEST_PARAMS.F_SIZE_TOTAL > PHY_MTU + 14) {
+            
+            printf("\nPhysical interface MTU (%u with headers) is less than\n"
+                   "the test frame size (%u with headers). Test frames shall\n"
+                   "bo limited to the interface MTU size\n\n",
+                   PHY_MTU+14, TEST_PARAMS.F_SIZE_TOTAL);
+            
+            TEST_PARAMS.F_SIZE_TOTAL = PHY_MTU + 14;
+
+        }
 
         // Fill the test frame with some random data
         for (int i = 0; i < (F_SIZE_MAX-FRAME_HEADERS.LENGTH); i++)
@@ -332,38 +375,39 @@ int main(int argc, char *argv[]) {
         // Declare sigint handler, TX will signal RX to reset when it quits
         signal (SIGINT,signal_handler);
 
+
         printf("Source MAC %02x:%02x:%02x:%02x:%02x:%02x\n",
                FRAME_HEADERS.SOURCE_MAC[0],FRAME_HEADERS.SOURCE_MAC[1],
                FRAME_HEADERS.SOURCE_MAC[2],FRAME_HEADERS.SOURCE_MAC[3],
                FRAME_HEADERS.SOURCE_MAC[4],FRAME_HEADERS.SOURCE_MAC[5]);
 
         printf("Destination MAC %02x:%02x:%02x:%02x:%02x:%02x\n",
-               FRAME_HEADERS.DESTINATION_MAC[0],FRAME_HEADERS.DESTINATION_MAC[1],
-               FRAME_HEADERS.DESTINATION_MAC[2],FRAME_HEADERS.DESTINATION_MAC[3],
-               FRAME_HEADERS.DESTINATION_MAC[4],FRAME_HEADERS.DESTINATION_MAC[5]);
+               FRAME_HEADERS.DEST_MAC[0],FRAME_HEADERS.DEST_MAC[1],
+               FRAME_HEADERS.DEST_MAC[2],FRAME_HEADERS.DEST_MAC[3],
+               FRAME_HEADERS.DEST_MAC[4],FRAME_HEADERS.DEST_MAC[5]);
 
 
         // Broadcacst to populate any TCAM or MAC tables
         unsigned char TEMP_MAC[6] = {
-            FRAME_HEADERS.DESTINATION_MAC[0],
-            FRAME_HEADERS.DESTINATION_MAC[1],
-            FRAME_HEADERS.DESTINATION_MAC[2],
-            FRAME_HEADERS.DESTINATION_MAC[3],
-            FRAME_HEADERS.DESTINATION_MAC[4],
-            FRAME_HEADERS.DESTINATION_MAC[5],
+            FRAME_HEADERS.DEST_MAC[0],
+            FRAME_HEADERS.DEST_MAC[1],
+            FRAME_HEADERS.DEST_MAC[2],
+            FRAME_HEADERS.DEST_MAC[3],
+            FRAME_HEADERS.DEST_MAC[4],
+            FRAME_HEADERS.DEST_MAC[5],
         };
 
-        FRAME_HEADERS.DESTINATION_MAC[0] = 0xFF;
-        FRAME_HEADERS.DESTINATION_MAC[1] = 0xFF;
-        FRAME_HEADERS.DESTINATION_MAC[2] = 0xFF;
-        FRAME_HEADERS.DESTINATION_MAC[3] = 0xFF;
-        FRAME_HEADERS.DESTINATION_MAC[4] = 0xFF;
-        FRAME_HEADERS.DESTINATION_MAC[5] = 0xFF;
+        FRAME_HEADERS.DEST_MAC[0] = 0xFF;
+        FRAME_HEADERS.DEST_MAC[1] = 0xFF;
+        FRAME_HEADERS.DEST_MAC[2] = 0xFF;
+        FRAME_HEADERS.DEST_MAC[3] = 0xFF;
+        FRAME_HEADERS.DEST_MAC[4] = 0xFF;
+        FRAME_HEADERS.DEST_MAC[5] = 0xFF;
 
+        // Rebuild frame headers with destination MAC
         build_headers(&FRAME_HEADERS);
 
         build_tlv(&FRAME_HEADERS, htons(TYPE_BROADCAST), htonl(VALUE_PRESENCE));
-
         // Build a dummy sub-TLV to align the buffers and pointers
         build_sub_tlv(&FRAME_HEADERS, htons(TYPE_APPLICATION_SUB_TLV),
                       htonll(VALUE_DUMMY));
@@ -382,19 +426,21 @@ int main(int argc, char *argv[]) {
         }
 
 
-        FRAME_HEADERS.DESTINATION_MAC[0] = TEMP_MAC[0];
-        FRAME_HEADERS.DESTINATION_MAC[1] = TEMP_MAC[1];
-        FRAME_HEADERS.DESTINATION_MAC[2] = TEMP_MAC[2];
-        FRAME_HEADERS.DESTINATION_MAC[3] = TEMP_MAC[3];
-        FRAME_HEADERS.DESTINATION_MAC[4] = TEMP_MAC[4];
-        FRAME_HEADERS.DESTINATION_MAC[5] = TEMP_MAC[5];
+        FRAME_HEADERS.DEST_MAC[0] = TEMP_MAC[0];
+        FRAME_HEADERS.DEST_MAC[1] = TEMP_MAC[1];
+        FRAME_HEADERS.DEST_MAC[2] = TEMP_MAC[2];
+        FRAME_HEADERS.DEST_MAC[3] = TEMP_MAC[3];
+        FRAME_HEADERS.DEST_MAC[4] = TEMP_MAC[4];
+        FRAME_HEADERS.DEST_MAC[5] = TEMP_MAC[5];
 
         build_headers(&FRAME_HEADERS);
-
+        /////build_tlv(&FRAME_HEADERS, htons(TYPE_BROADCAST), htonl(VALUE_PRESENCE));
+        /////build_sub_tlv(&FRAME_HEADERS, htons(TYPE_APPLICATION_SUB_TLV),
+        /////htonll(VALUE_DUMMY));
 
         // Total size of the frame data (paylod size+headers), this excludes the
         // preamble & start frame delimiter, FCS and inter frame gap
-        TEST_PARAMS.F_SIZE_TOTAL = TEST_PARAMS.F_SIZE + FRAME_HEADERS.LENGTH;
+/////        TEST_PARAMS.F_SIZE_TOTAL = TEST_PARAMS.F_SIZE + FRAME_HEADERS.LENGTH;
 
 
 
@@ -435,7 +481,8 @@ int main(int argc, char *argv[]) {
 
         } else {
 
-            speed_test(&APP_PARAMS, &FRAME_HEADERS, &TEST_INTERFACE, &TEST_PARAMS);
+            speed_test(&APP_PARAMS, &FRAME_HEADERS, &TEST_INTERFACE,
+                       &TEST_PARAMS);
 
         }
         
@@ -452,7 +499,7 @@ int main(int argc, char *argv[]) {
 
     if (ioctl(TEST_INTERFACE.SOCKET_FD,SIOCGIFFLAGS,&ethreq) == -1)
     {
-        printf("Error getting socket flags, leaving promiscuous mode failed!\n");;
+        printf("Error getting socket flags, leaving promiscuous mode failed!\n");
         perror("ioctl() ");
         close(TEST_INTERFACE.SOCKET_FD);
         return EX_SOFTWARE;

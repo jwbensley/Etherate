@@ -1,8 +1,35 @@
+-----Etherate 0.8 Beta - 2016-03
+
+[FEATURE] Added CLI arg -F to set max frames per second limit
+
+[FEATURE] Set the default Ethertype for the Etherate payload frame to be 0xABCD for easy identification
+
+[FEATURE] Added -L option to build an MPLS label stack and -E to specify LSR src/dst MAC
+
+[FEATURE] Added -P option to add pseudowire control word to header stack
+
+[MAJOR] Fixed issue with delay calculation not waiting and loop exceeding by 1
+
+[MAJOR] Fixed issue with VLAN tag not being restored after build_headers()
+
+[MINOR] Added MTU check to resolve MTU issues with QinQ
+
+[MINOR] Fixed uninitialised value for IF_NAME
+
+[MINOR] Fixed code, comment and documentation typos
+
+[MINOR] Wrote the initial INSTALL file
+
+add DEI option
+
+MPLS labels
+
+
 -----Etherate 0.7 Beta - 2015-10-10
 
 [FEATURE] First draft of the link quality test is implemented
 
-[MINOR] Added a pause on the RX host for the first test frame to come though (so the hosts are in sync)
+[MINOR] Added a pause on the RX host for the first test frame to come though (so the hosts are testing in sync)
 
 [MINOR] I was a very naughty boy and used a goto, this has now been removed
 

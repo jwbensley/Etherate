@@ -1,7 +1,7 @@
 /*
  * License:
  *
- * Copyright (c) 2012-2015 James Bensley.
+ * Copyright (c) 2012-2016 James Bensley.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -37,23 +37,21 @@
  ************************************************************* GLOBAL CONSTANTS
  */
 
-const char VERSION[20] = "0.7.beta 2015-10";
-
-// Maximum frame size on the wire (payload + all headers headers) Etherate
-// will support, this is hard coded here because send and receive buffers
-// have to allocated
-const unsigned int       F_SIZE_MAX         = 10000;
+const char VERSION[20] = "0.8.beta 2016-02";
+const unsigned int       F_SIZE_MAX         = 10000; // Maximum frame size on the wire (payload+headers)
 const unsigned int       F_SIZE_DEF         = 1500;  // Default frame payload size in bytes
 const unsigned long long F_DURATION_DEF     = 30;    // Default test duration in seconds
 const unsigned long      F_COUNT_DEF        = 0;     // Default total number of frames to transmit
 const unsigned long      F_BYTES_DEF        = 0;     // Default amount of data to transmit in bytes
 const unsigned long      B_TX_SPEED_MAX_DEF = 0;     // Default max speed in bytes, 0 == no limit
+const unsigned long      F_TX_SPEED_MAX_DEF = 0;     // Default max frames per second, 0 == no limit
 const unsigned short     PCP_DEF            = 0;     // Default PCP value
 const unsigned short     VLAN_ID_DEF        = 0;     // Default VLAN ID
 const unsigned short     QINQ_ID_DEF        = 0;     // Default QinQ VLAN ID
 const unsigned short     QINQ_PCP_DEF       = 0;     // Default QinQ PCP value
+const unsigned short     MPLS_LABELS_MAX    = 10;    // Maximum number of MPLS labels
 const unsigned int       HEADERS_LEN_DEF    = 14;    // Default frame headers length
-const unsigned short     ETHERTYPE_DEF      = 2048;  // Default ETHERTYPE (0x0800 == IPv4)
+const unsigned short     ETHERTYPE_DEF      = 43981; // Default Ethertype (0xABCD)
 const unsigned int       IF_INDEX_DEF       = -1;    // Default interface index number
 const unsigned char      TX_DELAY_DEF       = true;  // Default TX to RX delay check
 
@@ -64,7 +62,7 @@ const unsigned char      TX_DELAY_DEF       = true;  // Default TX to RX delay c
  */
 
 
-
+// TVL and sub-TLV types/values
 #define TYPE_APPLICATION         1
 #define TYPE_APPLICATION_SUB_TLV 11
 #define VALUE_DYINGGASP          101
@@ -113,7 +111,6 @@ struct APP_PARAMS              // General application parameters
     char         TX_DELAY;              // Default, measure one way delay TX > RX
     time_t       TS_NOW;                // Current date and time
     tm*          TM_LOCAL;              // For breaking down the above
-    unsigned int STATS_DELAY;           // SCreen update frequently in seconds
 
 };
 
@@ -122,23 +119,33 @@ struct FRAME_HEADERS           // Frame header settings
 {
 
     unsigned char       SOURCE_MAC[6];
-    unsigned char       DESTINATION_MAC[6];
+    unsigned char       DEST_MAC[6];
     unsigned short      ETHERTYPE;
     unsigned short      LENGTH;
     unsigned short      PCP;
     unsigned short      VLAN_ID;
     unsigned short      QINQ_ID;
     unsigned short      QINQ_PCP;
-    char*               RX_BUFFER;
-    char*               RX_DATA;
-    char*               TX_BUFFER;
-    char*               TX_DATA;
+    unsigned char       LSP_SOURCE_MAC[6];
+    unsigned char       LSP_DEST_MAC[6];
+    unsigned short      MPLS_LABELS;
+    unsigned int        MPLS_LABEL[MPLS_LABELS_MAX];
+    unsigned short      MPLS_EXP[MPLS_LABELS_MAX];
+    unsigned short      MPLS_TTL[MPLS_LABELS_MAX];
+    unsigned char       PWE_CONTROL_WORD;
+    unsigned char       MPLS_IGNORE;
+    
+    char*               RX_BUFFER;      // Full frame including headers
+    char*               RX_DATA;        // Pointer to frame payload after the headers
+    char*               TX_BUFFER;      // Full frame including headers
+    char*               TX_DATA;        // Pointer to frame payload after the headers
     unsigned int        TLV_SIZE;
-    unsigned short*     RX_TLV_TYPE;
-    unsigned long*      RX_TLV_VALUE;
+    unsigned short*     RX_TLV_TYPE;    // TLV type within frame headers
+    unsigned long*      RX_TLV_VALUE;   // TLV value within the frame header
     unsigned int        SUB_TLV_SIZE;
     unsigned short*     RX_SUB_TLV_TYPE;
     unsigned long long* RX_SUB_TLV_VALUE;
+
 };
 
 
@@ -149,10 +156,12 @@ struct TEST_INTERFACE          // Settings for the physical test interface
     char   IF_NAME[IFNAMSIZ];
     struct sockaddr_ll SOCKET_ADDRESS;
     int    SOCKET_FD;                   // Used for sending frames
-    fd_set FD_READS;                    // Socket file descriptors for polling with select()
-    int    SOCKET_FD_COUNT;             // FD count and ret val for polling with select()
+    /////fd_set FD_READS;                    // Socket file descriptors for polling with select()
+    /////int    SOCKET_FD_COUNT;             // FD count and ret val for polling with select()
     int    SELECT_RET_VAL;
     struct timeval TV_SELECT_DELAY;     // Elapsed time struct for polling the socket FD
+
+    struct pollfd fds[1]; /////
 
 };
 
@@ -171,6 +180,7 @@ struct TEST_PARAMS             // Gerneral testing parameters
     unsigned long long S_ELAPSED;       // Seconds the test has been running
     unsigned long long F_TX_COUNT;      // Total number of frames transmitted
     unsigned long long F_TX_COUNT_PREV; // Total number of frames sent one second ago
+    unsigned long      F_TX_SPEED_MAX;  // Maximum transmit speed in frames per second
     unsigned long long B_TX;            // Total number of bytes transmitted
     unsigned long long B_TX_PREV;       // Bytes sent up to one second ago
     unsigned long long F_RX_COUNT;      // Total number of frames received
