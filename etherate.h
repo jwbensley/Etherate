@@ -37,7 +37,7 @@
  ************************************************************* GLOBAL CONSTANTS
  */
 
-const char VERSION[20] = "0.8.beta 2016-02";
+const char VERSION[20] = "0.8.beta 2016-03";
 const unsigned int       F_SIZE_MAX         = 10000; // Maximum frame size on the wire (payload+headers)
 const unsigned int       F_SIZE_DEF         = 1500;  // Default frame payload size in bytes
 const unsigned long long F_DURATION_DEF     = 30;    // Default test duration in seconds
@@ -62,7 +62,7 @@ const unsigned char      TX_DELAY_DEF       = true;  // Default TX to RX delay c
  */
 
 
-// TVL and sub-TLV types/values
+// TLV and sub-TLV types/values
 #define TYPE_APPLICATION         1
 #define TYPE_APPLICATION_SUB_TLV 11
 #define VALUE_DYINGGASP          101

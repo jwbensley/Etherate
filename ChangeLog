@@ -1,3 +1,13 @@
+-----Etherate 0.9 Beta - 2016-04
+
+[MINOR] Fixed code, comment and documentation typos
+
+add DEI option
+
+MPLS labels
+
+
+
 -----Etherate 0.8 Beta - 2016-03
 
 [FEATURE] Added CLI arg -F to set max frames per second limit
@@ -20,9 +30,6 @@
 
 [MINOR] Wrote the initial INSTALL file
 
-add DEI option
-
-MPLS labels
 
 
 -----Etherate 0.7 Beta - 2015-10-10
