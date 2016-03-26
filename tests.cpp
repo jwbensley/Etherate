@@ -178,8 +178,6 @@ void delay_test(struct APP_PARAMS *APP_PARAMS, struct FRAME_HEADERS *FRAME_HEADE
         
         WAITING = true;
 
-        WAITING = true;
-
         while(WAITING)
         {
 
