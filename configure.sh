@@ -5,4 +5,4 @@ libtoolize
 automake --add-missing
 
 autoconf && automake
-./configure --enable-debug
+./configure
