@@ -88,8 +88,8 @@ Etherate
 
 #### Who made it (where to send your hate mail)
 
-  James Bensley [jwbensley at gmail dot com]
+    James Bensley [jwbensley at gmail dot com]
 
-  Major credit is due for their code review and bug fixing efforts, to;
-  Bradley Kite
-  Bruno de Montis
+    Major credit is due for their code review and bug fixing efforts, to;
+    Bradley Kite
+    Bruno de Montis
