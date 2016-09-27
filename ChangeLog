@@ -1,121 +1,143 @@
+-----Etherate 0.10 Beta 2016-09
+
+[FEATURE] Added DEI option for single and double tagged VLANs.
+
+[FEATURE] Added -C option to load a custom frame from file.
+
+[MINOR] The default Ethertype has been changed from 0xABCD as several other applications use this, to 0x3333 which is still unassigned by IANA
+
+[MINOR] The network socket was being declared inside the loop and closed outside, only the last socket was being closed.
+
+[MINOR] Various strict coding issues corrected when compiling with -Wall -ftrapv such as signed/unsigned comparisons, operator behaviour --a vs a-- vs a-=1 etc. Still lots to do to pass "-pedantic".
+
+[MINOR] Syntax passing bug in -L option fixed.
+
+[MINOR] Migrated to uint*_t/int*_t to standardise sizes and standardised return values with ints.
+
+[MINOR] More code cleaning, adding the defaults.cpp file to tidy main().
+
+
+
 -----Etherate 0.9 Beta - 2016-04
 
-[MINOR] Fixed code, comment and documentation typos
+[FEATURE] Added max and avg frames per second stats.
 
-add DEI option
+[MINOR] Added warning and padding for frames less than 46 bytes.
 
-MPLS labels
+[MINOR] Fixed code, comment and documentation typos.
+
+[MINOR] Migrated from select() to poll() to non-block recvfrom(), faster for unidirectional single flow.
 
 
 
 -----Etherate 0.8 Beta - 2016-03
 
-[FEATURE] Added CLI arg -F to set max frames per second limit
+[FEATURE] Added CLI arg -F to set max frames per second limit.
 
-[FEATURE] Set the default Ethertype for the Etherate payload frame to be 0xABCD for easy identification
+[FEATURE] Set the default Ethertype for the Etherate payload frame to be 0xABCD for easy identification.
 
-[FEATURE] Added -L option to build an MPLS label stack and -E to specify LSR src/dst MAC
+[FEATURE] Added -L option to build an MPLS label stack and -E to specify LSR src/dst MAC.
 
-[FEATURE] Added -P option to add pseudowire control word to header stack
+[FEATURE] Added -P option to add pseudowire control word to header stack.
 
-[MAJOR] Fixed issue with delay calculation not waiting and loop exceeding by 1
+[MAJOR] Fixed issue with delay calculation not waiting and loop exceeding by 1.
 
-[MAJOR] Fixed issue with VLAN tag not being restored after build_headers()
+[MAJOR] Fixed issue with VLAN tag not being restored after build_headers().
 
-[MINOR] Added MTU check to resolve MTU issues with QinQ
+[MINOR] Added MTU check to resolve MTU issues with QinQ.
 
-[MINOR] Fixed uninitialised value for IF_NAME
+[MINOR] Fixed uninitialised value for IF_NAME.
 
-[MINOR] Fixed code, comment and documentation typos
+[MINOR] Fixed code, comment and documentation typos.
 
-[MINOR] Wrote the initial INSTALL file
+[MINOR] Wrote the initial INSTALL file.
 
 
 
 -----Etherate 0.7 Beta - 2015-10-10
 
-[FEATURE] First draft of the link quality test is implemented
+[FEATURE] First draft of the link quality test is implemented.
 
-[MINOR] Added a pause on the RX host for the first test frame to come though (so the hosts are testing in sync)
+[MINOR] Added a pause on the RX host for the first test frame to come though (so the hosts are testing in sync).
 
-[MINOR] I was a very naughty boy and used a goto, this has now been removed
+[MINOR] I was a very naughty boy and used a goto, this has now been removed.
 
-[MINOR] Fixed code, comment and documenation typos
+[MINOR] Fixed code, comment and documentation typos.
 
 
 
 -----Etherate 0.6 Beta - 2015-09-13
 
-[MAJOR] Rewrite to structs and functions to improve efficiency (major becasue this was 10G performance impacting)
+[MAJOR] Rewrite to structs and functions to improve efficiency (major because this was 10G performance impacting).
 
-[MAJOR] Moved to a TLV based header (major because this was 10G performance impacting)
+[MAJOR] Moved to a TLV based header (major because this was 10G performance impacting).
 
-[MAJOR] Added htonll() and ntohll() function (major becasue this was 10G performance impacting)
+[MAJOR] Added htonll() and ntohll() function (major because this was 10G performance impacting).
 
-[MINOR] Fixed minor memory leaks
+[MINOR] Fixed minor memory leaks.
 
-[MINOR] Removed most of the nasty global variables
+[MINOR] Removed most of the nasty global variables.
 
-[MINOR] Fixed code, comment and documentation typos
+[MINOR] Fixed code, comment and documentation typos.
 
-[MINOR] General code tidy up to improve readability
+[MINOR] General code tidy up to improve readability.
 
-[MINOR] Fixed rounding and display errors when using -m and -M
+[MINOR] Fixed rounding and display errors when using -m and -M.
 
 
 
 -----Etherarte 0.5 Beta - 2015-07-11
 
-[MINOR] Fixed MTU sweeps that are bigger than interface max MTU size
+[MINOR] Fixed MTU sweeps that are bigger than interface max MTU size.
 
-[MINOR] Add bigger delay averages to account for interrupt coalescing
+[MINOR] Add bigger delay averages to account for interrupt coalescing.
 
 
 
 -----Etherarte 0.4 Alpha - 2014-11-04
 
-[FEATURE] Code for single VLAN tagging an priority codes is working (double tag/QinQ needs further research)
+[FEATURE] Code for single VLAN tagging an priority codes is working (double tag/QinQ needs further research).
 
-[FEATURE] Both hosts display the number of non-test frames received during a test
+[FEATURE] Both hosts display the number of non-test frames received during a test.
 
-[FEATURE] Code for interface selection by index and by name is now working
+[FEATURE] Code for interface selection by index and by name is now working.
 
-[FEATURE] Added rate limit in bits per second using -M option (previously just -m for bytes per second)
+[FEATURE] Added rate limit in bits per second using -M option (previously just -m for bytes per second).
 
-[FEATURE] Option to transmit without sync is coded, -g will skip strait to transmittion
+[FEATURE] Option to transmit without sync is coded, -g will skip strait to transmission.
 
-[FEATURE] Added MTU sweep feature
+[FEATURE] Added MTU sweep feature.
 
-[MAJOR] Finalised delay calculation code (calculates mean delay based on 5 samples)
+[MAJOR] Finalised delay calculation code (calculates mean delay based on 5 samples).
 
-[MINOR] Fixed the interface selection by ID/index
+[MINOR] Fixed the interface selection by ID/index.
 
-[MINOR] TX host can receive dying gasp from RX (RX could already recieve dying gasp from TX)
+[MINOR] TX host can receive dying gasp from RX (RX could already receive dying gasp from TX).
 
-[MINOR] Fixed hanging of RX host on recv()
+[MINOR] Fixed hanging of RX host on recv().
 
-[MINOR] Further clean up of code
+[MINOR] Further clean up of code.
 
-[MINOR] Further clean up of CLI output
+[MINOR] Further clean up of CLI output.
 
-[MINOR] Non test frame receive count is fixed
+[MINOR] Non test frame receive count is fixed.
 
 
 
 -----Etherate 0.3 Alpha - 2014-01-10
 
-[FEATURE] Add code for testing with VLAN tagging, priority codes, QinQ tagging and QinQ priorities, -v 25 -p 3 -q 2025 -o 4
+[FEATURE] Add code for testing with VLAN tagging, priority codes, QinQ tagging and QinQ priorities, -v 25 -p 3 -q 2025 -o 4.
 
-[MAJOR] Sometimes locking to the wrong interface such as "eth0" even though it was disabled or disconnected and specifically selecting another interface like "wlan0" (for example)
+[MAJOR] Sometimes locking to the wrong interface such as "eth0" even though it was disabled or disconnected and specifically selecting another interface like "wlan0" (for example).
 
 [MAJOR] Promiscuous mode was not entering/exiting properly. Rather than XOR IFF_PROMISC on and off, copy interface flags to ifFlags then OR IFF_PROMISC, then restore the stored ifFlags value. Looks like a problem with ifreq.
 
-[MINOR] Typos in the CLI output
+[MINOR] Typos in the CLI output.
 
-[MINOR] Further clean up of code
+[MINOR] Further clean up of code.
 
 [MINOR] Standardise changelog tags;
-[FEATURE]  == New working feature added to etherate
+[FEATURE]  == New working feature added to Etherate
 [MAJOR]    == Fixed a bug in Etherate code that affects the operations of the program or one of the test modes or test results
 [MINOR]    == Fixed a bug that doesn't stop Etherate from running properly like typos, formatting, documentation errata, code tidies
 
@@ -123,15 +145,15 @@ MPLS labels
 
 -----Etherate 0.2 Alpha - 2013-06-30
 
-[MAJOR] Added promiscuous mode, frames addressed anything other than FF:FF:FF:FF:FF:FF and the NICs burnt in address wasn't being received but were being sent (e.g. TX wasn't receiving dst==00:04:00:00:00:01)
+[MAJOR] Added promiscuous mode, frames addressed anything other than FF:FF:FF:FF:FF:FF and the NICs burnt in address wasn't being received but were being sent (e.g. TX wasn't receiving dst==00:04:00:00:00:01).
 
 [MAJOR] Using a custom MAC like 00:00:5E:00:00:02 on the RX host was being overwritten, typo in code. Now both TX and RX can use any MAC.
 
-[MAJOR] Using wrong IANA unnasigend MAC, using MAC allocated to Lexmark. Changed to 00:00:5E:00:00:0[1-2]
+[MAJOR] Using wrong IANA unassigned MAC, using MAC allocated to Lexmark. Changed to 00:00:5E:00:00:0[1-2].
 
-[MINOR] Typos in the UI/CLI output
+[MINOR] Typos in the UI/CLI output.
 
-[FEATURE] Added code to check CLI arguments that have two parts like "-i 2", the second option (the value) supplied was casuing etherate to Seg Fault.
+[FEATURE] Added code to check CLI arguments that have two parts like "-i 2", the second option (the value) supplied was casuing Etherate to Seg Fault.
 
 
 

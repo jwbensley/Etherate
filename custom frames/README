@@ -1,0 +1,3 @@
+RPVSTP BPUD 001.txt:       src MAC 0 00 5e 00 00 01, dst MAC 01 00 0C CC CC CD, VLAN 10, Flags Proposal, Designated
+ICMP EHCO REQUEST 001.txt: src IP 10.0.0.2, dst IP 10.0.0.1, ICMP message type 8 code 0 (echo request)
+TCP SYN 001.txt:           src IP 10.0.0.2, dst IP 10.0.0.1, src TCP port 42213, dst TCP port 8080, TCP SYN flag

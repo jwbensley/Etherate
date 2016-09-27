@@ -4,16 +4,20 @@ For a complete check and compile install, install any missing dependancies with 
 
 sudo apt-get install automake autoconf libtool
 
-The simply run:
+Then simply run:
 
 ./configure.sh
 
 
 
-
-
-2. Stand alone binary compile
+2. Standalone binary compile
 
 To just compile the binary in the local directory use the following:
 
-g++ -o etherate etherate.cpp -lrt
+g++ -o etherate etherate.cpp -Wall -ftrapv -g -O3
+
+
+
+3. Standalone binary compile (with minimal checks, only for slags)
+
+g++ -o etherate etherate.cpp
