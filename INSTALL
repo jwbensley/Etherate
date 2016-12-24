@@ -12,9 +12,9 @@ Then simply run:
 
 2. Standalone binary compile
 
-To just compile the binary in the local directory use the following:
+To compile the binary in the local directory use the following:
 
-g++ -o etherate etherate.cpp -Wall -ftrapv -g -O3
+g++ -o etherate etherate.cpp -Wall -ftrapv -g -O3 -lrt
 
 
 
