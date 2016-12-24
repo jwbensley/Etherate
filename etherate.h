@@ -39,7 +39,6 @@
 
 const int ccc = 1;
 const char APP_VERSION[20] = "0.10.beta 2016-09";
-//const char VERSION[20] = "0.8.beta 2016-03";
 const uint16_t F_SIZE_MAX         = 10000; // Maximum frame size on the wire (payload+headers)
 const uint32_t F_SIZE_DEF         = 1500;  // Default frame payload size in bytes
 const uint64_t F_DURATION_DEF     = 30;    // Default test duration in seconds

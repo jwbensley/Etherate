@@ -511,7 +511,7 @@ void mtu_sweep_test(struct APP_PARAMS *APP_PARAMS,
                         for(uint8_t i = 1; i <= 3; i += 1)
                         {
 
-                        build_sub_tlv(FRAME_HEADERS, ntohs(TYPE_ACKINDEX), htonll(MTU_RX_CURRENT));
+                        build_sub_tlv(FRAME_HEADERS, htons(TYPE_ACKINDEX), htonll(MTU_RX_CURRENT));
 
                         TX_RET_VAL = sendto(TEST_INTERFACE->SOCKET_FD,
                                             FRAME_HEADERS->TX_BUFFER,
@@ -629,8 +629,8 @@ void latency_test(struct APP_PARAMS *APP_PARAMS,
 
     build_tlv(FRAME_HEADERS, htons(TYPE_TESTFRAME), htonl(VALUE_TEST_SUB_TLV));
 
-    int16_t    TX_RET_VAL    = 0;
-    int16_t    RX_LEN        = 0;
+    int16_t     TX_RET_VAL    = 0;
+    int16_t     RX_LEN        = 0;
     long double UPTIME_1     = 0.0;
     long double UPTIME_2     = 0.0;
     long double UPTIME_RX    = 0.0;
@@ -641,7 +641,6 @@ void latency_test(struct APP_PARAMS *APP_PARAMS,
     uint64_t    TX_UPTIME    = 0;
     uint8_t     WAITING      = false;
     uint8_t     ECHO_WAITING = false;
-
 
     uint64_t *testBase, *testMax;
 
@@ -674,7 +673,7 @@ void latency_test(struct APP_PARAMS *APP_PARAMS,
             UPTIME_1 = TEST_PARAMS->TS_CURRENT_TIME.tv_sec + ((double)TEST_PARAMS->TS_CURRENT_TIME.tv_nsec * 1e-9);
             TX_UPTIME = roundl(UPTIME_1 * 1000000000.0);
 
-            build_sub_tlv(FRAME_HEADERS, ntohs(TYPE_PING), htonll(TX_UPTIME));
+            build_sub_tlv(FRAME_HEADERS, htons(TYPE_PING), htonll(TX_UPTIME));
 
             TX_RET_VAL = sendto(TEST_INTERFACE->SOCKET_FD,
                                 FRAME_HEADERS->TX_BUFFER,
@@ -709,7 +708,7 @@ void latency_test(struct APP_PARAMS *APP_PARAMS,
 
                 if (RX_LEN > 0) {
 
-                    // Received and echo reply/pong
+                    // Received an echo reply/pong
                     if (ntohl(*FRAME_HEADERS->RX_TLV_VALUE) == VALUE_TEST_SUB_TLV &&
                         ntohs(*FRAME_HEADERS->RX_SUB_TLV_TYPE) == TYPE_PONG)
                     {
@@ -763,11 +762,11 @@ void latency_test(struct APP_PARAMS *APP_PARAMS,
                     }
 
 
-                    // Check if TX host has quit/died;
+                    // Check if RX host has quit/died;
                     if (ntohl(*FRAME_HEADERS->RX_TLV_VALUE) == VALUE_DYINGGASP)
                     {
 
-                        printf("TX host has quit\n");
+                        printf("RX host has quit\n");
                         return;
 
                     }
@@ -788,6 +787,7 @@ void latency_test(struct APP_PARAMS *APP_PARAMS,
                         ECHO_WAITING = false;
                         printf("*\n");
                         QM_TEST->TIMEOUT_COUNT += 1;
+                        QM_TEST->TEST_COUNT += 1;
 
                     }
                 }
@@ -888,7 +888,6 @@ void latency_test(struct APP_PARAMS *APP_PARAMS,
 
             clock_gettime(CLOCK_MONOTONIC_RAW, &TEST_PARAMS->TS_CURRENT_TIME);
 
-
             WAITING      = true;
             ECHO_WAITING = true;
 
@@ -915,7 +914,7 @@ void latency_test(struct APP_PARAMS *APP_PARAMS,
                                    ((double)TEST_PARAMS->TS_ELAPSED_TIME.tv_nsec * 1e-9);
 
                         // Send the TX uptime value back to the TX host
-                        build_sub_tlv(FRAME_HEADERS, ntohs(TYPE_PONG),
+                        build_sub_tlv(FRAME_HEADERS, htons(TYPE_PONG),
                                       *FRAME_HEADERS->RX_SUB_TLV_VALUE);
 
                         TX_RET_VAL = sendto(TEST_INTERFACE->SOCKET_FD,
@@ -927,7 +926,7 @@ void latency_test(struct APP_PARAMS *APP_PARAMS,
 
                         if (TX_RET_VAL <=0)
                         {
-                            perror("Latency test TX error ");
+                            perror("Latency test RX error ");
                             return;
                         }
 
@@ -979,7 +978,8 @@ void latency_test(struct APP_PARAMS *APP_PARAMS,
 
                         printf("*\n");
                         QM_TEST->TIMEOUT_COUNT += 1;
-                        WAITING = false;
+                        QM_TEST->TEST_COUNT += 1;
+                        ECHO_WAITING = false;
 
                     }
                     
