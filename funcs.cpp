@@ -1102,7 +1102,7 @@ void list_interfaces()
     struct ifaddrs *ifaddr, *ifa;
 
     int SOCKET_FD;
-    SOCKET_FD = socket(AF_INET, SOCK_RAW, htons(ETH_P_ALL));
+    SOCKET_FD = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 
     if (getifaddrs(&ifaddr)==-1)
     {
