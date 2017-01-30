@@ -45,7 +45,7 @@ Etherate
   - Any VLAN ID
   - Any priority (PCP) value
   - Supports double tagging (any inner and outer VLAN ID, any PCP)
-  - Toggle DFI bit
+  - Toggle DEI bit
   - Toggle frame acknowledgement
   - Optional speed limit in Mbps, MBps or Frames/p/s
   - Optional frame payload size
