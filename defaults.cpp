@@ -1,7 +1,7 @@
 /*
- * License:
+ * License: MIT
  *
- * Copyright (c) 2012-2016 James Bensley.
+ * Copyright (c) 2012-2017 James Bensley.
  *
  * Permission is hereby granted, free of uint8_tge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -23,7 +23,7 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  *
- * File: Etherate Setup Function
+ * File: Etherate Setup Functions
  *
  * File Contents:
  * void set_default_values()
@@ -34,8 +34,6 @@
  */
 
 
-
-#include "funcs.cpp"
 
 // Restore all test and interface values to default at the start of each RX loop
 void set_default_values(struct APP_PARAMS *APP_PARAMS,
@@ -123,6 +121,8 @@ void set_default_values(struct APP_PARAMS *APP_PARAMS,
     for (uint16_t i = 0; i<IFNAMSIZ; i += 1) {
         TEST_INTERFACE->IF_NAME[i] = 0;
     }
+    TEST_INTERFACE->SOCKET_FD = SOCKET_FD_DEF;
+
 
     pTEST_PARAMS                 = TEST_PARAMS;
     TEST_PARAMS->F_SIZE          = F_SIZE_DEF;
@@ -164,21 +164,27 @@ void set_default_values(struct APP_PARAMS *APP_PARAMS,
 
     pQM_TEST                  = QM_TEST;
     QM_TEST->ENABLED          = false;
+    QM_TEST->DELAY_TEST_COUNT = 10000;
     QM_TEST->INTERVAL         = 1000;
     QM_TEST->INTERVAL_SEC     = 0;
     QM_TEST->INTERVAL_NSEC    = 0;
     QM_TEST->INTERVAL_MIN     = 99999.99999;
     QM_TEST->INTERVAL_MAX     = 0.0;
+    QM_TEST->JITTER_MIN       = 999999.999999;
+    QM_TEST->JITTER_MAX       = 0.0;
+    QM_TEST->RTT_MIN          = 999999.999999;
+    QM_TEST->RTT_MAX          = 0.0;
+    QM_TEST->TEST_COUNT       = 0;
+    QM_TEST->TIME_TX_1        = NULL;
+    QM_TEST->TIME_TX_2        = NULL;
+    QM_TEST->TIME_RX_1        = NULL;
+    QM_TEST->TIME_RX_2        = NULL;
+    QM_TEST->TIME_TX_DIFF     = NULL;
+    QM_TEST->TIME_RX_DIFF     = NULL;
     QM_TEST->TIMEOUT          = 1000;
     QM_TEST->TIMEOUT_NSEC     = 0;
     QM_TEST->TIMEOUT_SEC      = 0;
     QM_TEST->TIMEOUT_COUNT    = 0;
-    QM_TEST->TEST_COUNT       = 0;
-    QM_TEST->DELAY_TEST_COUNT = 10000;
-    QM_TEST->RTT_MIN          = 999999.999999;
-    QM_TEST->RTT_MAX          = 0.0;
-    QM_TEST->JITTER_MIN       = 999999.999999;
-    QM_TEST->JITTER_MAX       = 0.0;
     QM_TEST->pDELAY_RESULTS   = (double*)calloc(QM_TEST->DELAY_TEST_COUNT,
                                                sizeof(double));
 
@@ -186,9 +192,7 @@ void set_default_values(struct APP_PARAMS *APP_PARAMS,
     APP_PARAMS->TX_MODE     = true;
     APP_PARAMS->TX_SYNC     = true;
     APP_PARAMS->TX_DELAY    = TX_DELAY_DEF;
-        
-
-    return;
+    
 }
 
 
@@ -198,8 +202,6 @@ int16_t setup_frame(struct APP_PARAMS *APP_PARAMS,
                     struct TEST_INTERFACE *TEST_INTERFACE,
                     struct TEST_PARAMS *TEST_PARAMS)
 {
-
-    int16_t RET_VAL = EXIT_SUCCESS;
 
     printf("Source MAC %02x:%02x:%02x:%02x:%02x:%02x\n",
            FRAME_HEADERS->SOURCE_MAC[0],FRAME_HEADERS->SOURCE_MAC[1],
@@ -227,7 +229,7 @@ int16_t setup_frame(struct APP_PARAMS *APP_PARAMS,
     
     build_headers(FRAME_HEADERS);
 
-    return RET_VAL;
+    return EXIT_SUCCESS;
 
 }
 
@@ -235,19 +237,16 @@ int16_t setup_frame(struct APP_PARAMS *APP_PARAMS,
 
 int16_t setup_socket(struct TEST_INTERFACE *TEST_INTERFACE)
 {
-    int16_t RET_VAL = EXIT_SUCCESS;
 
     TEST_INTERFACE->SOCKET_FD = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 
     if (TEST_INTERFACE->SOCKET_FD < 0 )
     {
-      printf("Error defining socket!\n");
-      perror("socket() ");
-      close(TEST_INTERFACE->SOCKET_FD);
+      perror("Error defining socket ");
       return EX_SOFTWARE;
     }
 
-    return RET_VAL;
+    return EXIT_SUCCESS;
 }
 
 
@@ -257,17 +256,15 @@ int16_t setup_socket_interface(struct FRAME_HEADERS *FRAME_HEADERS,
                                struct TEST_PARAMS *TEST_PARAMS)
 {
 
-    int16_t RET_VAL = EXIT_SUCCESS;
-
 
     // If the user has supplied an interface index try to use that
     if (TEST_INTERFACE->IF_INDEX != IF_INDEX_DEF) {
 
         TEST_INTERFACE->IF_INDEX = set_sock_interface_index(TEST_INTERFACE);
-        if (TEST_INTERFACE->IF_INDEX == -1)
+        if (TEST_INTERFACE->IF_INDEX <= 0)
         {
             printf("Error: Couldn't set interface with index, "
-                   "returned index was 0!\n");
+                   "returned index was %d!\n", TEST_INTERFACE->IF_INDEX);
             return EX_SOFTWARE;
         }
 
@@ -275,10 +272,10 @@ int16_t setup_socket_interface(struct FRAME_HEADERS *FRAME_HEADERS,
     } else if (strcmp((char*)TEST_INTERFACE->IF_NAME, "") != 0) {
 
         TEST_INTERFACE->IF_INDEX = set_sock_interface_name(TEST_INTERFACE);
-        if (TEST_INTERFACE->IF_INDEX == -1)
+        if (TEST_INTERFACE->IF_INDEX <= 0)
         {
             printf("Error: Couldn't set interface index from name, "
-                   "returned index was 0!\n");
+                   "returned index was %d!\n", TEST_INTERFACE->IF_INDEX);
             return EX_SOFTWARE;
         }
 
@@ -286,11 +283,10 @@ int16_t setup_socket_interface(struct FRAME_HEADERS *FRAME_HEADERS,
     } else if (TEST_INTERFACE->IF_INDEX == IF_INDEX_DEF) {
 
         TEST_INTERFACE->IF_INDEX = get_sock_interface(TEST_INTERFACE);
-        if (TEST_INTERFACE->IF_INDEX == -1)
+        if (TEST_INTERFACE->IF_INDEX <= 0)
         {
             printf("Error: Couldn't find appropriate interface ID, "
-                  "returned ID was 0!\n Try supplying a source MAC address "
-                  "with the -s option.\n");
+                  "returned ID was %d!\n", TEST_INTERFACE->IF_INDEX);
             return EX_SOFTWARE;
         }
 
@@ -320,16 +316,16 @@ int16_t setup_socket_interface(struct FRAME_HEADERS *FRAME_HEADERS,
     TEST_PARAMS->F_SIZE_TOTAL = TEST_PARAMS->F_SIZE + FRAME_HEADERS->LENGTH;
 
 
-    uint16_t PHY_MTU = get_interface_mtu_by_name(TEST_INTERFACE);
+    int16_t PHY_MTU = get_interface_mtu_by_name(TEST_INTERFACE);
     
-    if (PHY_MTU == -1 || PHY_MTU == 0) {
+    if (PHY_MTU <= 0) {
 
         printf("\nPhysical interface MTU unknown, "
                "test might exceed physical MTU!\n\n");
 
     } else if (TEST_PARAMS->F_SIZE_TOTAL > PHY_MTU + 14) {
         
-        printf("\nPhysical interface MTU (%u with headers) is less than\n"
+        printf("\nPhysical interface MTU (%d with headers) is less than\n"
                "the test frame size (%u with headers). Test frames shall\n"
                "be limited to the interface MTU size\n\n",
                PHY_MTU+14, TEST_PARAMS->F_SIZE_TOTAL);
@@ -338,6 +334,6 @@ int16_t setup_socket_interface(struct FRAME_HEADERS *FRAME_HEADERS,
 
     }
 
-    return RET_VAL;
+    return EXIT_SUCCESS;
 
 }

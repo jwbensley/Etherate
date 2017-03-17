@@ -1,7 +1,7 @@
 /*
- * License:
+ * License: MIT
  *
- * Copyright (c) 2012-2016 James Bensley.
+ * Copyright (c) 2012-2017 James Bensley.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -39,6 +39,7 @@
  * ntohll()
  * print_usage()
  * remove_interface_promisc()
+ * reset_app()
  * set_interface_promisc()
  * set_sock_interface_index()
  * set_sock_interface_name()
@@ -49,79 +50,12 @@
 
 
 
-// Send gratuitus Etherate broadcasts
-int16_t broadcast_etherate(struct FRAME_HEADERS *FRAME_HEADERS,
-                           struct TEST_INTERFACE *TEST_INTERFACE);
-
-// Build the Ethernet headers for sending frames
-void build_headers(struct FRAME_HEADERS *FRAME_HEADERS);
-
-// Build the Etherate TLV header
-void build_tlv(struct FRAME_HEADERS *FRAME_HEADERS, uint16_t TLV_TYPE,
-               uint32_t TLV_VALUE);
-
-// Build a sub-TLV value after the TLV header
-void build_sub_tlv(struct FRAME_HEADERS *FRAME_HEADERS, uint16_t SUB_TLV_TYPE,
-                   uint64_t SUB_TLV_VALUE);
-
-// Process the CLI arguments
-int16_t cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
-                 struct FRAME_HEADERS *FRAME_HEADERS,
-                 struct TEST_INTERFACE *TEST_INTERFACE,
-                 struct TEST_PARAMS *TEST_PARAMS, struct MTU_TEST *MTU_TEST,
-                 struct QM_TEST *QM_TEST);
-
-// Explode a char string based on the passed field delimiter
-uint8_t explode_char(char *string, char *delim, char *tokens[]);
-
-// Get the MTU of the interface used for the test
-uint16_t get_interface_mtu_by_name(struct TEST_INTERFACE *TEST_INTERFACE);
-
-// Try to automatically chose an interface to run the test on
-int16_t get_sock_interface(struct TEST_INTERFACE *TEST_INTERFACE);
-
-// HtoN method for ull values
-uint64_t htonll(uint64_t val);
-
-// List interfaces and hardware (MAC) address
-void list_interfaces();
-
-// NtoH method for ull values
-uint64_t ntohll(uint64_t val);
-
-// Print CLI args and usage
-void print_usage(struct APP_PARAMS *APP_PARAMS,
-                 struct FRAME_HEADERS *FRAME_HEADERS);
-
-// Remove the interface from promiscuous mode
-int16_t remove_interface_promisc(struct TEST_INTERFACE *TEST_INTERFACE);
-
-// Set the interface into promiscuous mode
-int16_t set_interface_promisc(struct TEST_INTERFACE *TEST_INTERFACE);
-
-// Try to open the passed socket on a user specified interface by index
-int16_t set_sock_interface_index(struct TEST_INTERFACE *TEST_INTERFACE);
-
-// Try to open the passed socket on a user specified interface by name
-int16_t set_sock_interface_name(struct TEST_INTERFACE *TEST_INTERFACE);
-
-// Signal handler to notify remote host of local application termiantion
-void signal_handler(int signal);
-
-// Send the settings from TX to RX
-void sync_settings(struct APP_PARAMS *APP_PARAMS,
-                   struct FRAME_HEADERS *FRAME_HEADERS,
-                   struct TEST_INTERFACE *TEST_INTERFACE,
-                   struct TEST_PARAMS * TEST_PARAMS,
-                   struct MTU_TEST *MTU_TEST, struct QM_TEST *QM_TEST);
-
+#include "functions.h"
 
 
 int16_t broadcast_etherate(struct FRAME_HEADERS *FRAME_HEADERS,
                            struct TEST_INTERFACE *TEST_INTERFACE)
 {
-
-    int16_t RET_VAL = EXIT_SUCCESS;
 
     uint8_t TEMP_MAC[6] = {
     FRAME_HEADERS->DEST_MAC[0],
@@ -143,6 +77,7 @@ int16_t broadcast_etherate(struct FRAME_HEADERS *FRAME_HEADERS,
     build_headers(FRAME_HEADERS);
 
     build_tlv(FRAME_HEADERS, htons(TYPE_BROADCAST), htonl(VALUE_PRESENCE));
+
     // Build a dummy sub-TLV to align the buffers and pointers
     build_sub_tlv(FRAME_HEADERS, htons(TYPE_APPLICATION_SUB_TLV),
                   htonll(VALUE_DUMMY));
@@ -160,13 +95,15 @@ int16_t broadcast_etherate(struct FRAME_HEADERS *FRAME_HEADERS,
 
         if (TX_RET_VAL <= 0)
         {
-            perror("Broadcast error ");
+            perror("Error: Broadcast failed ");
             return TX_RET_VAL;
         }
 
         sleep(1);
 
     }
+
+    printf("Done.\n");
 
 
     // Restore the original destination MAC
@@ -177,7 +114,7 @@ int16_t broadcast_etherate(struct FRAME_HEADERS *FRAME_HEADERS,
     FRAME_HEADERS->DEST_MAC[4] = TEMP_MAC[4];
     FRAME_HEADERS->DEST_MAC[5] = TEMP_MAC[5];
 
-    return RET_VAL;
+    return EXIT_SUCCESS;
 
 }
 
@@ -402,8 +339,6 @@ void build_tlv(struct FRAME_HEADERS *FRAME_HEADERS, uint16_t TLV_TYPE,
     FRAME_HEADERS->RX_TLV_VALUE = (uint32_t*)(FRAME_HEADERS->RX_DATA +
                                   sizeof(TLV_TYPE) + sizeof(TLV_LENGTH));
 
-    return;
-
 }
 
 
@@ -430,8 +365,6 @@ void build_sub_tlv(struct FRAME_HEADERS *FRAME_HEADERS, uint16_t SUB_TLV_TYPE,
                                                    FRAME_HEADERS->TLV_SIZE +
                                                    sizeof(SUB_TLV_TYPE) +
                                                    sizeof(SUB_TLV_LENGTH));
-
-    return;
 
 }
 
@@ -486,7 +419,7 @@ int16_t cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                 } else {
                     printf("Error: Invalid destination MAC address!\n"
                            "Usage info: %s -h\n", argv[0]);
-                    return RET_EX_USAGE;
+                    return RET_EXIT_FAILURE;
                 }
                 i += 1;
 
@@ -517,7 +450,7 @@ int16_t cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                 } else {
                     printf("Error: Invalid source MAC address!\n"
                            "Usage info: %s -h\n", argv[0]);
-                    return RET_EX_USAGE;
+                    return RET_EXIT_FAILURE;
                 }
                 i += 1;
 
@@ -526,13 +459,14 @@ int16_t cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
             } else if (strncmp(argv[i], "-i", 2)==0) {
                 if (argc > (i+1))
                 {
+                    uint8_t size = sizeof(argv[i+1]);
                     strncpy((char*)TEST_INTERFACE->IF_NAME,
-                            argv[i+1], sizeof(*argv[i+1]));
+                            argv[i+1], size);
                     i += 1;
                 } else {
                     printf("Oops! Missing interface name\n"
                            "Usage info: %s -h\n", argv[0]);
-                    return RET_EX_USAGE;
+                    return RET_EXIT_FAILURE;
                 }
 
 
@@ -545,7 +479,7 @@ int16_t cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                 } else {
                     printf("Oops! Missing interface index\n"
                            "Usage info: %s -h\n", argv[0]);
-                    return RET_EX_USAGE;
+                    return RET_EXIT_FAILURE;
                 }
 
 
@@ -577,7 +511,7 @@ int16_t cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                 } else {
                     printf("Oops! Missing frame size\n"
                            "Usage info: %s -h\n", argv[0]);
-                    return RET_EX_USAGE;
+                    return RET_EXIT_FAILURE;
                 }
 
 
@@ -590,7 +524,7 @@ int16_t cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                 } else {
                     printf("Oops! Missing transmission duration\n"
                            "Usage info: %s -h\n", argv[0]);
-                    return RET_EX_USAGE;
+                    return RET_EXIT_FAILURE;
                 }
 
 
@@ -603,7 +537,7 @@ int16_t cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                 } else {
                     printf("Oops! Missing max frame count\n"
                            "Usage info: %s -h\n", argv[0]);
-                    return RET_EX_USAGE;
+                    return RET_EXIT_FAILURE;
                 }
 
 
@@ -646,7 +580,7 @@ int16_t cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                 } else {
                     printf("Oops! Missing filename\n"
                            "Usage info: %s -h\n", argv[0]);
-                    return RET_EX_USAGE;
+                    return RET_EXIT_FAILURE;
                 }
 
 
@@ -659,7 +593,7 @@ int16_t cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                 } else {
                     printf("Oops! Missing max byte transfer limit\n"
                            "Usage info: %s -h\n", argv[0]);
-                    return RET_EX_USAGE;
+                    return RET_EXIT_FAILURE;
                 }
 
 
@@ -677,7 +611,7 @@ int16_t cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                 } else {
                     printf("Oops! Missing max frame rate\n"
                            "Usage info: %s -h\n", argv[0]);
-                    return RET_EX_USAGE;
+                    return RET_EXIT_FAILURE;
                 }
 
 
@@ -690,7 +624,7 @@ int16_t cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                 } else {
                     printf("Oops! Missing max TX rate\n"
                            "Usage info: %s -h\n", argv[0]);
-                    return RET_EX_USAGE;
+                    return RET_EXIT_FAILURE;
                 }
 
 
@@ -703,7 +637,7 @@ int16_t cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                 } else {
                     printf("Oops! Missing max TX rate\n"
                            "Usage info: %s -h\n", argv[0]);
-                    return RET_EX_USAGE;
+                    return RET_EXIT_FAILURE;
                 }
 
 
@@ -716,7 +650,7 @@ int16_t cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                 } else {
                     printf("Oops! Missing 802.1p VLAN ID\n"
                            "Usage info: %s -h\n", argv[0]);
-                    return RET_EX_USAGE;
+                    return RET_EXIT_FAILURE;
                 }
 
 
@@ -729,7 +663,7 @@ int16_t cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                 } else {
                     printf("Oops! Missing 802.1p PCP value\n"
                            "Usage info: %s -h\n", argv[0]);
-                    return RET_EX_USAGE;
+                    return RET_EXIT_FAILURE;
                 }
 
 
@@ -747,7 +681,7 @@ int16_t cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                 } else {
                     printf("Oops! Missing 802.1ad QinQ outer VLAN ID\n"
                            "Usage info: %s -h\n", argv[0]);
-                    return RET_EX_USAGE;
+                    return RET_EXIT_FAILURE;
                 }
 
 
@@ -760,7 +694,7 @@ int16_t cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                 } else {
                     printf("Oops! Missing 802.1ad QinQ outer PCP value\n"
                            "Usage info: %s -h\n", argv[0]);
-                    return RET_EX_USAGE;
+                    return RET_EXIT_FAILURE;
                 }
 
 
@@ -778,7 +712,7 @@ int16_t cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                 } else {
                     printf("Oops! Missing ethertype value\n"
                            "Usage info: %s -h\n", argv[0]);
-                    return RET_EX_USAGE;
+                    return RET_EXIT_FAILURE;
                 }
 
 
@@ -798,7 +732,7 @@ int16_t cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                 } else {
                     printf("Error: Invalid destination LSR MAC address!\n"
                            "Usage info: %s -h\n", argv[0]);
-                    return RET_EX_USAGE;
+                    return RET_EXIT_FAILURE;
                 }
                 i += 1;
 
@@ -812,7 +746,7 @@ int16_t cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                 } else {
                     printf("Error: Invalid source LSR MAC address!\n"
                            "Usage info: %s -h\n", argv[0]);
-                    return RET_EX_USAGE;
+                    return RET_EXIT_FAILURE;
                 }
                 i += 1;
 
@@ -825,17 +759,17 @@ int16_t cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
 
                         if((uint32_t)atoi(argv[i+1]) > 1048575) {
                             printf("Oops! MPLS label higher than 1,048,575\n");
-                            return RET_EX_USAGE;
+                            return RET_EXIT_FAILURE;
                         }
 
                         if((uint16_t)atoi(argv[i+2]) > 7) {
                             printf("Oops! MPLS EXP higher than 7\n");
-                            return RET_EX_USAGE;
+                            return RET_EXIT_FAILURE;
                         }
 
                         if((uint16_t)atoi(argv[i+3]) > 255) {
                             printf("Oops! MPLS TTL higher than 255\n");
-                            return RET_EX_USAGE;
+                            return RET_EXIT_FAILURE;
                         }
 
                         FRAME_HEADERS->MPLS_LABEL[FRAME_HEADERS->MPLS_LABELS] =
@@ -854,12 +788,12 @@ int16_t cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                     } else {
                         printf("Oops! You have exceeded the maximum number of "
                                "MPLS labels (%d)\n", MPLS_LABELS_MAX);
-                        return RET_EX_USAGE;
+                        return RET_EXIT_FAILURE;
                     }
                 } else {
                     printf("Oops! Missing MPLS label values\n"
                            "Usage info: %s -h\n", argv[0]);
-                    return RET_EX_USAGE;
+                    return RET_EXIT_FAILURE;
                 }
 
 
@@ -870,7 +804,7 @@ int16_t cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
 
             // Enable the MTU sweep test
             } else if (strncmp(argv[i], "-U", 2)==0) {
-                if (argc > (i+1))
+                if (argc > (i+2))
                 {
                     MTU_TEST->MTU_TX_MIN = (uint16_t)atoi(argv[i+1]);
                     MTU_TEST->MTU_TX_MAX = (uint16_t)atoi(argv[i+2]);
@@ -878,7 +812,7 @@ int16_t cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                     if (MTU_TEST->MTU_TX_MAX > F_SIZE_MAX) { 
                         printf("MTU size can not exceed the maximum hard coded"
                                " size: %u\n", F_SIZE_MAX);
-                             return RET_EX_USAGE;
+                             return RET_EXIT_FAILURE;
                     }
 
                     MTU_TEST->ENABLED = true;
@@ -887,20 +821,20 @@ int16_t cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                 } else {
                     printf("Oops! Missing min/max MTU sizes\n"
                            "Usage info: %s -h\n", argv[0]);
-                    return RET_EX_USAGE;
+                    return RET_EXIT_FAILURE;
                 }
 
 
             // Enable the link quality measurement tests
             } else if (strncmp(argv[i], "-Q", 2)==0) {
-                if (argc > (i+1))
+                if (argc > (i+2))
                 {
                     QM_TEST->INTERVAL = (uint32_t)atoi(argv[i+1]);
                     QM_TEST->TIMEOUT =  (uint32_t)atoi(argv[i+2]);
 
                     if (QM_TEST->TIMEOUT > QM_TEST->INTERVAL) { 
                         printf("Oops! Echo timeout exceeded the interval\n");
-                        return RET_EX_USAGE;
+                        return RET_EXIT_FAILURE;
                     }
 
                     // Convert to ns for use with timespec
@@ -914,7 +848,7 @@ int16_t cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
                 } else {
                     printf("Oops! Missing interval and timeout values\n"
                            "Usage info: %s -h\n", argv[0]);
-                    return RET_EX_USAGE;
+                    return RET_EXIT_FAILURE;
                 }
 
 
@@ -938,7 +872,7 @@ int16_t cli_args(int argc, char *argv[], struct APP_PARAMS *APP_PARAMS,
             } else {
                     printf("Oops! Invalid argument %s\n"
                            "Usage info: %s -h\n", argv[i], argv[0]);
-                    return RET_EX_USAGE;
+                    return RET_EXIT_FAILURE;
             }
 
 
@@ -982,10 +916,8 @@ uint8_t explode_char(char *string, char *delim, char *tokens[])
 
 
 
-uint16_t get_interface_mtu_by_name(struct TEST_INTERFACE *TEST_INTERFACE)
+int32_t get_interface_mtu_by_name(struct TEST_INTERFACE *TEST_INTERFACE)
 {
-
-    const uint16_t NO_INT = -1;
 
     struct ifreq ifr;
 
@@ -998,7 +930,7 @@ uint16_t get_interface_mtu_by_name(struct TEST_INTERFACE *TEST_INTERFACE)
         return ifr.ifr_mtu;
     }
 
-    return NO_INT;
+    return RET_EXIT_FAILURE;
 
 }
 
@@ -1006,14 +938,6 @@ uint16_t get_interface_mtu_by_name(struct TEST_INTERFACE *TEST_INTERFACE)
 
 int16_t get_sock_interface(struct TEST_INTERFACE *TEST_INTERFACE)
 {
-// This function was gleaned from;
-// http://cboard.cprogramming.com/linux-programming/43261-ioctl-request-get
-// -hw-address.html
-// As far as I can tell its a variation on some open source code originally
-// written for Diald, here: http://diald.sourceforge.net/FAQ/diald-faq.html
-// So thanks go to the Diald authors Eric Schenk and Gordon Soukoreff!
-
-    const int16_t NO_INT = -1;
 
     struct ifreq *ifr, *ifend;
     struct ifreq ifreq;
@@ -1025,8 +949,8 @@ int16_t get_sock_interface(struct TEST_INTERFACE *TEST_INTERFACE)
 
     if (ioctl(TEST_INTERFACE->SOCKET_FD, SIOCGIFCONF, &ifc) < 0)
     {
-        printf("Error: No compatible interfaces found: ioctl(SIOCGIFCONF): %m\n");
-        return NO_INT;
+        perror("Error: No compatible interfaces found ");
+        return RET_EXIT_FAILURE;
     }
 
     ifend = ifs + (ifc.ifc_len / sizeof(struct ifreq));
@@ -1037,38 +961,43 @@ int16_t get_sock_interface(struct TEST_INTERFACE *TEST_INTERFACE)
         if (ifr->ifr_addr.sa_family == AF_INET)
         {
 
-            // Try to get a typical ethernet adapter, not a bridge virt interface
-            if (strncmp(ifr->ifr_name, "eth", 3)==0 ||
-                strncmp(ifr->ifr_name, "en", 2)==0 ||
-                strncmp(ifr->ifr_name, "em", 3)==0 ||
-                strncmp(ifr->ifr_name, "wlan", 4)==0)
+            // Try to get a typical ethernet adapter, not a bridge or virt interface
+            if (strncmp(ifr->ifr_name, "eth",  3)==0 ||
+                strncmp(ifr->ifr_name, "en",   2)==0 ||
+                strncmp(ifr->ifr_name, "em",   3)==0 ||
+                strncmp(ifr->ifr_name, "wlan", 4)==0 ||
+                strncmp(ifr->ifr_name, "wlp",  3)==0 )
             {
 
                 strncpy(ifreq.ifr_name,ifr->ifr_name,sizeof(ifreq.ifr_name));
 
                 // Does this device even have hardware address?
-                if (ioctl (TEST_INTERFACE->SOCKET_FD,
-                           SIOCGIFHWADDR, &ifreq) != 0)
+                if (ioctl (TEST_INTERFACE->SOCKET_FD, SIOCGIFHWADDR, &ifreq) != 0)
                 {
-                    printf("Error: Device has no hardware address: \n"
-                           "SIOCGIFHWADDR(%s): %m\n", ifreq.ifr_name);
-                    return NO_INT;
+                    perror("Error: Device has no hardware address ");
+                    return RET_EXIT_FAILURE;
                 }
 
-                ioctl(TEST_INTERFACE->SOCKET_FD, SIOCGIFINDEX, &ifreq);
+                // Copy MAC address before SIOCGIFINDEX
+                char mac[6];
+                memcpy(mac, ifreq.ifr_addr.sa_data, 6);
 
-                strncpy((char*)TEST_INTERFACE->IF_NAME,
-                        ifreq.ifr_name, IFNAMSIZ);
+                if (ioctl(TEST_INTERFACE->SOCKET_FD, SIOCGIFINDEX, &ifreq) != 0) {
+                    perror("Error: could get interface index ");
+                    return RET_EXIT_FAILURE;
+                }
+
+                strncpy((char*)TEST_INTERFACE->IF_NAME, ifreq.ifr_name, IFNAMSIZ);
 
                 printf("Using device %s with address "
                        "%02x:%02x:%02x:%02x:%02x:%02x, interface index %u\n",
                        ifreq.ifr_name,
-                       (int) ((uint8_t *) &ifreq.ifr_hwaddr.sa_data)[0],
-                       (int) ((uint8_t *) &ifreq.ifr_hwaddr.sa_data)[1],
-                       (int) ((uint8_t *) &ifreq.ifr_hwaddr.sa_data)[2],
-                       (int) ((uint8_t *) &ifreq.ifr_hwaddr.sa_data)[3],
-                       (int) ((uint8_t *) &ifreq.ifr_hwaddr.sa_data)[4],
-                       (int) ((uint8_t *) &ifreq.ifr_hwaddr.sa_data)[5],
+                       (uint8_t)mac[0],
+                       (uint8_t)mac[1],
+                       (uint8_t)mac[2],
+                       (uint8_t)mac[3],
+                       (uint8_t)mac[4],
+                       (uint8_t)mac[5],
                        ifreq.ifr_ifindex);
 
                 return ifreq.ifr_ifindex;
@@ -1079,7 +1008,7 @@ int16_t get_sock_interface(struct TEST_INTERFACE *TEST_INTERFACE)
 
     } // Looping through interface count
 
-    return NO_INT;
+    return RET_EXIT_FAILURE;
 
 }
 
@@ -1101,12 +1030,12 @@ void list_interfaces()
     struct ifreq ifreq;
     struct ifaddrs *ifaddr, *ifa;
 
-    int SOCKET_FD;
+    int32_t SOCKET_FD;
     SOCKET_FD = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 
-    if (getifaddrs(&ifaddr)==-1)
+    if (getifaddrs(&ifaddr) == -1)
     {
-        perror("getifaddrs ");
+        perror("Error: Could get interface list ");
         exit(EX_PROTOCOL);
     }
 
@@ -1128,29 +1057,32 @@ void list_interfaces()
             if (ioctl (SOCKET_FD, SIOCGIFHWADDR, &ifreq)==0)
             {
 
+                // Copy the MAC before running SIOCGIFINDEX
+                char mac[6];
+                memcpy(mac, ifreq.ifr_addr.sa_data, 6);
+
                 // Get the interface index
                 ioctl(SOCKET_FD, SIOCGIFINDEX, &ifreq);
 
-                // Print the current interface details
                 printf("Device %s with address %02x:%02x:%02x:%02x:%02x:%02x, "
-                       "interface index %u\n",
+                       "has interface index %d\n",
                        ifreq.ifr_name,
-                       (int) ((uint8_t *) &ifreq.ifr_hwaddr.sa_data)[0],
-                       (int) ((uint8_t *) &ifreq.ifr_hwaddr.sa_data)[1],
-                       (int) ((uint8_t *) &ifreq.ifr_hwaddr.sa_data)[2],
-                       (int) ((uint8_t *) &ifreq.ifr_hwaddr.sa_data)[3],
-                       (int) ((uint8_t *) &ifreq.ifr_hwaddr.sa_data)[4],
-                       (int) ((uint8_t *) &ifreq.ifr_hwaddr.sa_data)[5],
+                       (uint8_t)mac[0],
+                       (uint8_t)mac[1],
+                       (uint8_t)mac[2],
+                       (uint8_t)mac[3],
+                       (uint8_t)mac[4],
+                       (uint8_t)mac[5],
                        ifreq.ifr_ifindex);
+
             }
 
         }
 
     }
 
+    close(SOCKET_FD);
     freeifaddrs(ifaddr);
-
-    return;
 
 }
 
@@ -1260,17 +1192,18 @@ void print_usage (struct APP_PARAMS *APP_PARAMS,
 int16_t remove_interface_promisc(struct TEST_INTERFACE *TEST_INTERFACE)
 {
 
-    int16_t RET_VAL = EXIT_SUCCESS;
-
     printf("Leaving promiscuous mode\n");
 
     strncpy(ethreq.ifr_name,(char*)TEST_INTERFACE->IF_NAME,IFNAMSIZ);
 
     if (ioctl(TEST_INTERFACE->SOCKET_FD,SIOCGIFFLAGS,&ethreq) == -1)
     {
-        printf("Error getting socket flags, leaving promiscuous mode failed!\n");
-        perror("ioctl() ");
-        close(TEST_INTERFACE->SOCKET_FD);
+        perror("Error getting socket flags, leaving promiscuous mode failed ");
+
+        if (close(TEST_INTERFACE->SOCKET_FD) != 0) {
+            perror("Error: Could't close socket file descriptor ");
+        }
+
         return EX_SOFTWARE;
     }
 
@@ -1278,13 +1211,31 @@ int16_t remove_interface_promisc(struct TEST_INTERFACE *TEST_INTERFACE)
 
     if (ioctl(TEST_INTERFACE->SOCKET_FD,SIOCSIFFLAGS,&ethreq) == -1)
     {
-        printf("Error setting socket flags, leaving promiscuous mode failed\n");
-        perror("ioctl() ");
-        close(TEST_INTERFACE->SOCKET_FD);
+        perror("Error setting socket flags, leaving promiscuous mode failed ");
+
+        if (close(TEST_INTERFACE->SOCKET_FD) != 0) {
+            perror("Error: Couldn't close socket file descriptor ");
+        }
         return EX_SOFTWARE;
     }
 
-    return RET_VAL;
+
+    return EXIT_SUCCESS;
+
+}
+
+
+
+void reset_app(struct FRAME_HEADERS *FRAME_HEADERS,
+               struct TEST_INTERFACE *TEST_INTERFACE,
+               struct TEST_PARAMS *TEST_PARAMS, struct QM_TEST *QM_TEST)
+{
+
+    free(FRAME_HEADERS->RX_BUFFER);
+    free(FRAME_HEADERS->TX_BUFFER);
+    free(TEST_PARAMS->F_PAYLOAD);
+    free(QM_TEST->pDELAY_RESULTS);
+    if (TEST_INTERFACE->SOCKET_FD > 0) close(TEST_INTERFACE->SOCKET_FD);
 
 }
 
@@ -1293,16 +1244,13 @@ int16_t remove_interface_promisc(struct TEST_INTERFACE *TEST_INTERFACE)
 int16_t set_interface_promisc(struct TEST_INTERFACE *TEST_INTERFACE)
 {
 
-    int16_t RET_VAL = EXIT_SUCCESS;
-
     printf("Entering promiscuous mode\n");
     strncpy(ethreq.ifr_name,(char*)TEST_INTERFACE->IF_NAME,IFNAMSIZ);
 
     if (ioctl(TEST_INTERFACE->SOCKET_FD,SIOCGIFFLAGS,&ethreq) == -1) 
     {
 
-        printf("Error getting socket flags, entering promiscuous mode failed!\n");
-        perror("ioctl() ");
+        perror("Error: Getting socket flags failed when entering promiscuous mode ");
         close(TEST_INTERFACE->SOCKET_FD);
         return EX_SOFTWARE;
 
@@ -1313,14 +1261,13 @@ int16_t set_interface_promisc(struct TEST_INTERFACE *TEST_INTERFACE)
     if (ioctl(TEST_INTERFACE->SOCKET_FD,SIOCSIFFLAGS,&ethreq) == -1)
     {
 
-        printf("Error setting socket flags, entering promiscuous mode failed!\n");
-        perror("ioctl() ");
+        perror("Error: Setting socket flags failed when entering promiscuous mode ");
         close(TEST_INTERFACE->SOCKET_FD);
         return EX_SOFTWARE;
 
     }
 
-    return RET_VAL;
+    return EXIT_SUCCESS;
 
 }
 
@@ -1329,16 +1276,15 @@ int16_t set_interface_promisc(struct TEST_INTERFACE *TEST_INTERFACE)
 int16_t set_sock_interface_index(struct TEST_INTERFACE *TEST_INTERFACE)
 {
 
-    const int16_t NO_INT = -1;
-
     struct ifreq ifreq;
     struct ifaddrs *ifaddr, *ifa;
 
     if (getifaddrs(&ifaddr)==-1)
     {
         perror("getifaddrs ");
-        return(NO_INT);
+        return(RET_EXIT_FAILURE);
     }
+
 
     for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next)
     {
@@ -1348,21 +1294,25 @@ int16_t set_sock_interface_index(struct TEST_INTERFACE *TEST_INTERFACE)
         }
 
         // Does this interface sub address family support AF_PACKET
-        if (ifa->ifa_addr->sa_family==AF_PACKET)
+        if (ifa->ifa_addr->sa_family == AF_PACKET)
         {
 
             // Set the ifreq by interface name
-            strncpy(ifreq.ifr_name,ifa->ifa_name, sizeof(ifreq.ifr_name));
+            strncpy(ifreq.ifr_name, ifa->ifa_name, sizeof(ifreq.ifr_name));
 
             // Does this device have a hardware address?
-            if (ioctl (TEST_INTERFACE->SOCKET_FD, SIOCGIFHWADDR, &ifreq)==0)
+            if (ioctl (TEST_INTERFACE->SOCKET_FD, SIOCGIFHWADDR, &ifreq) ==0 )
             {
+
+                // Copy the MAC before running SIOCGIFINDEX
+                char mac[6];
+                memcpy(mac, ifreq.ifr_addr.sa_data, 6);
 
                 // Get the interface index
                 ioctl(TEST_INTERFACE->SOCKET_FD, SIOCGIFINDEX, &ifreq);
 
                 // Check if this is the interface index the user specified
-                if (ifreq.ifr_ifindex==TEST_INTERFACE->IF_INDEX)
+                if (ifreq.ifr_ifindex == TEST_INTERFACE->IF_INDEX)
                 {
 
                     // Get the interface name
@@ -1372,12 +1322,12 @@ int16_t set_sock_interface_index(struct TEST_INTERFACE *TEST_INTERFACE)
                     printf("Using device %s with address "
                            "%02x:%02x:%02x:%02x:%02x:%02x, interface index %u\n",
                            ifreq.ifr_name,
-                           (int) ((uint8_t *) &ifreq.ifr_hwaddr.sa_data)[0],
-                           (int) ((uint8_t *) &ifreq.ifr_hwaddr.sa_data)[1],
-                           (int) ((uint8_t *) &ifreq.ifr_hwaddr.sa_data)[2],
-                           (int) ((uint8_t *) &ifreq.ifr_hwaddr.sa_data)[3],
-                           (int) ((uint8_t *) &ifreq.ifr_hwaddr.sa_data)[4],
-                           (int) ((uint8_t *) &ifreq.ifr_hwaddr.sa_data)[5],
+                           (uint8_t)mac[0],
+                           (uint8_t)mac[1],
+                           (uint8_t)mac[2],
+                           (uint8_t)mac[3],
+                           (uint8_t)mac[4],
+                           (uint8_t)mac[5],
                            ifreq.ifr_ifindex);
 
                     freeifaddrs(ifaddr);
@@ -1394,7 +1344,7 @@ int16_t set_sock_interface_index(struct TEST_INTERFACE *TEST_INTERFACE)
 
     freeifaddrs(ifaddr);
 
-    return NO_INT;
+    return RET_EXIT_FAILURE;
 
 }
 
@@ -1402,8 +1352,6 @@ int16_t set_sock_interface_index(struct TEST_INTERFACE *TEST_INTERFACE)
 
 int16_t set_sock_interface_name(struct TEST_INTERFACE *TEST_INTERFACE)
 {
-
-    const int16_t NO_INT = -1;
 
     struct ifreq ifreq;
     struct ifaddrs *ifaddr, *ifa;
@@ -1422,32 +1370,38 @@ int16_t set_sock_interface_name(struct TEST_INTERFACE *TEST_INTERFACE)
         }
 
         // Does this interface sub address family support AF_PACKET
-        if (ifa->ifa_addr->sa_family==AF_PACKET)
+        if (ifa->ifa_addr->sa_family == AF_PACKET)
         {
 
             // Set the ifreq by interface name
-            strncpy(ifreq.ifr_name,ifa->ifa_name, sizeof(ifreq.ifr_name));
+            strncpy(ifreq.ifr_name, ifa->ifa_name, sizeof(ifreq.ifr_name));
 
             // Does this device have a hardware address?
-            if (ioctl (TEST_INTERFACE->SOCKET_FD, SIOCGIFHWADDR, &ifreq)==0)
+            if (ioctl (TEST_INTERFACE->SOCKET_FD, SIOCGIFHWADDR, &ifreq) == 0)
             {
 
+                // Copy the MAC before running SIOCGIFINDEX
+                char mac[6];
+                memcpy(mac, ifreq.ifr_addr.sa_data, 6);
+
                 // Check if this is the interface name the user specified
-                if (strcmp(ifreq.ifr_name, (char *)&TEST_INTERFACE->IF_NAME)==0)
+                if (strcmp(ifreq.ifr_name, (char*)TEST_INTERFACE->IF_NAME) == 0)
                 {
 
                     // Get the interface index
                     ioctl(TEST_INTERFACE->SOCKET_FD, SIOCGIFINDEX, &ifreq);
 
+                    TEST_INTERFACE->IF_INDEX = ifreq.ifr_ifindex;
+
                     printf("Using device %s with address "
                            "%02x:%02x:%02x:%02x:%02x:%02x, interface index %u\n",
                            ifreq.ifr_name,
-                           (int) ((uint8_t *) &ifreq.ifr_hwaddr.sa_data)[0],
-                           (int) ((uint8_t *) &ifreq.ifr_hwaddr.sa_data)[1],
-                           (int) ((uint8_t *) &ifreq.ifr_hwaddr.sa_data)[2],
-                           (int) ((uint8_t *) &ifreq.ifr_hwaddr.sa_data)[3],
-                           (int) ((uint8_t *) &ifreq.ifr_hwaddr.sa_data)[4],
-                           (int) ((uint8_t *) &ifreq.ifr_hwaddr.sa_data)[5],
+                           (uint8_t)mac[0],
+                           (uint8_t)mac[1],
+                           (uint8_t)mac[2],
+                           (uint8_t)mac[3],
+                           (uint8_t)mac[4],
+                           (uint8_t)mac[5],
                            ifreq.ifr_ifindex);
 
                     freeifaddrs(ifaddr);
@@ -1464,7 +1418,7 @@ int16_t set_sock_interface_name(struct TEST_INTERFACE *TEST_INTERFACE)
 
     freeifaddrs(ifaddr);
 
-    return NO_INT;
+    return RET_EXIT_FAILURE;
 
 }
 
@@ -1499,19 +1453,29 @@ void signal_handler(int signal)
 
     strncpy(ethreq.ifr_name, (char*)TEST_INTERFACE->IF_NAME,IFNAMSIZ);
 
-    if (ioctl(TEST_INTERFACE->SOCKET_FD, SIOCGIFFLAGS, &ethreq)==-1) {
-        printf("Error getting socket flags, leaving promiscuous mode failed!\n");
-        perror("ioctl() ");
+    if (ioctl(TEST_INTERFACE->SOCKET_FD, SIOCGIFFLAGS, &ethreq) == -1) {
+        perror("Error: Failed to get socket flags when leaving promiscuous mode ");
     }
 
     ethreq.ifr_flags &= ~IFF_PROMISC;
 
-    if (ioctl(TEST_INTERFACE->SOCKET_FD, SIOCSIFFLAGS, &ethreq)==-1) {
-        printf("Error setting socket flags, leaving promiscuous mode failed!\n");
-        perror("ioctl() ");
+    if (ioctl(TEST_INTERFACE->SOCKET_FD, SIOCSIFFLAGS, &ethreq) == -1) {
+        perror("Error: Setting socket flags when leaving promiscuous mode ");
     }
 
-    close(TEST_INTERFACE->SOCKET_FD);
+    if (TEST_INTERFACE->SOCKET_FD > 0) { 
+        if (close(TEST_INTERFACE->SOCKET_FD) != 0) {
+            perror("Error: Couldn't close file descriptor ");
+        }
+    }
+
+    if (QM_TEST->TIME_RX_1    != NULL) free(QM_TEST->TIME_RX_1);
+    if (QM_TEST->TIME_RX_2    != NULL) free(QM_TEST->TIME_RX_2);
+    if (QM_TEST->TIME_RX_DIFF != NULL) free(QM_TEST->TIME_RX_DIFF);
+    if (QM_TEST->TIME_TX_1    != NULL) free(QM_TEST->TIME_TX_1);
+    if (QM_TEST->TIME_TX_2    != NULL) free(QM_TEST->TIME_TX_2);
+    if (QM_TEST->TIME_TX_DIFF != NULL) free(QM_TEST->TIME_TX_DIFF);
+
     free (QM_TEST->pDELAY_RESULTS);
     free (FRAME_HEADERS->RX_BUFFER);
     free (FRAME_HEADERS->TX_BUFFER);
@@ -1557,7 +1521,7 @@ void sync_settings(struct APP_PARAMS *APP_PARAMS,
 
             if (TX_RET_VAL <= 0)
             {
-                perror("Sync settings TX error ");
+                perror("Error: Sync settings transmit error ");
                 return;
             }
 
@@ -1582,7 +1546,7 @@ void sync_settings(struct APP_PARAMS *APP_PARAMS,
 
             if (TX_RET_VAL <= 0)
             {
-                perror("Sync settings TX error ");
+                perror("Error: Sync settings transmit error ");
                 return;
             }
 
@@ -1607,7 +1571,7 @@ void sync_settings(struct APP_PARAMS *APP_PARAMS,
 
             if (TX_RET_VAL <= 0)
             {
-                perror("Sync settings TX error ");
+                perror("Error: Sync settings transmit error ");
                 return;
             }
 
@@ -1632,7 +1596,7 @@ void sync_settings(struct APP_PARAMS *APP_PARAMS,
 
             if (TX_RET_VAL <= 0)
             {
-                perror("Sync settings TX error ");
+                perror("Error: Sync settings transmit error ");
                 return;
             }
 
@@ -1657,7 +1621,7 @@ void sync_settings(struct APP_PARAMS *APP_PARAMS,
 
             if (TX_RET_VAL <= 0)
             {
-                perror("Sync settings TX error ");
+                perror("Error: Sync settings transmit error ");
                 return;
             }
 
@@ -1682,7 +1646,7 @@ void sync_settings(struct APP_PARAMS *APP_PARAMS,
 
             if (TX_RET_VAL <= 0)
             {
-                perror("Sync settings TX error ");
+                perror("Error: Sync settings transmit error ");
                 return;
             }
 
@@ -1707,7 +1671,7 @@ void sync_settings(struct APP_PARAMS *APP_PARAMS,
 
             if (TX_RET_VAL <= 0)
             {
-                perror("Sync settings TX error ");
+                perror("Error: Sync settings transmit error ");
                 return;
             }
 
@@ -1733,7 +1697,7 @@ void sync_settings(struct APP_PARAMS *APP_PARAMS,
 
             if (TX_RET_VAL <= 0)
             {
-                perror("Sync settings TX error ");
+                perror("Error: Sync settings transmit error ");
                 return;
             }
 
@@ -1758,7 +1722,7 @@ void sync_settings(struct APP_PARAMS *APP_PARAMS,
 
             if (TX_RET_VAL <= 0)
             {
-                perror("Sync settings TX error ");
+                perror("Error: Sync settings transmit error ");
                 return;
             }
 
@@ -1783,7 +1747,7 @@ void sync_settings(struct APP_PARAMS *APP_PARAMS,
 
             if (TX_RET_VAL <= 0)
             {
-                perror("Sync settings TX error ");
+                perror("Error: Sync settings transmit error ");
                 return;
             }
 
@@ -1807,7 +1771,7 @@ void sync_settings(struct APP_PARAMS *APP_PARAMS,
 
             if (TX_RET_VAL <= 0)
             {
-                perror("Sync settings TX error ");
+                perror("Error: Sync settings transmit error ");
                 return;
             }
 
@@ -1824,7 +1788,7 @@ void sync_settings(struct APP_PARAMS *APP_PARAMS,
 
             if (TX_RET_VAL <= 0)
             {
-                perror("Sync settings TX error ");
+                perror("Error: Sync settings transmit error ");
                 return;
             }
 
@@ -1841,7 +1805,7 @@ void sync_settings(struct APP_PARAMS *APP_PARAMS,
 
             if (TX_RET_VAL <= 0)
             {
-                perror("Sync settings TX error ");
+                perror("Error: Sync settings transmit error ");
                 return;
             }
 
@@ -1867,7 +1831,7 @@ void sync_settings(struct APP_PARAMS *APP_PARAMS,
 
             if (TX_RET_VAL <= 0)
             {
-                perror("Sync settings TX error ");
+                perror("Error: Sync settings transmit error ");
                 return;
             }
 
@@ -1884,7 +1848,7 @@ void sync_settings(struct APP_PARAMS *APP_PARAMS,
 
             if (TX_RET_VAL <= 0)
             {
-                perror("Sync settings TX error ");
+                perror("Error: Sync settings transmit error ");
                 return;
             }
 
@@ -1901,7 +1865,7 @@ void sync_settings(struct APP_PARAMS *APP_PARAMS,
 
             if (TX_RET_VAL <= 0)
             {
-                perror("Sync settings TX error ");
+                perror("Error: Sync settings transmit error ");
                 return;
             }
 
@@ -1923,7 +1887,7 @@ void sync_settings(struct APP_PARAMS *APP_PARAMS,
 
         if (TX_RET_VAL <= 0)
         {
-            perror("Sync settings TX error ");
+            perror("Error: Sync settings transmit error ");
             return;
         }
 
@@ -2064,7 +2028,7 @@ void sync_settings(struct APP_PARAMS *APP_PARAMS,
 
             } else if (RX_LEN <0) {
 
-                perror("Setting RX error ");
+                perror("Error: Setting receive failed ");
                 {
                     return;
                 }
@@ -2075,8 +2039,5 @@ void sync_settings(struct APP_PARAMS *APP_PARAMS,
 
       
     } // TX or RX mode
-
-
-    return;
 
 }

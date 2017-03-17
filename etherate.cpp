@@ -1,7 +1,7 @@
 /*
- * License:
+ * License: MIT
  *
- * Copyright (c) 2012-2016 James Bensley.
+ * Copyright (c) 2012-2017 James Bensley.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -57,7 +57,7 @@
 #include <string.h>          // strncmp()
 #define MAX_IFS 64
 #include <sys/ioctl.h>
-#include <sys/socket.h>      // AF_PACKET *Address Family*
+#include <sys/socket.h>      // AF_PACKET
 #include "sysexits.h"        // EX_USAGE, EX_NOPERM, EX_PROTOCOL, EX_SOFTWARE
 #include <time.h>            // clock_gettime(), struct timeval, time_t,
                              // struct tm
@@ -75,6 +75,7 @@
 #endif
 
 #include "etherate.h"
+#include "functions.cpp"
 #include "defaults.cpp"
 #include "tests.cpp"
 
@@ -112,17 +113,20 @@ int main(int argc, char *argv[]) {
                                        &TEST_INTERFACE, &TEST_PARAMS, &MTU_TEST,
                                        &QM_TEST);
 
-        if (CLI_RET_VAL == RET_EXIT_APP) {
-            return EXIT_SUCCESS;
-        } else if (CLI_RET_VAL == RET_EX_USAGE) {
-            return EX_USAGE;
-        } else if (CLI_RET_VAL != EXIT_SUCCESS) {
-            return EX_SOFTWARE;
+        if (CLI_RET_VAL != EXIT_SUCCESS) {
+            reset_app(&FRAME_HEADERS, &TEST_INTERFACE, &TEST_PARAMS, &QM_TEST);
+        
+            if(CLI_RET_VAL == RET_EXIT_APP) {
+                return EXIT_SUCCESS;
+            } else {
+                return CLI_RET_VAL;
+            }
         }
 
         // Check for root privs, low level socket access is required
         if (getuid() != 0) {
             printf("Must be root to use this program!\n");
+            reset_app(&FRAME_HEADERS, &TEST_INTERFACE, &TEST_PARAMS, &QM_TEST);
             return EX_NOPERM;
         }
 
@@ -133,25 +137,37 @@ int main(int argc, char *argv[]) {
          */
 
         int16_t SOCK_RET_VAL = setup_socket(&TEST_INTERFACE);
-        if (SOCK_RET_VAL != EXIT_SUCCESS) return SOCK_RET_VAL;
+        if (SOCK_RET_VAL != EXIT_SUCCESS) {
+            reset_app(&FRAME_HEADERS, &TEST_INTERFACE, &TEST_PARAMS, &QM_TEST);
+            return SOCK_RET_VAL;
+        }
 
         int16_t INT_RET_VAL = setup_socket_interface(&FRAME_HEADERS,
                                                      &TEST_INTERFACE,
                                                      &TEST_PARAMS);
-        if (INT_RET_VAL != EXIT_SUCCESS) return INT_RET_VAL;
+        if (INT_RET_VAL != EXIT_SUCCESS) {
+            reset_app(&FRAME_HEADERS, &TEST_INTERFACE, &TEST_PARAMS, &QM_TEST);
+            return INT_RET_VAL;
+        }
         
         // Set the network interface to promiscuos mode
         int16_t PROM_RET_VAL = set_interface_promisc(&TEST_INTERFACE);
-        if (PROM_RET_VAL != EXIT_SUCCESS) return PROM_RET_VAL;
+        if (PROM_RET_VAL != EXIT_SUCCESS) {
+            reset_app(&FRAME_HEADERS, &TEST_INTERFACE, &TEST_PARAMS, &QM_TEST);
+            return PROM_RET_VAL;
+        }
 
         // Declare sigint handler, TX will signal RX to reset when it quits.
-        // This can not be declared until now, the interfaces must be set up
-        // so that a dying gasp can be sent
+        // This can not be declared until now because the interfaces must be
+        // set up so that a dying gasp can be sent.
         signal (SIGINT,signal_handler);
 
         int16_t FRAME_RET_VAL = setup_frame(&APP_PARAMS, &FRAME_HEADERS,
                                             &TEST_INTERFACE, &TEST_PARAMS);
-        if (FRAME_RET_VAL != EXIT_SUCCESS) return FRAME_RET_VAL;
+        if (FRAME_RET_VAL != EXIT_SUCCESS) {
+            reset_app(&FRAME_HEADERS, &TEST_INTERFACE, &TEST_PARAMS, &QM_TEST);
+            return FRAME_RET_VAL;
+        }
 
 
 
@@ -212,29 +228,24 @@ int main(int argc, char *argv[]) {
         APP_PARAMS.TM_LOCAL = localtime(&APP_PARAMS.TS_NOW);
         printf("Ending test on %s\n\n", asctime(APP_PARAMS.TM_LOCAL));
 
-
-        free(FRAME_HEADERS.RX_BUFFER);
-        free(FRAME_HEADERS.TX_BUFFER);
-        free(TEST_PARAMS.F_PAYLOAD);
-
         int16_t RM_PROM_RET_VAL = remove_interface_promisc(&TEST_INTERFACE);
-        if (RM_PROM_RET_VAL != EXIT_SUCCESS) return RM_PROM_RET_VAL;
+        if (RM_PROM_RET_VAL != EXIT_SUCCESS) {
+            printf("Error: Leaving promiscuous mode\n");
+        }
 
-        close(TEST_INTERFACE.SOCKET_FD);
+        int16_t CLOSE_RET_VAL = close(TEST_INTERFACE.SOCKET_FD);
+        if (CLOSE_RET_VAL != EXIT_SUCCESS) {
+            perror("Error: Closing socket failed ");
+        }
+
+        reset_app(&FRAME_HEADERS, &TEST_INTERFACE, &TEST_PARAMS, &QM_TEST);
 
         // End the testing loop if TX host
-        if (APP_PARAMS.TX_MODE == true) TESTING=false;
+        if (APP_PARAMS.TX_MODE == true) TESTING = false;
 
 
     }
 
-
-
-    /*
-     ***************************************************************** CLEAN UP
-     */
-
-    free (QM_TEST.pDELAY_RESULTS);
 
     return EXIT_SUCCESS;
 

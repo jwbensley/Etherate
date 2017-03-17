@@ -1,4 +1,4 @@
-Copyright (c) 2012-2016 James Bensley.
+Copyright (c) 2012-2017 James Bensley.
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
