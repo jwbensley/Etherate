@@ -14,7 +14,7 @@ sudo make instal
 
 2. To create a debugging build
 
-g++ -o etherate etherate.cpp -Wall -Werror -ftrapv -pedantic -lrt -fstack-protector-all -fsanitize=address -std=c++11 -Og -g
+g++ -o etherate etherate.cpp -Wall -Werror -ftrapv -pedantic -lrt -fstack-protector-all -fsanitize=address -std=c++0x -Og -g
 
 
 
@@ -22,7 +22,7 @@ g++ -o etherate etherate.cpp -Wall -Werror -ftrapv -pedantic -lrt -fstack-protec
 
 To compile the binary in the local directory use the following:
 
-g++ -o etherate etherate.cpp -Wall -Werror -ftrapv -pedantic -lrt -fstack-protector-all -std=c++11 -O3
+g++ -o etherate etherate.cpp -Wall -Werror -ftrapv -pedantic -lrt -fstack-protector-all -std=c++0x -O3
 
 
 
