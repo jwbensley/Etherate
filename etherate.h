@@ -1,7 +1,7 @@
 /*
- * License:
+ * License: MIT
  *
- * Copyright (c) 2012-2016 James Bensley.
+ * Copyright (c) 2012-2017 James Bensley.
  *
  * Permission is hereby granted, free of uint8_tge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -37,8 +37,7 @@
  ************************************************************* GLOBAL CONSTANTS
  */
 
-const int ccc = 1;
-const char APP_VERSION[20] = "0.10.beta 2016-09";
+const char APP_VERSION[20] = "0.11.beta 2017-03";
 const uint16_t F_SIZE_MAX         = 10000; // Maximum frame size on the wire (payload+headers)
 const uint32_t F_SIZE_DEF         = 1500;  // Default frame payload size in bytes
 const uint64_t F_DURATION_DEF     = 30;    // Default test duration in seconds
@@ -54,10 +53,10 @@ const uint16_t MPLS_LABELS_MAX    = 10;    // Maximum number of MPLS labels
 const uint32_t HEADERS_LEN_DEF    = 14;    // Default frame headers length
 const uint16_t ETHERTYPE_DEF      = 13107; // Default Ethertype (0x3333)
 const int32_t  IF_INDEX_DEF       = -1;    // Default interface index number
-const uint8_t  TX_DELAY_DEF       = 1;  // Default TX to RX delay check
-
-const int8_t RET_EXIT_APP =    -2;
-const int8_t RET_EX_USAGE =    -1;
+const int32_t  SOCKET_FD_DEF      = -1;    // Default socket fd
+const uint8_t  TX_DELAY_DEF       = 1;     // Default TX to RX delay check
+const int8_t   RET_EXIT_APP       = -2;    // Used to exit the app even though success
+const int8_t   RET_EXIT_FAILURE   = -1;    // EXIT_FAILURE but a negative value
 
 
 /*
@@ -220,21 +219,27 @@ struct MTU_TEST {              // Settings specific to the MTU sweep test
 struct QM_TEST {               // Settings specific to the quality measurement test
 
     uint8_t       ENABLED;          // Enable the quality measurement tests
+    uint32_t      DELAY_TEST_COUNT; // Number of one way delay measurements
     uint32_t      INTERVAL;         // Default echo interval in milliseconds
     signed long   INTERVAL_SEC;
     signed long   INTERVAL_NSEC;
     long double   INTERVAL_MIN;
     long double   INTERVAL_MAX;
+    long double   JITTER_MIN;
+    long double   JITTER_MAX;
+    long double   RTT_MIN;
+    long double   RTT_MAX;
+    uint32_t      TEST_COUNT;       // Number of latency tests made
+    double        *TIME_RX_1;       // These values are used to calculate the
+    double        *TIME_RX_2;       // delay between TX and RX hosts
+    double        *TIME_RX_DIFF;
+    double        *TIME_TX_1;
+    double        *TIME_TX_2;
+    double        *TIME_TX_DIFF;
     uint32_t      TIMEOUT;          // Default timeout in milliseconds
     signed long   TIMEOUT_NSEC;
     signed long   TIMEOUT_SEC;
     uint32_t      TIMEOUT_COUNT;
-    uint32_t      TEST_COUNT;       // Number of latency tests made
-    uint32_t      DELAY_TEST_COUNT; // Number of one way delay measurements
-    long double   RTT_MIN;
-    long double   RTT_MAX;
-    long double   JITTER_MIN;
-    long double   JITTER_MAX;
     double        *pDELAY_RESULTS;  // Store Tx to Rx test results
     timespec      TS_RTT;           // Timespec used for calculating delay/RTT
     timespec      TS_START;         // Time the test was started

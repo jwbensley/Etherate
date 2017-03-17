@@ -1,23 +1,31 @@
-1. Full compile
+1. Full compile and install
 
 For a complete check and compile install, install any missing dependancies with the following (adjust to your OS as required):
 
 sudo apt-get install automake autoconf libtool
 
-Then simply run:
+Then run:
 
 ./configure.sh
+make
+sudo make instal
 
 
 
-2. Standalone binary compile
+2. To create a debugging build
+
+g++ -o etherate etherate.cpp -Wall -Werror -ftrapv -pedantic -lrt -fstack-protector-all -fsanitize=address -std=c++11 -Og -g
+
+
+
+3. Standalone binary compile
 
 To compile the binary in the local directory use the following:
 
-g++ -o etherate etherate.cpp -Wall -ftrapv -g -O3 -lrt
+g++ -o etherate etherate.cpp -Wall -Werror -ftrapv -pedantic -lrt -fstack-protector-all -std=c++11 -O3
 
 
 
-3. Standalone binary compile (with minimal checks, only for slags)
+4. Standalone binary compile with minimal checks (only for proper slags)
 
-g++ -o etherate etherate.cpp
+g++ -o etherate etherate.cpp -lrt

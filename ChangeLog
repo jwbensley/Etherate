@@ -1,3 +1,21 @@
+-----Etherate 0.11 Beta 2017-03
+
+[MAJOR] Fixed issue #5; -Q option not working, 100% frame loss
+
+[MINOR] Fixed issue #8; LeakSanatisor found leak with "-h" and several "return"s
+
+[MINOR] Fixed issue #7; File descriptors left open in list_interfaces()
+
+[MINOR] Fixed issue #6; Interface selectiom not working by name and list_interfaces() shows the wrong MAC address
+
+[MINOR] Fixed seg fault when missing arguments to -Q, "sudo ./etherate -I 11 -Q -r"
+
+[MINOR] Fixed blocks at exit used for delay_test() not being free()'ed
+
+[MINOR] Tidied exit codes to use EXIT_SUCCCESS/EXIT_FAILURE
+
+
+
 -----Etherate 0.10 Beta 2016-09
 
 [FEATURE] Added DEI option for single and double tagged VLANs.

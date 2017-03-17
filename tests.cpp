@@ -1,7 +1,7 @@
 /*
- * License:
+ * License: MIT
  *
- * Copyright (c) 2012-2016 James Bensley.
+ * Copyright (c) 2012-2017 James Bensley.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -34,21 +34,21 @@
  *
  */
 
-// Calculate the one-way delay from TX to RX
+// Calculate the one-way delay from Tx to Rx
 void delay_test(struct APP_PARAMS *APP_PARAMS,
                 struct FRAME_HEADERS *FRAME_HEADERS,
                 struct TEST_INTERFACE *TEST_INTERFACE,
                 struct TEST_PARAMS * TEST_PARAMS,
                 struct QM_TEST *QM_TEST);
 
-// Run an MTU sweep test from TX to RX
+// Run an MTU sweep test from Tx to Rx
 void mtu_sweep_test(struct APP_PARAMS *APP_PARAMS,
                     struct FRAME_HEADERS *FRAME_HEADERS,
                     struct TEST_INTERFACE *TEST_INTERFACE,
                     struct TEST_PARAMS *TEST_PARAMS,
                     struct MTU_TEST *MTU_TEST);
 
-// Run some quality measurements from TX to RX
+// Run some quality measurements from Tx to Rx
 void latency_test(struct APP_PARAMS *APP_PARAMS,
                   struct FRAME_HEADERS *FRAME_HEADERS,
                   struct TEST_INTERFACE *TEST_INTERFACE,
@@ -75,7 +75,7 @@ void delay_test(struct APP_PARAMS *APP_PARAMS,
                 struct TEST_PARAMS * TEST_PARAMS,
                 struct QM_TEST *QM_TEST)
 {
-// Calculate the delay between TX and RX hosts. The uptime is exchanged twice
+// Calculate the delay between Tx and Rx hosts. The uptime is exchanged twice
 // to estimate the delay between the hosts. Then the process is repeated so
 // an average can be taken
 
@@ -97,7 +97,7 @@ void delay_test(struct APP_PARAMS *APP_PARAMS,
         for (uint32_t i=0; i < QM_TEST->DELAY_TEST_COUNT; i += 1)
         {
 
-            // Get the current time and send it to RX
+            // Get the current time and send it to Rx
             clock_gettime(CLOCK_MONOTONIC_RAW, &QM_TEST->TS_RTT);
 
             // Convert it to double then long long (uint64t_) for transmission
@@ -113,9 +113,9 @@ void delay_test(struct APP_PARAMS *APP_PARAMS,
                                 (struct sockaddr*)&TEST_INTERFACE->SOCKET_ADDRESS,
                                 sizeof(TEST_INTERFACE->SOCKET_ADDRESS));
 
-            if (TX_RET_VAL <=0)
+            if (TX_RET_VAL <= 0)
             {
-                perror("Delay test TX error ");
+                perror("Delay test Tx error ");
                 return;
             }
 
@@ -134,14 +134,14 @@ void delay_test(struct APP_PARAMS *APP_PARAMS,
                                 (struct sockaddr*)&TEST_INTERFACE->SOCKET_ADDRESS,
                                 sizeof(TEST_INTERFACE->SOCKET_ADDRESS));
 
-            if (TX_RET_VAL <=0)
+            if (TX_RET_VAL <= 0)
             {
-                perror("Delay test TX error ");
+                perror("Delay test Tx error ");
                 return;
             }
 
-            // Wait for RX to send back delay value
 
+            // Wait for Rx to send back delay value
             WAITING = true;
             while (WAITING)
             {
@@ -150,7 +150,7 @@ void delay_test(struct APP_PARAMS *APP_PARAMS,
                                   TEST_PARAMS->F_SIZE_TOTAL,
                                   0, NULL, NULL);
 
-                if (RX_LEN >0)
+                if (RX_LEN > 0)
                 {
 
                     if (ntohs(*FRAME_HEADERS->RX_SUB_TLV_TYPE) == TYPE_DELAY)
@@ -159,16 +159,17 @@ void delay_test(struct APP_PARAMS *APP_PARAMS,
                         WAITING = false;
                     }
 
-                } else if (RX_LEN <0) {
+                } else if (RX_LEN < 0) {
 
-                    perror("Delay test TX error ");
+                    perror("Delay test Tx error ");
                     return;
 
                 }
 
             }
 
-        } // End delay TX loop
+        } // End delay Tx loop
+
 
         // Let the receiver know all delay values have been received
         build_tlv(FRAME_HEADERS, htons(TYPE_TESTFRAME), htonl(VALUE_DELAY_END));
@@ -178,14 +179,14 @@ void delay_test(struct APP_PARAMS *APP_PARAMS,
 
         TX_RET_VAL = sendto(TEST_INTERFACE->SOCKET_FD,
                             FRAME_HEADERS->TX_BUFFER,
-                            FRAME_HEADERS->LENGTH+FRAME_HEADERS->TLV_SIZE,
+                            FRAME_HEADERS->LENGTH+FRAME_HEADERS->SUB_TLV_SIZE,
                             0,
                             (struct sockaddr*)&TEST_INTERFACE->SOCKET_ADDRESS,
                             sizeof(TEST_INTERFACE->SOCKET_ADDRESS));
 
-        if (TX_RET_VAL <=0)
+        if (TX_RET_VAL <= 0)
         {
-            perror("Delay test TX error ");
+            perror("Delay test Tx error ");
             return;
         }
 
@@ -202,17 +203,17 @@ void delay_test(struct APP_PARAMS *APP_PARAMS,
         printf("Tx to Rx delay calculated as %.9f seconds\n\n", DELAY_AVERAGE);
 
 
-    // This is the RX host
+    // This is the Rx host
     } else {
 
 
-        // These values are used to calculate the delay between TX and RX hosts
-        double *TIME_TX_1 = (double*)calloc(QM_TEST->DELAY_TEST_COUNT, sizeof(double));
-        double *TIME_TX_2 = (double*)calloc(QM_TEST->DELAY_TEST_COUNT, sizeof(double));
-        double *TIME_RX_1 = (double*)calloc(QM_TEST->DELAY_TEST_COUNT, sizeof(double));
-        double *TIME_RX_2 = (double*)calloc(QM_TEST->DELAY_TEST_COUNT, sizeof(double));
-        double *TIME_TX_DIFF = (double*)calloc(QM_TEST->DELAY_TEST_COUNT, sizeof(double));
-        double *TIME_RX_DIFF = (double*)calloc(QM_TEST->DELAY_TEST_COUNT, sizeof(double));
+        // These values are used to calculate the delay between Tx and Rx hosts
+        QM_TEST->TIME_TX_1 = (double*)calloc(QM_TEST->DELAY_TEST_COUNT, sizeof(double));
+        QM_TEST->TIME_TX_2 = (double*)calloc(QM_TEST->DELAY_TEST_COUNT, sizeof(double));
+        QM_TEST->TIME_RX_1 = (double*)calloc(QM_TEST->DELAY_TEST_COUNT, sizeof(double));
+        QM_TEST->TIME_RX_2 = (double*)calloc(QM_TEST->DELAY_TEST_COUNT, sizeof(double));
+        QM_TEST->TIME_TX_DIFF = (double*)calloc(QM_TEST->DELAY_TEST_COUNT, sizeof(double));
+        QM_TEST->TIME_RX_DIFF = (double*)calloc(QM_TEST->DELAY_TEST_COUNT, sizeof(double));
 
         uint32_t DELAY_INDEX = 0;
         
@@ -229,30 +230,30 @@ void delay_test(struct APP_PARAMS *APP_PARAMS,
             if (ntohs(*FRAME_HEADERS->RX_SUB_TLV_TYPE) == TYPE_DELAY1)
             {
 
-                // Get the time RX is receiving TX's sent time figure
+                // Get the time Rx is receiving Tx's sent time figure
                 clock_gettime(CLOCK_MONOTONIC_RAW, &QM_TEST->TS_RTT);
 
-                // Record the time RX received this TX value
-                TIME_RX_1[DELAY_INDEX] = QM_TEST->TS_RTT.tv_sec + ((double)QM_TEST->TS_RTT.tv_nsec*1e-9);
-                // Record the TX value received
-                TIME_TX_1[DELAY_INDEX] = (ntohll(*FRAME_HEADERS->RX_SUB_TLV_VALUE)/1000000000.0);
+                // Record the time Rx received this Tx value
+                QM_TEST->TIME_RX_1[DELAY_INDEX] = QM_TEST->TS_RTT.tv_sec + ((double)QM_TEST->TS_RTT.tv_nsec*1e-9);
+                // Record the Tx value received
+                QM_TEST->TIME_TX_1[DELAY_INDEX] = (ntohll(*FRAME_HEADERS->RX_SUB_TLV_VALUE)/1000000000.0);
 
 
             } else if (ntohs(*FRAME_HEADERS->RX_SUB_TLV_TYPE) == TYPE_DELAY2) {
 
 
+                // Grab the Rx time and sent Tx value for the second time
                 clock_gettime(CLOCK_MONOTONIC_RAW, &QM_TEST->TS_RTT);
-                TIME_RX_2[DELAY_INDEX] = QM_TEST->TS_RTT.tv_sec + ((double)QM_TEST->TS_RTT.tv_nsec*1e-9);
-                TIME_TX_2[DELAY_INDEX] = (ntohll(*FRAME_HEADERS->RX_SUB_TLV_VALUE)/1000000000.0);
+                QM_TEST->TIME_RX_2[DELAY_INDEX] = QM_TEST->TS_RTT.tv_sec + ((double)QM_TEST->TS_RTT.tv_nsec*1e-9);
+                QM_TEST->TIME_TX_2[DELAY_INDEX] = (ntohll(*FRAME_HEADERS->RX_SUB_TLV_VALUE)/1000000000.0);
 
                 // Calculate the delay
-                TIME_TX_DIFF[DELAY_INDEX] = TIME_TX_2[DELAY_INDEX]-TIME_TX_1[DELAY_INDEX];
-                TIME_RX_DIFF[DELAY_INDEX] = TIME_RX_2[DELAY_INDEX]-TIME_RX_1[DELAY_INDEX];
+                QM_TEST->TIME_TX_DIFF[DELAY_INDEX] = QM_TEST->TIME_TX_2[DELAY_INDEX]-QM_TEST->TIME_TX_1[DELAY_INDEX];
+                QM_TEST->TIME_RX_DIFF[DELAY_INDEX] = QM_TEST->TIME_RX_2[DELAY_INDEX]-QM_TEST->TIME_RX_1[DELAY_INDEX];
 
-                if (TIME_RX_DIFF[DELAY_INDEX]-TIME_TX_DIFF[DELAY_INDEX] > 0) {
-
-                    QM_TEST->pDELAY_RESULTS[DELAY_INDEX] = TIME_RX_DIFF[DELAY_INDEX]-TIME_TX_DIFF[DELAY_INDEX];
-
+                // Rarely a negative value is calculated
+                if (QM_TEST->TIME_RX_DIFF[DELAY_INDEX]-QM_TEST->TIME_TX_DIFF[DELAY_INDEX] > 0) {
+                    QM_TEST->pDELAY_RESULTS[DELAY_INDEX] = QM_TEST->TIME_RX_DIFF[DELAY_INDEX]-QM_TEST->TIME_TX_DIFF[DELAY_INDEX];
                 // This value returned is minus and thus invalid
                 } else {
 
@@ -260,7 +261,7 @@ void delay_test(struct APP_PARAMS *APP_PARAMS,
                 }
 
 
-                // Send the calculated delay back to the TX host
+                // Send the calculated delay back to the Tx host
                 build_sub_tlv(FRAME_HEADERS, htons(TYPE_DELAY),
                               htonll(roundl(QM_TEST->pDELAY_RESULTS[DELAY_INDEX]*1000000000.0)));
 
@@ -269,9 +270,9 @@ void delay_test(struct APP_PARAMS *APP_PARAMS,
                                     0,(struct sockaddr*)&TEST_INTERFACE->SOCKET_ADDRESS,
                                     sizeof(TEST_INTERFACE->SOCKET_ADDRESS));
 
-                if (TX_RET_VAL <=0)
+                if (TX_RET_VAL <= 0)
                 {
-                    perror("Delay test TX error ");
+                    perror("Delay test Rx error ");
                     return;
                 }
 
@@ -299,16 +300,21 @@ void delay_test(struct APP_PARAMS *APP_PARAMS,
 
         } // End of WAITING
 
-        free(TIME_TX_1);
-        free(TIME_TX_2);
-        free(TIME_RX_1);
-        free(TIME_RX_2);
-        free(TIME_TX_DIFF);
-        free(TIME_RX_DIFF);
+        free(QM_TEST->TIME_TX_1);
+        free(QM_TEST->TIME_TX_2);
+        free(QM_TEST->TIME_RX_1);
+        free(QM_TEST->TIME_RX_2);
+        free(QM_TEST->TIME_TX_DIFF);
+        free(QM_TEST->TIME_RX_DIFF);
+        QM_TEST->TIME_TX_1    = NULL;
+        QM_TEST->TIME_TX_2    = NULL;
+        QM_TEST->TIME_RX_1    = NULL;
+        QM_TEST->TIME_RX_2    = NULL;
+        QM_TEST->TIME_TX_DIFF = NULL;
+        QM_TEST->TIME_RX_DIFF = NULL;
 
-    } // End of RX mode
+    } // End of Rx mode
 
-    return;
 }
 
 
@@ -321,10 +327,10 @@ void mtu_sweep_test(struct APP_PARAMS *APP_PARAMS,
 {
 
     // Check the interface MTU
-    uint16_t PHY_MTU = get_interface_mtu_by_name(TEST_INTERFACE);
+    int32_t PHY_MTU = get_interface_mtu_by_name(TEST_INTERFACE);
 
     if (MTU_TEST->MTU_TX_MAX > PHY_MTU) {
-        printf("Starting MTU sweep from %u to %u (interface max)\n",
+        printf("Starting MTU sweep from %u to %d (interface max)\n",
                MTU_TEST->MTU_TX_MIN, PHY_MTU);
         MTU_TEST->MTU_TX_MAX = PHY_MTU;
 
@@ -370,7 +376,7 @@ void mtu_sweep_test(struct APP_PARAMS *APP_PARAMS,
 
                 if (TX_RET_VAL <=0)
                 {
-                    perror("MTU test TX error ");
+                    perror("MTU test Tx error ");
                     return;
                 }
 
@@ -381,7 +387,7 @@ void mtu_sweep_test(struct APP_PARAMS *APP_PARAMS,
 
             }
 
-            // Wait for the ACK from back from RX
+            // Wait for the ACK from back from Rx
             while(WAITING)
             {
 
@@ -403,7 +409,7 @@ void mtu_sweep_test(struct APP_PARAMS *APP_PARAMS,
 
                         TEST_PARAMS->F_RX_COUNT += 1;
 
-                        // Get the MTU size RX is ACK'ing
+                        // Get the MTU size Rx is ACK'ing
                         MTU_ACK_CURRENT = (uint32_t)ntohll(*FRAME_HEADERS->RX_SUB_TLV_VALUE);
                         if (MTU_ACK_CURRENT > MTU_ACK_LARGEST) 
                         {
@@ -415,12 +421,18 @@ void mtu_sweep_test(struct APP_PARAMS *APP_PARAMS,
                         {
                             // Frame received out of order, later than expected
                             TEST_PARAMS->F_RX_LATE += 1;
-                        } else if (MTU_ACK_CURRENT > MTU_ACK_PREVIOUS + 1) {
+                        } else if (MTU_ACK_CURRENT > (MTU_ACK_PREVIOUS + 2)) {
                             // Frame received out of order, earlier than expected
                             TEST_PARAMS->F_RX_EARLY += 1;
-                        } else if (MTU_ACK_CURRENT == MTU_ACK_PREVIOUS + 1) {
+                            MTU_ACK_PREVIOUS = MTU_ACK_CURRENT;
+                        } else if (MTU_ACK_CURRENT == (MTU_ACK_PREVIOUS + 1)) {
+                            // Fame received in order
+                            MTU_ACK_PREVIOUS = MTU_ACK_CURRENT;
+                            TEST_PARAMS->F_RX_ONTIME += 1;
+                        } else if (MTU_ACK_CURRENT == MTU_ACK_PREVIOUS) {
                             // Frame received in order
                             MTU_ACK_PREVIOUS = MTU_ACK_CURRENT;
+                            TEST_PARAMS->F_RX_ONTIME += 1;
                         }
 
 
@@ -432,19 +444,19 @@ void mtu_sweep_test(struct APP_PARAMS *APP_PARAMS,
                     }
 
 
-                } // RX_LEN > 0
+                } // Rx_LEN > 0
 
-                // 1 seconds have passed TX has probably missed/lost the ACK
+                // 1 seconds have passed Tx has probably missed/lost the ACK
                 if ((TEST_PARAMS->TS_CURRENT_TIME.tv_sec - 
                      TEST_PARAMS->TS_ELAPSED_TIME.tv_sec) >= 1) WAITING = false;
 
             } // End of WAITING
 
             
-        } // End of TX transmit
+        } // End of Tx transmit
 
 
-        printf("Largest MTU ACK'ed from RX is %u\n\n", MTU_ACK_LARGEST);
+        printf("Largest MTU ACK'ed from Rx is %u\n\n", MTU_ACK_LARGEST);
 
         printf("Test frames transmitted: %" PRIu64 "\n"
                "Test frames received: %" PRIu64 "\n"
@@ -459,10 +471,8 @@ void mtu_sweep_test(struct APP_PARAMS *APP_PARAMS,
                TEST_PARAMS->F_RX_EARLY,
                TEST_PARAMS->F_RX_LATE);
 
-        return;
 
-
-    // Running in RX mode
+    // Running in Rx mode
     } else {
 
         uint32_t MTU_RX_PREVIOUS = 0;
@@ -482,7 +492,7 @@ void mtu_sweep_test(struct APP_PARAMS *APP_PARAMS,
             // Get the current time
             clock_gettime(CLOCK_MONOTONIC_RAW, &TEST_PARAMS->TS_CURRENT_TIME);
 
-            // Check for test frame from TX
+            // Check for test frame from Tx
             RX_LEN = recvfrom(TEST_INTERFACE->SOCKET_FD,
                               FRAME_HEADERS->RX_BUFFER,
                               MTU_TEST->MTU_TX_MAX,
@@ -498,7 +508,7 @@ void mtu_sweep_test(struct APP_PARAMS *APP_PARAMS,
 
                     TEST_PARAMS->F_RX_COUNT += 1;
 
-                    // Get the MTU size TX is sending
+                    // Get the MTU size Tx is sending
                     MTU_RX_CURRENT = (uint32_t)ntohll(*FRAME_HEADERS->RX_SUB_TLV_VALUE);
 
                     if (MTU_RX_CURRENT > MTU_RX_LARGEST)
@@ -506,7 +516,7 @@ void mtu_sweep_test(struct APP_PARAMS *APP_PARAMS,
 
                         MTU_RX_LARGEST = MTU_RX_CURRENT;
 
-                        // ACK that back to TX as new largest MTU received
+                        // ACK that back to Tx as new largest MTU received
                         // (send the ACK 3 times)
                         for(uint8_t i = 1; i <= 3; i += 1)
                         {
@@ -521,7 +531,7 @@ void mtu_sweep_test(struct APP_PARAMS *APP_PARAMS,
 
                         if (TX_RET_VAL <=0)
                         {
-                            perror("MTU test TX error ");
+                            perror("MTU test Rx error ");
                             return;
                         }
 
@@ -534,16 +544,23 @@ void mtu_sweep_test(struct APP_PARAMS *APP_PARAMS,
                     } // MTU_RX_CURRENT > MTU_RX_LARGEST
 
 
+
                     if (MTU_RX_CURRENT < MTU_RX_PREVIOUS)
                     {
                         // Frame received out of order, later than expected
                         TEST_PARAMS->F_RX_LATE += 1;
-                    } else if (MTU_RX_CURRENT > MTU_RX_PREVIOUS+1) {
+                    } else if (MTU_RX_CURRENT > (MTU_RX_PREVIOUS + 2)) {
                         // Frame received out of order, earlier than expected
                         TEST_PARAMS->F_RX_EARLY += 1;
-                    } else if (MTU_RX_CURRENT == MTU_RX_PREVIOUS+1) {
+                        MTU_RX_PREVIOUS = MTU_RX_CURRENT;
+                    } else if (MTU_RX_CURRENT == (MTU_RX_PREVIOUS + 1)) {
+                        // Fame received in order
+                        MTU_RX_PREVIOUS = MTU_RX_CURRENT;
+                        TEST_PARAMS->F_RX_ONTIME += 1;
+                    } else if (MTU_RX_CURRENT == MTU_RX_PREVIOUS) {
                         // Frame received in order
                         MTU_RX_PREVIOUS = MTU_RX_CURRENT;
+                        TEST_PARAMS->F_RX_ONTIME += 1;
                     }
 
 
@@ -558,12 +575,12 @@ void mtu_sweep_test(struct APP_PARAMS *APP_PARAMS,
             } // RX_LEN > 0
 
 
-            // If RX has received the largest MTU TX hoped to send,
+            // If Rx has received the largest MTU Tx hoped to send,
             // the MTU sweep test is over
             if (MTU_RX_LARGEST == MTU_TEST->MTU_TX_MAX)
             {
 
-                // Signal back to TX the largest MTU RX recieved at the end
+                // Signal back to Tx the largest MTU Rx recieved at the end
                 WAITING = false;
 
                 printf("MTU sweep test complete\n"
@@ -593,7 +610,7 @@ void mtu_sweep_test(struct APP_PARAMS *APP_PARAMS,
 
                 if (MTU_RX_ANY == false)
                 {
-                    printf("Timeout waiting for MTU sweep frames from TX, "
+                    printf("Timeout waiting for MTU sweep frames from Tx, "
                            "ending the test.\nLargest MTU received %u\n\n",
                            MTU_RX_LARGEST);
 
@@ -612,10 +629,9 @@ void mtu_sweep_test(struct APP_PARAMS *APP_PARAMS,
         } // End of WAITING
 
 
-    } // End of TX/RX mode
+    } // End of Tx/Rx mode
 
 
-    return;
 }
 
 
@@ -682,9 +698,9 @@ void latency_test(struct APP_PARAMS *APP_PARAMS,
                                 (struct sockaddr*)&TEST_INTERFACE->SOCKET_ADDRESS,
                                 sizeof(TEST_INTERFACE->SOCKET_ADDRESS));
 
-            if (TX_RET_VAL <=0)
+            if (TX_RET_VAL <=0 )
             {
-                perror("Latency test TX error ");
+                perror("Latency test Tx error ");
                 return;
             }
 
@@ -762,11 +778,11 @@ void latency_test(struct APP_PARAMS *APP_PARAMS,
                     }
 
 
-                    // Check if RX host has quit/died;
+                    // Check if Rx host has quit/died;
                     if (ntohl(*FRAME_HEADERS->RX_TLV_VALUE) == VALUE_DYINGGASP)
                     {
 
-                        printf("RX host has quit\n");
+                        printf("Rx host has quit\n");
                         return;
 
                     }
@@ -775,7 +791,7 @@ void latency_test(struct APP_PARAMS *APP_PARAMS,
                 } // RX_LEN > 0
 
 
-                // If TX is waiting for echo reply, check if the echo reply has timed out
+                // If Tx is waiting for echo reply, check if the echo reply has timed out
                 if (ECHO_WAITING) {
                     if ( (TEST_PARAMS->TS_ELAPSED_TIME.tv_sec-
                           TEST_PARAMS->TS_CURRENT_TIME.tv_sec >= QM_TEST->TIMEOUT_SEC)
@@ -842,7 +858,7 @@ void latency_test(struct APP_PARAMS *APP_PARAMS,
                QM_TEST->JITTER_MAX);
 
 
-    // Else, RX mode
+    // Else, Rx mode
     } else {
 
 
@@ -881,7 +897,7 @@ void latency_test(struct APP_PARAMS *APP_PARAMS,
         printf("No.\tEcho Interval\n");
 
 
-        // RX test loop
+        // Rx test loop
         while (*testBase<=*testMax)
         {
 
@@ -909,11 +925,11 @@ void latency_test(struct APP_PARAMS *APP_PARAMS,
                          ntohs(*FRAME_HEADERS->RX_SUB_TLV_TYPE) == TYPE_PING )
                     {
 
-                        // Time RX received this value
+                        // Time Rx received this value
                         UPTIME_2 = TEST_PARAMS->TS_ELAPSED_TIME.tv_sec + 
                                    ((double)TEST_PARAMS->TS_ELAPSED_TIME.tv_nsec * 1e-9);
 
-                        // Send the TX uptime value back to the TX host
+                        // Send the Tx uptime value back to the Tx host
                         build_sub_tlv(FRAME_HEADERS, htons(TYPE_PONG),
                                       *FRAME_HEADERS->RX_SUB_TLV_VALUE);
 
@@ -924,9 +940,9 @@ void latency_test(struct APP_PARAMS *APP_PARAMS,
                                             (struct sockaddr*)&TEST_INTERFACE->SOCKET_ADDRESS,
                                             sizeof(TEST_INTERFACE->SOCKET_ADDRESS));
 
-                        if (TX_RET_VAL <=0)
+                        if (TX_RET_VAL <= 0)
                         {
-                            perror("Latency test RX error ");
+                            perror("Latency test Rx error ");
                             return;
                         }
 
@@ -938,7 +954,7 @@ void latency_test(struct APP_PARAMS *APP_PARAMS,
                         QM_TEST->TEST_COUNT += 1;
 
                         // Interval between receiving this uptime value and the last
-                        if (UPTIME_1!=0.0)
+                        if (UPTIME_1 != 0.0)
                         {
                             printf("%" PRIu32 ":\t%.9Lfs\n", QM_TEST->TEST_COUNT, INTERVAL);
                         } else {
@@ -1014,11 +1030,11 @@ void latency_test(struct APP_PARAMS *APP_PARAMS,
                 }
 
 
-                // Check if TX host has quit/died;
+                // Check if Tx host has quit/died;
                 if (ntohl(*FRAME_HEADERS->RX_TLV_VALUE) == VALUE_DYINGGASP)
                 {
 
-                    printf("TX host has quit\n");
+                    printf("Tx host has quit\n");
                     return;
 
                 }
@@ -1042,10 +1058,7 @@ void latency_test(struct APP_PARAMS *APP_PARAMS,
                QM_TEST->INTERVAL_MAX);
 
 
-    } // End of TX/RX
-
-
-     return;
+    } // End of Tx/Rx
 
  }
 
@@ -1066,7 +1079,7 @@ void speed_test(struct APP_PARAMS *APP_PARAMS,
     if (APP_PARAMS->TX_MODE == true)
     {
 
-        printf("Seconds\t\tMbps Tx\t\tMBs Tx\t\tFrmTX/s\t\tFrames Tx\n");
+        printf("Seconds\t\tMbps Tx\t\tMBs Tx\t\tFrmTx/s\t\tFrames Tx\n");
 
         // By default test until F_DURATION_DEF has passed
         uint64_t *testMax = (uint64_t*)&TEST_PARAMS->F_DURATION;
@@ -1092,7 +1105,7 @@ void speed_test(struct APP_PARAMS *APP_PARAMS,
         // Get clock times for the speed limit restriction and starting time
         clock_gettime(CLOCK_MONOTONIC_RAW, &TEST_PARAMS->TS_ELAPSED_TIME);
 
-        // TX test loop
+        // Tx test loop
         while (*testBase<=*testMax)
         {
 
@@ -1159,7 +1172,7 @@ void speed_test(struct APP_PARAMS *APP_PARAMS,
                         } else if (ntohs(*FRAME_HEADERS->RX_TLV_TYPE) == TYPE_APPLICATION &&
                                    ntohl(*FRAME_HEADERS->RX_TLV_VALUE) == VALUE_DYINGGASP) {
 
-                            printf("RX host has quit\n");
+                            printf("Rx host has quit\n");
 
                             return;
 
@@ -1172,7 +1185,7 @@ void speed_test(struct APP_PARAMS *APP_PARAMS,
                     } else if (ntohs(*FRAME_HEADERS->RX_TLV_TYPE) == TYPE_APPLICATION &&
                                ntohll(*FRAME_HEADERS->RX_TLV_VALUE) == VALUE_DYINGGASP) {
 
-                        printf("RX host has quit\n");
+                        printf("Rx host has quit\n");
 
                         return;
 
@@ -1205,9 +1218,9 @@ void speed_test(struct APP_PARAMS *APP_PARAMS,
                                                 (struct sockaddr*)&TEST_INTERFACE->SOCKET_ADDRESS,
                                                 sizeof(TEST_INTERFACE->SOCKET_ADDRESS));
 
-                            if (TX_RET_VAL <=0)
+                            if (TX_RET_VAL <= 0)
                             {
-                                perror("Speed test TX error ");
+                                perror("Speed test Tx error ");
                                 return;
                             }
 
@@ -1235,9 +1248,9 @@ void speed_test(struct APP_PARAMS *APP_PARAMS,
                                                 (struct sockaddr*)&TEST_INTERFACE->SOCKET_ADDRESS,
                                                 sizeof(TEST_INTERFACE->SOCKET_ADDRESS));
 
-                            if (TX_RET_VAL <=0)
+                            if (TX_RET_VAL <= 0)
                             {
-                                perror("Speed test TX error ");
+                                perror("Speed test Tx error ");
                                 return;
                             }
 
@@ -1261,9 +1274,9 @@ void speed_test(struct APP_PARAMS *APP_PARAMS,
                                             (struct sockaddr*)&TEST_INTERFACE->SOCKET_ADDRESS,
                                             sizeof(TEST_INTERFACE->SOCKET_ADDRESS));
 
-                        if (TX_RET_VAL <=0)
+                        if (TX_RET_VAL <= 0)
                         {
-                            perror("Speed test TX error ");
+                            perror("Speed test Tx error ");
                             return;
                         }
 
@@ -1310,10 +1323,10 @@ void speed_test(struct APP_PARAMS *APP_PARAMS,
                (TEST_PARAMS->B_TX/1024)/1024);
 
 
-    // Else, RX mode
+    // Else, Rx mode
     } else {
 
-        printf("Seconds\t\tMbps Rx\t\tMBs Rx\t\tFrmRX/s\t\tFrames Rx\n");
+        printf("Seconds\t\tMbps Rx\t\tMBs Rx\t\tFrmRx/s\t\tFrames Rx\n");
 
         // By default test until F_DURATION_DEF has passed
         uint64_t *testMax = (uint64_t*)&TEST_PARAMS->F_DURATION;
@@ -1355,7 +1368,7 @@ void speed_test(struct APP_PARAMS *APP_PARAMS,
 
         clock_gettime(CLOCK_MONOTONIC_RAW, &TEST_PARAMS->TS_ELAPSED_TIME);
 
-        // RX test loop
+        // Rx test loop
         while (*testBase<=*testMax)
         {
 
@@ -1419,7 +1432,7 @@ void speed_test(struct APP_PARAMS *APP_PARAMS,
                         TEST_PARAMS->F_RX_LATE += 1;
                     }
 
-                    // If running in ACK mode RX needs to ACK to TX host
+                    // If running in ACK mode Rx needs to ACK to Tx host
                     if (TEST_PARAMS->F_ACK)
                     {
 
@@ -1432,9 +1445,9 @@ void speed_test(struct APP_PARAMS *APP_PARAMS,
                                             (struct sockaddr*)&TEST_INTERFACE->SOCKET_ADDRESS,
                                             sizeof(TEST_INTERFACE->SOCKET_ADDRESS));
 
-                        if (TX_RET_VAL <=0)
+                        if (TX_RET_VAL <= 0)
                         {
-                            perror("Speed test TX error ");
+                            perror("Speed test Tx error ");
                             return;
                         }
 
@@ -1448,11 +1461,11 @@ void speed_test(struct APP_PARAMS *APP_PARAMS,
                     TEST_PARAMS->F_RX_OTHER += 1;
                 }
 
-                // Check if TX host has quit/died;
+                // Check if Tx host has quit/died;
                 if (unlikely(ntohl(*FRAME_HEADERS->RX_TLV_VALUE) == VALUE_DYINGGASP))
                 {
 
-                    printf("TX host has quit\n");
+                    printf("Tx host has quit\n");
                     return;
 
                 }
@@ -1491,10 +1504,8 @@ void speed_test(struct APP_PARAMS *APP_PARAMS,
                TEST_PARAMS->F_SPEED_AVG,
                (TEST_PARAMS->B_RX/1024)/1024);
 
-
     }
 
-    return;
  }
 
 
@@ -1507,7 +1518,7 @@ void send_custom_frame(struct APP_PARAMS *APP_PARAMS,
 
     int16_t TX_RET_VAL = 0;
 
-    printf("Seconds\t\tMbps Tx\t\tMBs Tx\t\tFrmTX/s\t\tFrames Tx\n");
+    printf("Seconds\t\tMbps Tx\t\tMBs Tx\t\tFrmTx/s\t\tFrames Tx\n");
 
     // By default test until F_DURATION_DEF has passed
     uint64_t *testMax = (uint64_t*)&TEST_PARAMS->F_DURATION;
@@ -1533,7 +1544,7 @@ void send_custom_frame(struct APP_PARAMS *APP_PARAMS,
     // Get clock times for the speed limit restriction and starting time
     clock_gettime(CLOCK_MONOTONIC_RAW, &TEST_PARAMS->TS_ELAPSED_TIME);
 
-    // TX test loop
+    // Tx test loop
     while (*testBase<=*testMax)
     {
 
@@ -1586,9 +1597,9 @@ void send_custom_frame(struct APP_PARAMS *APP_PARAMS,
                                         (struct sockaddr*)&TEST_INTERFACE->SOCKET_ADDRESS,
                                         sizeof(TEST_INTERFACE->SOCKET_ADDRESS));
 
-                    if (TX_RET_VAL <=0)
+                    if (TX_RET_VAL <= 0)
                     {
-                        perror("Frame sending TX error ");
+                        perror("Frame sending Tx error ");
                         return;
                     }
 
@@ -1612,9 +1623,9 @@ void send_custom_frame(struct APP_PARAMS *APP_PARAMS,
                                         (struct sockaddr*)&TEST_INTERFACE->SOCKET_ADDRESS,
                                         sizeof(TEST_INTERFACE->SOCKET_ADDRESS));
 
-                    if (TX_RET_VAL <=0)
+                    if (TX_RET_VAL <= 0)
                     {
-                        perror("Frame sending TX error ");
+                        perror("Frame sending Tx error ");
                         return;
                     }
 
@@ -1634,9 +1645,9 @@ void send_custom_frame(struct APP_PARAMS *APP_PARAMS,
                                     (struct sockaddr*)&TEST_INTERFACE->SOCKET_ADDRESS,
                                     sizeof(TEST_INTERFACE->SOCKET_ADDRESS));
 
-                if (TX_RET_VAL <=0)
+                if (TX_RET_VAL <= 0)
                 {
-                    perror("Frame sending TX error ");
+                    perror("Frame sending Tx error ");
                     return;
                 }
 
@@ -1679,5 +1690,4 @@ void send_custom_frame(struct APP_PARAMS *APP_PARAMS,
            (TEST_PARAMS->B_TX/1024)/1024);
 
 
-    return;
  }
