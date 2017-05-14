@@ -44,7 +44,7 @@
 #include <ifaddrs.h>         // freeifaddrs(), getifaddrs()
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>        // intN_t, uintN_t, PRIuN, SCNuN
-#include <net/if.h>          // IFNAMSIZ, struct ifreq
+//#include <net/if.h>          // IFNAMSIZ, struct ifreq
 #include <linux/if_arp.h>    // sockaddr_ll
 #include <linux/if_ether.h>  // ETH_P_ALL (0x003)
                              // ETH_FRAME_LEN (default 1514)
