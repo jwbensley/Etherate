@@ -26,6 +26,7 @@
  * File: Etherate Global Code
  *
  * File Contents:
+ * GLOBAL MACROS
  * GLOBAL CONSTANTS
  * GLOBAL DEFINITIONS
  *
@@ -34,35 +35,57 @@
 
 
 /*
+ **************************************************************** GLOBAL MACROS
+ */
+
+#ifdef __GNUC__
+#define likely(x)       __builtin_expect(!!(x), 1)
+#define unlikely(x)     __builtin_expect(!!(x), 0)
+#else
+#define likely(x)       (x)
+#define unlikely(x)     (x)
+#endif
+
+// HtoN and NtoH methods for ull values
+#if (__BYTE_ORDER == __BIG_ENDIAN)
+#define ntohll(val) return (val)
+#define htonll(val) return (val)
+#else
+#define ntohll(val) __bswap_64(val)
+#define htonll(val) __bswap_64(val)
+#endif
+
+
+
+/*
  ************************************************************* GLOBAL CONSTANTS
  */
 
-const char APP_VERSION[20] = "0.11.beta 2017-03";
-const uint16_t F_SIZE_MAX         = 10000; // Maximum frame size on the wire (payload+headers)
-const uint32_t F_SIZE_DEF         = 1500;  // Default frame payload size in bytes
-const uint64_t F_DURATION_DEF     = 30;    // Default test duration in seconds
-const uint32_t F_COUNT_DEF        = 0;     // Default total number of frames to transmit
-const uint32_t F_BYTES_DEF        = 0;     // Default amount of data to transmit in bytes
-const uint32_t B_TX_SPEED_MAX_DEF = 0;     // Default max speed in bytes, 0 == no limit
-const uint32_t F_TX_SPEED_MAX_DEF = 0;     // Default max frames per second, 0 == no limit
-const uint16_t PCP_DEF            = 0;     // Default PCP value
-const uint16_t VLAN_ID_DEF        = 0;     // Default VLAN ID
-const uint16_t QINQ_ID_DEF        = 0;     // Default QinQ VLAN ID
-const uint16_t QINQ_PCP_DEF       = 0;     // Default QinQ PCP value
-const uint16_t MPLS_LABELS_MAX    = 10;    // Maximum number of MPLS labels
-const uint32_t HEADERS_LEN_DEF    = 14;    // Default frame headers length
-const uint16_t ETHERTYPE_DEF      = 13107; // Default Ethertype (0x3333)
-const int32_t  IF_INDEX_DEF       = -1;    // Default interface index number
-const int32_t  SOCKET_FD_DEF      = -1;    // Default socket fd
-const uint8_t  TX_DELAY_DEF       = 1;     // Default TX to RX delay check
-const int8_t   RET_EXIT_APP       = -2;    // Used to exit the app even though success
-const int8_t   RET_EXIT_FAILURE   = -1;    // EXIT_FAILURE but a negative value
+#define APP_VERSION        "0.12.beta 2017-05"
+#define F_SIZE_MAX         10000 // Maximum frame size on the wire (payload+headers)
+#define F_SIZE_DEF         1500  // Default frame payload size in bytes
+#define F_DURATION_DEF     30    // Default test duration in seconds
+#define F_COUNT_DEF        0     // Default total number of frames to transmit
+#define F_BYTES_DEF        0     // Default amount of data to transmit in bytes
+#define B_TX_SPEED_MAX_DEF 0     // Default max speed in bytes, 0 == no limit
+#define F_TX_SPEED_MAX_DEF 0     // Default max frames per second, 0 == no limit
+#define PCP_DEF            0     // Default PCP value
+#define VLAN_ID_DEF        0     // Default VLAN ID
+#define QINQ_ID_DEF        0     // Default QinQ VLAN ID
+#define QINQ_PCP_DEF       0     // Default QinQ PCP value
+#define MPLS_LABELS_MAX    10    // Maximum number of MPLS labels
+#define HEADERS_LEN_DEF    14    // Default frame headers length
+#define ETHERTYPE_DEF      13107 // Default Ethertype (0x3333)
+#define IF_INDEX_DEF       -1    // Default interface index number
+#define SOCKET_FD_DEF      -1    // Default socket fd
+#define TX_DELAY_DEF       1     // Default TX to RX delay check
+#define RET_EXIT_APP       -2    // Used to exit the app even though success
+#define RET_EXIT_FAILURE   -1    // EXIT_FAILURE but a negative value
 
 
 /*
  *********************************************************** GLOBAL DEFINITIONS
  */
-
 
 // TLV and sub-TLV types/values
 #define TYPE_APPLICATION         1
@@ -105,20 +128,20 @@ const int8_t   RET_EXIT_FAILURE   = -1;    // EXIT_FAILURE but a negative value
 #define TYPE_PONG                407
 
 
-struct APP_PARAMS              // General application parameters
+struct app_params              // General application parameters
 {
 
-    uint8_t BROADCAST; // Default, broadcast local source MAC before start
-    uint8_t TX_MODE;   // Default, mode is TX
-    uint8_t TX_SYNC;   // Default, sync settings between hosts
-    uint8_t TX_DELAY;  // Default, measure one way delay TX > RX
-    time_t  TS_NOW;    // Current date and time
-    tm*     TM_LOCAL;  // For breaking down the above
+    uint8_t BROADCAST;    // Default, broadcast local source MAC before start
+    uint8_t TX_MODE;      // Default, mode is TX
+    uint8_t TX_SYNC;      // Default, sync settings between hosts
+    uint8_t TX_DELAY;     // Default, measure one way delay TX > RX
+    time_t  TS_NOW;       // Current date and time
+    struct  tm* TM_LOCAL; // For breaking down the above
 
 };
 
 
-struct FRAME_HEADERS           // Frame header settings
+struct frame_headers           // Frame header settings
 {
 
     uint8_t   SOURCE_MAC[6];
@@ -153,7 +176,7 @@ struct FRAME_HEADERS           // Frame header settings
 };
 
 
-struct TEST_INTERFACE          // Settings for the physical test interface
+struct test_interface          // Settings for the physical test interface
 {
 
     int     IF_INDEX;
@@ -166,7 +189,7 @@ struct TEST_INTERFACE          // Settings for the physical test interface
 };
 
 
-struct TEST_PARAMS             // Gerneral testing parameters
+struct test_params             // Gerneral testing parameters
 {
 
     uint16_t    F_SIZE;          // Frame payload in bytes
@@ -201,13 +224,13 @@ struct TEST_PARAMS             // Gerneral testing parameters
     long double B_SPEED_AVG;     // Average speed achieved during the test
     uint8_t     F_ACK;           // Testing in ACK mode during transmition
     uint8_t     F_WAITING_ACK;   // Test is waiting for a frame to be ACK'ed
-    timespec    TS_CURRENT_TIME; // Two timers for timing a test and calculating stats
-    timespec    TS_ELAPSED_TIME;
+    struct timespec TS_CURRENT_TIME; // Two timers for timing a test and calculating stats
+    struct timespec TS_ELAPSED_TIME;
 
 };
 
 
-struct MTU_TEST {              // Settings specific to the MTU sweep test
+struct mtu_test {              // Settings specific to the MTU sweep test
 
     uint8_t  ENABLED;     // Enable the MTU sweep test mode
     uint16_t MTU_TX_MIN;  // Default minmum MTU size
@@ -216,7 +239,7 @@ struct MTU_TEST {              // Settings specific to the MTU sweep test
 };
 
 
-struct QM_TEST {               // Settings specific to the quality measurement test
+struct qm_test {               // Settings specific to the quality measurement test
 
     uint8_t       ENABLED;          // Enable the quality measurement tests
     uint32_t      DELAY_TEST_COUNT; // Number of one way delay measurements
@@ -241,8 +264,8 @@ struct QM_TEST {               // Settings specific to the quality measurement t
     signed long   TIMEOUT_SEC;
     uint32_t      TIMEOUT_COUNT;
     double        *pDELAY_RESULTS;  // Store Tx to Rx test results
-    timespec      TS_RTT;           // Timespec used for calculating delay/RTT
-    timespec      TS_START;         // Time the test was started
+    struct timespec TS_RTT;           // Timespec used for calculating delay/RTT
+    struct timespec TS_START;         // Time the test was started
 
 };
 
@@ -250,7 +273,7 @@ struct QM_TEST {               // Settings specific to the quality measurement t
 // These need to be global so that signal_handler() can send a dying gasp
 // and the allocated buffers can be free()'d
 struct ifreq ethreq;
-struct QM_TEST *pQM_TEST;
-struct TEST_INTERFACE *pTEST_INTERFACE;
-struct TEST_PARAMS *pTEST_PARAMS;
-struct FRAME_HEADERS *pFRAME_HEADERS;
+struct qm_test *pqm_test;
+struct test_interface *ptest_interface;
+struct test_params *ptest_params;
+struct frame_headers *pframe_headers;

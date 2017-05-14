@@ -1,3 +1,31 @@
+-----Etherate 0.12 Beta 2017-05
+
+[FEATURE] Added enhancement #16; PACKET_QDISC_BYPASS
+
+[FEATURE] Added enhancement #13; Remove the htonll() and ntohll() functions
+
+[FEATURE] Added enhancement #18; Inline the build_tlv() and build_sub_tlv() functions
+
+[MINOR] Finally finished migrating from C++ to C
+
+[MINOR] Fixed error with double close() on socket file descriptor
+
+[MINOR] Fixed missing net/if.h include
+
+[MINOR] Added error check for fclose() in cli_args()
+
+[MINOR] Fixed issue #17; Multiple ioctl() calls have no error checking
+
+[MINOR] Fixed issue #15; cli_args() IF_NAME copy error
+
+[MINOR] Fixed issue #14; Make strncpy() zero value safe
+
+[MINOR] Fixed issue #12; Function prototype is missing parameter setup_frame()
+
+[MINOR] Cody tidy up, started to standardise lower case naming of variables
+
+
+
 -----Etherate 0.11 Beta 2017-03
 
 [MAJOR] Fixed issue #5; -Q option not working, 100% frame loss

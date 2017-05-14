@@ -3,10 +3,12 @@ ACLOCAL_AMFLAGS = -I m4
 bin_PROGRAMS = etherate
 
 etherate_SOURCES = \
-	etherate.cpp \
+	etherate.c \
 	etherate.h
 
-EXTRA_DIST = functions.cpp \
+EXTRA_DIST = functions.c \
     functions.h \
-    defaults.cpp \
-    tests.cpp
+    defaults.c \
+    defaults.h \
+    tests.c \
+    test.h
