@@ -12,9 +12,9 @@ sudo make instal
 
 
 
-2. To create a debugging build
+2. To create a debugging build (-fsanitize=address won't work with valgrind)
 
-g++ -o etherate etherate.cpp -Wall -Werror -ftrapv -pedantic -lrt -fstack-protector-all -fsanitize=address -std=c++0x -Og -g
+gcc -o etherate etherate.c -Wall -Werror -ftrapv -pedantic -lrt -lm -fstack-protector-all -std=gnu11 -fsanitize=address -Og -g
 
 
 
@@ -22,10 +22,10 @@ g++ -o etherate etherate.cpp -Wall -Werror -ftrapv -pedantic -lrt -fstack-protec
 
 To compile the binary in the local directory use the following:
 
-g++ -o etherate etherate.cpp -Wall -Werror -ftrapv -pedantic -lrt -fstack-protector-all -std=c++0x -O3
+gcc -o etherate etherate.c -Wall -Werror -ftrapv -pedantic -lrt -lm -fstack-protector-all -std=gnu11 -O3
 
 
 
 4. Standalone binary compile with minimal checks (only for proper slags)
 
-g++ -o etherate etherate.cpp -lrt
+gcc -o etherate etherate.c -lrt -lm -O1

@@ -1,4 +1,4 @@
-AC_INIT([etherate],[0.11.0],[jwbensley@gmail.com],,[https://null.53bits.co.uk/index.php?page=etherate])
+AC_INIT([etherate],[0.12.0],[jwbensley@gmail.com],,[https://null.53bits.co.uk/index.php?page=etherate])
 
 AM_INIT_AUTOMAKE([1.9 tar-pax])
 
@@ -10,7 +10,7 @@ AC_SYS_LARGEFILE
 AC_PROG_LIBTOOL
 
 #CFLAGS="-Wall -D_FILE_OFFSET_BITS=$ac_cv_sys_file_offset_bits"
-CFLAGS="-Wall -ftrapv -lrt -std=c++0x -fstack-protector-all -D _GNU_SOURCE -DPACKAGE=\\\"\$(PACKAGE)\\\" -DSYSCONFDIR=\\\"\$(sysconfdir)\\\" -DLOCALSTATEDIR=\\\"\$(localstatedir)\\\" -DLIBEXECDIR=\\\"\$(libexecdir)\\\" -DLIBDIR=\\\"\$(libdir)\\\" -DPACKAGE_VERSION=\\\"\$(PACKAGE_VERSION)\\\"" 
+CFLAGS="-Wall -ftrapv -lrt -lm -std=gnu11 -fstack-protector-all -D _GNU_SOURCE -DPACKAGE=\\\"\$(PACKAGE)\\\" -DSYSCONFDIR=\\\"\$(sysconfdir)\\\" -DLOCALSTATEDIR=\\\"\$(localstatedir)\\\" -DLIBEXECDIR=\\\"\$(libexecdir)\\\" -DLIBDIR=\\\"\$(libdir)\\\" -DPACKAGE_VERSION=\\\"\$(PACKAGE_VERSION)\\\"" 
 CXXFLAGS=$CFLAGS
 
 AC_MSG_CHECKING(whether to enable debugging)

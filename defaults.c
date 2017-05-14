@@ -1,0 +1,330 @@
+/*
+ * License: MIT
+ *
+ * Copyright (c) 2012-2017 James Bensley.
+ *
+ * Permission is hereby granted, free of uint8_tge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+ * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+ * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ *
+ * File: Etherate Setup Functions
+ *
+ * File Contents:
+ * void set_default_values()
+ * int16_t setup_frame()
+ * int16_t setup_socket()
+ * int16_t setup_socket_interface()
+ *
+ */
+
+
+
+#include "defaults.h"
+
+void set_default_values(struct app_params *app_params,
+                        struct frame_headers *frame_headers,
+                        struct mtu_test *mtu_test,
+                        struct test_interface *test_interface,
+                        struct test_params * test_params,
+                        struct qm_test *qm_test)
+{
+
+    pframe_headers                   = frame_headers;
+    frame_headers->SOURCE_MAC[0]     = 0x00;
+    frame_headers->SOURCE_MAC[1]     = 0x00;
+    frame_headers->SOURCE_MAC[2]     = 0x5E;
+    frame_headers->SOURCE_MAC[3]     = 0x00;
+    frame_headers->SOURCE_MAC[4]     = 0x00;
+    frame_headers->SOURCE_MAC[5]     = 0x01;
+    frame_headers->DEST_MAC[0]       = 0x00;
+    frame_headers->DEST_MAC[1]       = 0x00;
+    frame_headers->DEST_MAC[2]       = 0x5E;
+    frame_headers->DEST_MAC[3]       = 0x00;
+    frame_headers->DEST_MAC[4]       = 0x00;
+    frame_headers->DEST_MAC[5]       = 0x02;
+    frame_headers->LENGTH            = HEADERS_LEN_DEF;
+    frame_headers->ETHERTYPE         = ETHERTYPE_DEF;
+    frame_headers->PCP               = PCP_DEF;
+    frame_headers->VLAN_ID           = VLAN_ID_DEF;
+    frame_headers->VLAN_DEI          = 0;
+    frame_headers->QINQ_ID           = QINQ_ID_DEF;
+    frame_headers->QINQ_PCP          = QINQ_PCP_DEF;
+    frame_headers->QINQ_DEI          = 0;
+    frame_headers->LSP_SOURCE_MAC[0] = 0x00;
+    frame_headers->LSP_SOURCE_MAC[1] = 0x00;
+    frame_headers->LSP_SOURCE_MAC[2] = 0x00;
+    frame_headers->LSP_SOURCE_MAC[3] = 0x00;
+    frame_headers->LSP_SOURCE_MAC[4] = 0x00;
+    frame_headers->LSP_SOURCE_MAC[5] = 0x00;
+    frame_headers->LSP_DEST_MAC[0]   = 0x00;
+    frame_headers->LSP_DEST_MAC[1]   = 0x00;
+    frame_headers->LSP_DEST_MAC[2]   = 0x00;
+    frame_headers->LSP_DEST_MAC[3]   = 0x00;
+    frame_headers->LSP_DEST_MAC[4]   = 0x00;
+    frame_headers->LSP_DEST_MAC[5]   = 0x00;
+    frame_headers->MPLS_LABELS       = 0;
+    for (uint16_t i = 0; i<MPLS_LABELS_MAX; i += 1) {
+        frame_headers->MPLS_LABEL[i] = 0;
+        frame_headers->MPLS_EXP[i]   = 0;
+        frame_headers->MPLS_TTL[i]   = 0;
+    }
+    frame_headers->PWE_CONTROL_WORD  = 0;
+    frame_headers->TLV_SIZE          = sizeof(uint8_t) + sizeof(uint16_t) +
+                                       sizeof(uint32_t);
+    frame_headers->SUB_TLV_SIZE      = frame_headers->TLV_SIZE + 
+                                       sizeof(uint8_t) + sizeof(uint16_t) + 
+                                       sizeof(uint64_t);
+
+    // Send and receive buffers for incoming/outgoing ethernet frames
+    frame_headers->RX_BUFFER = (uint8_t*)calloc(1, F_SIZE_MAX);
+    frame_headers->TX_BUFFER = (uint8_t*)calloc(1, F_SIZE_MAX);
+
+    ptest_interface          = test_interface;
+    test_interface->IF_INDEX = IF_INDEX_DEF;
+    for (uint16_t i = 0; i<IFNAMSIZ; i += 1) {
+        test_interface->IF_NAME[i] = 0;
+    }
+    test_interface->SOCKET_FD = SOCKET_FD_DEF;
+
+
+    ptest_params                 = test_params;
+    test_params->F_SIZE          = F_SIZE_DEF;
+    test_params->F_SIZE_TOTAL    = F_SIZE_DEF + frame_headers->LENGTH;
+    test_params->F_DURATION      = F_DURATION_DEF;
+    test_params->F_COUNT         = F_COUNT_DEF; 
+    test_params->F_BYTES         = F_BYTES_DEF;
+    test_params->F_PAYLOAD       = (uint8_t*)calloc(1, F_SIZE_MAX);
+    test_params->F_PAYLOAD_SIZE  = 0;
+    test_params->S_ELAPSED       = 0;
+    test_params->B_TX_SPEED_MAX  = B_TX_SPEED_MAX_DEF;
+    test_params->B_TX_SPEED_PREV = 0;
+    test_params->F_TX_COUNT      = 0;
+    test_params->F_TX_COUNT_PREV = 0;
+    test_params->F_TX_SPEED_MAX  = F_TX_SPEED_MAX_DEF;
+    test_params->F_SPEED         = 0;
+    test_params->F_SPEED_AVG     = 0;
+    test_params->F_SPEED_MAX     = 0;
+    test_params->B_TX            = 0;
+    test_params->B_TX_PREV       = 0;
+    test_params->F_RX_COUNT      = 0;
+    test_params->F_RX_COUNT_PREV = 0;
+    test_params->B_RX            = 0;
+    test_params->B_RX_PREV       = 0;
+    test_params->F_INDEX_PREV    = 0;
+    test_params->F_RX_ONTIME     = 0;
+    test_params->F_RX_EARLY      = 0;
+    test_params->F_RX_LATE       = 0;
+    test_params->F_RX_OTHER      = 0;
+    test_params->B_SPEED         = 0;
+    test_params->B_SPEED_MAX     = 0;
+    test_params->B_SPEED_AVG     = 0;
+    test_params->F_ACK           = false;
+    test_params->F_WAITING_ACK   = false;
+
+    mtu_test->ENABLED    = false;
+    mtu_test->MTU_TX_MIN = 1400;
+    mtu_test->MTU_TX_MAX = 1500;
+
+    pqm_test                  = qm_test;
+    qm_test->ENABLED          = false;
+    qm_test->DELAY_TEST_COUNT = 10000;
+    qm_test->INTERVAL         = 1000;
+    qm_test->INTERVAL_SEC     = 0;
+    qm_test->INTERVAL_NSEC    = 0;
+    qm_test->INTERVAL_MIN     = 99999.99999;
+    qm_test->INTERVAL_MAX     = 0.0;
+    qm_test->JITTER_MIN       = 999999.999999;
+    qm_test->JITTER_MAX       = 0.0;
+    qm_test->RTT_MIN          = 999999.999999;
+    qm_test->RTT_MAX          = 0.0;
+    qm_test->TEST_COUNT       = 0;
+    qm_test->TIME_TX_1        = NULL;
+    qm_test->TIME_TX_2        = NULL;
+    qm_test->TIME_RX_1        = NULL;
+    qm_test->TIME_RX_2        = NULL;
+    qm_test->TIME_TX_DIFF     = NULL;
+    qm_test->TIME_RX_DIFF     = NULL;
+    qm_test->TIMEOUT          = 1000;
+    qm_test->TIMEOUT_NSEC     = 0;
+    qm_test->TIMEOUT_SEC      = 0;
+    qm_test->TIMEOUT_COUNT    = 0;
+    qm_test->pDELAY_RESULTS   = (double*)calloc(qm_test->DELAY_TEST_COUNT,
+                                               sizeof(double));
+
+    app_params->BROADCAST   = true;
+    app_params->TX_MODE     = true;
+    app_params->TX_SYNC     = true;
+    app_params->TX_DELAY    = TX_DELAY_DEF;
+    
+}
+
+
+
+int16_t setup_frame(struct app_params *app_params,
+                    struct frame_headers *frame_headers,
+                    struct test_interface *test_interface,
+                    struct test_params *test_params)
+{
+
+    printf("Source MAC %02x:%02x:%02x:%02x:%02x:%02x\n",
+           frame_headers->SOURCE_MAC[0],frame_headers->SOURCE_MAC[1],
+           frame_headers->SOURCE_MAC[2],frame_headers->SOURCE_MAC[3],
+           frame_headers->SOURCE_MAC[4],frame_headers->SOURCE_MAC[5]);
+
+    printf("Destination MAC %02x:%02x:%02x:%02x:%02x:%02x\n",
+           frame_headers->DEST_MAC[0],frame_headers->DEST_MAC[1],
+           frame_headers->DEST_MAC[2],frame_headers->DEST_MAC[3],
+           frame_headers->DEST_MAC[4],frame_headers->DEST_MAC[5]);
+
+    // Fill the test frame buffer with random data
+    for (uint32_t i = 0; i < (uint16_t)(F_SIZE_MAX-frame_headers->LENGTH); i += 1)
+    {
+        frame_headers->TX_DATA[i] = (uint8_t)((255.0*rand()/(RAND_MAX+1.0)));
+    }
+
+    if (app_params->BROADCAST == true) {
+
+        // Broadcast to populate any switch/MAC tables
+        int16_t BROAD_RET_VAL = broadcast_etherate(frame_headers, test_interface);
+        if (BROAD_RET_VAL != 0) return BROAD_RET_VAL;
+
+    }
+    
+    build_headers(frame_headers);
+
+    return EXIT_SUCCESS;
+
+}
+
+
+
+int16_t setup_socket(struct test_interface *test_interface)
+{
+
+    test_interface->SOCKET_FD = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+
+    if (test_interface->SOCKET_FD < 0 )
+    {
+      perror("Error defining socket ");
+      return EX_SOFTWARE;
+    }
+
+    #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
+            
+        static const int32_t sock_qdisc_bypass = 1;
+        int32_t sock_qdisc_ret = setsockopt(test_interface->SOCKET_FD, SOL_PACKET, PACKET_QDISC_BYPASS, &sock_qdisc_bypass, sizeof(sock_qdisc_bypass));
+
+        if (sock_qdisc_ret == -1) {
+            perror("Error enabling QDISC bypass on socket ");
+            return EXIT_FAILURE;
+        }
+
+    #endif
+
+    return EXIT_SUCCESS;
+}
+
+
+
+int16_t setup_socket_interface(struct frame_headers *frame_headers,
+                               struct test_interface *test_interface,
+                               struct test_params *test_params)
+{
+
+
+    // If the user has supplied an interface index try to use that
+    if (test_interface->IF_INDEX != IF_INDEX_DEF) {
+
+        test_interface->IF_INDEX = set_sock_interface_index(test_interface);
+        if (test_interface->IF_INDEX <= 0)
+        {
+            printf("Error: Couldn't set interface with index, "
+                   "returned index was %d!\n", test_interface->IF_INDEX);
+            return EX_SOFTWARE;
+        }
+
+    // Or if the user has supplied an interface name try to use that        
+    } else if (strcmp((char*)test_interface->IF_NAME, "") != 0) {
+
+        test_interface->IF_INDEX = set_sock_interface_name(test_interface);
+        if (test_interface->IF_INDEX <= 0)
+        {
+            printf("Error: Couldn't set interface index from name, "
+                   "returned index was %d!\n", test_interface->IF_INDEX);
+            return EX_SOFTWARE;
+        }
+
+    // Otherwise, try and best guess an interface
+    } else if (test_interface->IF_INDEX == IF_INDEX_DEF) {
+
+        test_interface->IF_INDEX = get_sock_interface(test_interface);
+        if (test_interface->IF_INDEX <= 0)
+        {
+            printf("Error: Couldn't find appropriate interface ID, "
+                  "returned ID was %d!\n", test_interface->IF_INDEX);
+            return EX_SOFTWARE;
+        }
+
+    }
+
+
+    // Link layer socket setup
+    test_interface->SOCKET_ADDRESS.sll_family   = PF_PACKET;    
+    test_interface->SOCKET_ADDRESS.sll_protocol = htons(ETH_P_IP);
+    test_interface->SOCKET_ADDRESS.sll_ifindex  = test_interface->IF_INDEX;    
+    test_interface->SOCKET_ADDRESS.sll_hatype   = ARPHRD_ETHER;
+    test_interface->SOCKET_ADDRESS.sll_pkttype  = PACKET_OTHERHOST;
+    test_interface->SOCKET_ADDRESS.sll_halen    = ETH_ALEN;        
+    test_interface->SOCKET_ADDRESS.sll_addr[0]  = frame_headers->DEST_MAC[0];        
+    test_interface->SOCKET_ADDRESS.sll_addr[1]  = frame_headers->DEST_MAC[1];
+    test_interface->SOCKET_ADDRESS.sll_addr[2]  = frame_headers->DEST_MAC[2];
+    test_interface->SOCKET_ADDRESS.sll_addr[3]  = frame_headers->DEST_MAC[3];
+    test_interface->SOCKET_ADDRESS.sll_addr[4]  = frame_headers->DEST_MAC[4];
+    test_interface->SOCKET_ADDRESS.sll_addr[5]  = frame_headers->DEST_MAC[5];
+    test_interface->SOCKET_ADDRESS.sll_addr[6]  = 0x00;
+    test_interface->SOCKET_ADDRESS.sll_addr[7]  = 0x00;
+
+    build_headers(frame_headers);
+
+    // Total size of the frame data (paylod size+headers), this excludes the
+    // preamble & start frame delimiter, FCS and inter frame gap
+    test_params->F_SIZE_TOTAL = test_params->F_SIZE + frame_headers->LENGTH;
+
+
+    int16_t PHY_MTU = get_interface_mtu_by_name(test_interface);
+    
+    if (PHY_MTU <= 0) {
+
+        printf("\nPhysical interface MTU unknown, "
+               "test might exceed physical MTU!\n\n");
+
+    } else if (test_params->F_SIZE_TOTAL > PHY_MTU + 14) {
+        
+        printf("\nPhysical interface MTU (%d with headers) is less than\n"
+               "the test frame size (%u with headers). Test frames shall\n"
+               "be limited to the interface MTU size\n\n",
+               PHY_MTU+14, test_params->F_SIZE_TOTAL);
+        
+        test_params->F_SIZE_TOTAL = PHY_MTU + 14;
+
+    }
+
+    return EXIT_SUCCESS;
+
+}
