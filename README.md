@@ -8,7 +8,8 @@ Etherate
 
 ## Update:
 
- EtheratMT is now in beta: https://github.com/jwbensley/EtherateMT
+    EtheratMT is now in beta which is a multi-threaded (MT) version of Etherate:
+    https://github.com/jwbensley/EtherateMT
 
 
 #### What is it

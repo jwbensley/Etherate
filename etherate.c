@@ -37,15 +37,14 @@
 
 
 #include <byteswap.h>        // __bswap_64
-//#include <string.h>          // memcpy()
-//#include <ctime>             // timers
 #include <endian.h>          // __BYTE_ORDER
 #include <errno.h>           // errno
 #include <ifaddrs.h>         // freeifaddrs(), getifaddrs()
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>        // intN_t, uintN_t, PRIuN, SCNuN
-//#include <net/if.h>          // IFNAMSIZ, struct ifreq
-#include <linux/if_arp.h>    // sockaddr_ll
+#include <linux/if_arp.h>    // IFNAMSIZ, sockaddr_ll, struct ifreq,
+                             // struct ifconf
+#define MAX_IFS 64           // Max interfaces for ifreq
 #include <linux/if_ether.h>  // ETH_P_ALL (0x003)
                              // ETH_FRAME_LEN (default 1514)
                              // ETH_ALEN (default 6)
@@ -59,13 +58,13 @@
 #include <stdlib.h>          // atoi(), calloc(), EXIT_SUCCESS, free(),
                              // fscanf(), malloc(), strtoul(), strtoull()
 #include <string.h>          // memcpy(), strncmp(), strsep()
-#define MAX_IFS 64
-#include <sys/ioctl.h>
+#include <sys/ioctl.h>       // ioctl()
 #include <sys/socket.h>      // AF_PACKET
 #include "sysexits.h"        // EX_USAGE, EX_NOPERM, EX_PROTOCOL, EX_SOFTWARE
 #include <time.h>            // clock_gettime(), struct timeval, time_t,
                              // struct tm
 #include "unistd.h"          // getuid(), sleep()
+
 #ifndef CLOCK_MONOTONIC_RAW
 #define CLOCK_MONOTONIC_RAW 4
 #endif
