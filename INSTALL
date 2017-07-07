@@ -8,7 +8,9 @@ Then run:
 
 ./configure.sh
 make
-sudo make instal
+sudo make install
+
+The configure.ac file actually contains the -std=gnu1x flag because Travis doesn't support -std=gnu11
 
 
 
