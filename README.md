@@ -52,7 +52,7 @@ Etherate
 
 #### Current version
 
-    Beta 0.12 (2017-05)
+    Beta 0.13 (2017-07)
 
 
 #### Current features
