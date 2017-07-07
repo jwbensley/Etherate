@@ -44,15 +44,15 @@ void build_headers(struct frame_headers *frame_headers);
 inline void build_tlv(struct frame_headers *frame_headers, uint16_t TLV_TYPE,
                       uint32_t TLV_VALUE)
 {
-    uint8_t* buffer_offset = frame_headers->TX_DATA;
+    uint8_t* buffer_offset = frame_headers->tx_data;
 
     *((uint16_t *) buffer_offset) = TLV_TYPE;
     buffer_offset += sizeof(TLV_TYPE);
     *buffer_offset++ = sizeof(uint8_t);
     *((uint32_t *) buffer_offset) = TLV_VALUE;
 
-    frame_headers->RX_TLV_TYPE  = (uint16_t*) frame_headers->RX_DATA;
-    frame_headers->RX_TLV_VALUE = (uint32_t*) (frame_headers->RX_DATA +
+    frame_headers->rx_tlv_type  = (uint16_t*) frame_headers->rx_data;
+    frame_headers->rx_tlv_value = (uint32_t*) (frame_headers->rx_data +
                                                sizeof(TLV_TYPE) +
                                                sizeof(uint8_t));
 }
@@ -62,17 +62,17 @@ inline void build_sub_tlv(struct frame_headers *frame_headers,
                           uint16_t SUB_TLV_TYPE, uint64_t SUB_TLV_VALUE)
 {
 
-    uint8_t *buffer_offset = frame_headers->TX_DATA + frame_headers->TLV_SIZE;
+    uint8_t *buffer_offset = frame_headers->tx_data + frame_headers->tlv_size;
 
     *((uint16_t *) buffer_offset) = SUB_TLV_TYPE;
     buffer_offset += sizeof(SUB_TLV_TYPE);
     *buffer_offset++ = sizeof(SUB_TLV_VALUE);
     *((uint64_t *) buffer_offset) = SUB_TLV_VALUE;
 
-    frame_headers->RX_SUB_TLV_TYPE  = (uint16_t*) (frame_headers->RX_DATA + 
-                                                   frame_headers->TLV_SIZE);
-    frame_headers->RX_SUB_TLV_VALUE = (uint64_t*) (frame_headers->RX_DATA +
-                                                   frame_headers->TLV_SIZE +
+    frame_headers->rx_sub_tlv_type  = (uint16_t*) (frame_headers->rx_data + 
+                                                   frame_headers->tlv_size);
+    frame_headers->rx_sub_tlv_value = (uint64_t*) (frame_headers->rx_data +
+                                                   frame_headers->tlv_size +
                                                    sizeof(SUB_TLV_TYPE) +
                                                    sizeof(uint8_t));
 }

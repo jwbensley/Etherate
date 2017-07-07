@@ -10,8 +10,6 @@ Then run:
 make
 sudo make instal
 
-The configure.ac file actually contains the -std=gnu1x flag because Travis doesn't support -std=gnu11
-
 
 
 2. To create a debugging build (-fsanitize=address won't work with valgrind)

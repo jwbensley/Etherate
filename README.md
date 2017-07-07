@@ -8,46 +8,51 @@ Etherate
 
 ## Update:
 
-    EtheratMT is now in beta which is a multi-threaded (MT) version of Etherate:
+    EtheratMT is now in alpha which is a multi-threaded (MT) version of
+    Etherate. EtherateMT is a simple high volume traffic generator with less
+    features than Etherate aimed at testing network and device load rather
+    than specific traffic properties like Etherate.
     https://github.com/jwbensley/EtherateMT
 
 
 #### What is it
 
     Etherate is a Linux CLI application for testing layer 2 Ethernet and MPLS
-    connectivity. It generates Ethernet and MPLS frames for testing various
-    devices (switches/routers/firewalls/DPI/flow monitoring etc) and to test
+    connectivity. It can generate various Ethernet and MPLS frames for testing
+    different devices such as switches/routers/firewalls etc, to test
     traffic parsing/matching/filtering/forwarding.
 
 
 #### Why was it made
 
     Programs such as iPerf/jPerf/Ostinato/PathEth/Scapy (to name just a few) 
-    are excellent! They can saturate a link to measure throughput or simulate
-    congestion and they allow the user to set custom DSCP values to test QoS.
+    are excellent! They can saturate a link to measure throughput, or simulate
+    congestion, or allow the user to set custom DSCP values to test QoS, etc.
     They usually operate at layer 3 or 4 of the OSI model using either TCP or
     UDP for data transport. Some of them use sockets defined by the OS that
-    rely on the convoluted OS TCP/IP stack, others use 3rd party libraries
+    rely on a convoluted OS TCP/IP stack, others use 3rd party libraries
     (such as libpcap, NetMap etc).
 
     These programs are great for testing over a layer 3 boundary such as across
     the Internet, home broadband, client to server diagnostics etc. Etherate
-    uses raw sockets within the OS operating directly over layer 2 to provide
+    uses raw sockets within Linux operating directly over layer 2 to provide
     low level network analysis for Ethernet and MPLS connections without using
     any 3rd party libraries or kernel bypass techniques.
 
     The aim is free Ethernet and MPLS testing program that allows for advanced
     network analysis. With any modern day CPU and off the self NIC it should
-    saturate up to a 10GigE link and allow for the testing of various metro and
-    carrier Ethernet features (such tag swapping, 802.1p QoS, ethertype
-    parsing, and so on). This should all be achievable without the need to
-    install any 3rd party libraries. See INSTALL for details, Etherate can
-    simply be compiled and executed from the folder it was downloaded to.
+    saturate up to a 10GigE link using 1500 byte frames and allow for the
+    testing of various metro and carrier Ethernet features (such tag swapping,
+    802.1p QoS, ethertype parsing, and so on). This should all be achievable
+    without the need to install any 3rd party libraries (see INSTALL for
+    details). Etherate can simply be compiled and executed from the folder it
+    was downloaded to and provide "quick and dirty" tests or advanced bespoke
+    testing using custom frame files.
 
 
 #### Current version
 
-    Beta 0.11 (2017-03)
+    Beta 0.12 (2017-05)
 
 
 #### Current features
@@ -86,20 +91,27 @@ Etherate
   - Report throughput if additional headers (IPv4/6/TCP/UDP) were present
   - The Etherate code is not object orientated, single threaded and only 
     uni-directionl so once the above feature list is completed development will
-    cease (except for bug figxes), a new multi-threaded version is currently
+    cease (except for bug fixes), a new multi-threaded version is currently
     being developed: https://github.com/jwbensley/EtherateMT
 
 
 #### Technical details
 
     Etherate is a single threaded application, despite which 10G throughput
-    can be achieved on a 2.4Ghz Intel CPU with 10G Intel NIC. Etherate is
-    not currently using NetMap/DPDK or the similar frameworks as it is intended
-    to test the OS's native capabilities and be easily usable without 3rd party
-    requirements.
+    can be achieved on a 2.4Ghz Intel CPU with 10G Intel NIC using 1500 byte
+    frames. Etherate is not currently using NetMap, DPDK, VPP or other similar
+    frameworks as it is intended to test the OS's native capabilities and be
+    easily usable without any 3rd party requirements (apart from a recent
+    Kernel!). If you want 64 byte packet line rate performance on Nx10G or
+    Nx100G etc then Etherate is not for you. There are some great projects such
+    as MoonGen and PtkGen which Etherate cannot compete with for performance.
+    DPDK and PktGen or MoonGen require additional setup time and complexity
+    which is the trade-off with Etherate. Etherate can load a custom frame from
+    a file to transmit and test a traffic parsing graph or fill a specific ASIC
+    queue with minimal effort.
 
 
-#### More info, usage examples, FAQs can be found here:
+#### More info, usage info, examples, FAQs can be found here:
 
     http://null.53bits.co.uk/index.php?page=etherate
 

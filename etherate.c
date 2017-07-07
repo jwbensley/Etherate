@@ -42,9 +42,7 @@
 #include <ifaddrs.h>         // freeifaddrs(), getifaddrs()
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>        // intN_t, uintN_t, PRIuN, SCNuN
-#include <linux/if_arp.h>    // IFNAMSIZ, sockaddr_ll, struct ifreq,
-                             // struct ifconf
-#define MAX_IFS 64           // Max interfaces for ifreq
+#include <linux/if_arp.h>    // IFNAMSIZ, struct ifreq, sockaddr_ll
 #include <linux/if_ether.h>  // ETH_P_ALL (0x003)
                              // ETH_FRAME_LEN (default 1514)
                              // ETH_ALEN (default 6)
@@ -58,13 +56,13 @@
 #include <stdlib.h>          // atoi(), calloc(), EXIT_SUCCESS, free(),
                              // fscanf(), malloc(), strtoul(), strtoull()
 #include <string.h>          // memcpy(), strncmp(), strsep()
-#include <sys/ioctl.h>       // ioctl()
+#define MAX_IFS 64
+#include <sys/ioctl.h>
 #include <sys/socket.h>      // AF_PACKET
 #include "sysexits.h"        // EX_USAGE, EX_NOPERM, EX_PROTOCOL, EX_SOFTWARE
 #include <time.h>            // clock_gettime(), struct timeval, time_t,
                              // struct tm
 #include "unistd.h"          // getuid(), sleep()
-
 #ifndef CLOCK_MONOTONIC_RAW
 #define CLOCK_MONOTONIC_RAW 4
 #endif
@@ -155,7 +153,7 @@ int main(int argc, char *argv[]) {
         // Declare sigint handler, TX will signal RX to reset when it quits.
         // This can not be declared until now because the interfaces must be
         // set up so that a dying gasp can be sent.
-        signal (SIGINT,signal_handler);
+        signal (SIGINT, signal_handler);
 
         if (setup_frame(&app_params, &frame_headers, &test_interface, &test_params) != EXIT_SUCCESS)
         {
@@ -170,7 +168,7 @@ int main(int argc, char *argv[]) {
          ******************************************************** SETTINGS SYNC
          */
 
-        if (app_params.TX_SYNC == true)
+        if (app_params.tx_sync == true)
             sync_settings(&app_params, &frame_headers, &test_interface,
                           &test_params, &mtu_test, &qm_test);
 
@@ -179,12 +177,12 @@ int main(int argc, char *argv[]) {
 
         // Rebuild the test frame headers in case any settings have been changed
         // by the TX host
-        if (app_params.TX_MODE != true) build_headers(&frame_headers);
-        printf("Frame size if %d bytes\n", test_params.F_SIZE_TOTAL);
+        if (app_params.tx_mode != true) build_headers(&frame_headers);
+        printf("Frame size is %d bytes\n", test_params.f_size_total);
 
 
         // Try to measure the TX to RX one way delay
-        if (app_params.TX_DELAY == true)
+        if (app_params.tx_delay == true)
             delay_test(&app_params, &frame_headers, &test_interface, 
                        &test_params, &qm_test);
 
@@ -194,21 +192,21 @@ int main(int argc, char *argv[]) {
          ****************************************************** MAIN TEST PHASE
          */
 
-        app_params.TS_NOW =   time(0);
-        app_params.TM_LOCAL = localtime(&app_params.TS_NOW);
-        printf("Starting test on %s\n", asctime(app_params.TM_LOCAL));   
+        app_params.ts_now =   time(0);
+        app_params.tm_local = localtime(&app_params.ts_now);
+        printf("Starting test on %s\n", asctime(app_params.tm_local));   
 
-        if (mtu_test.ENABLED) {
+        if (mtu_test.enabled) {
 
             mtu_sweep_test(&app_params, &frame_headers, &test_interface,
                            &test_params, &mtu_test);
 
-        } else if (qm_test.ENABLED) {
+        } else if (qm_test.enabled) {
 
             latency_test(&app_params, &frame_headers, &test_interface,
                          &test_params, &qm_test);
 
-        } else if (test_params.F_PAYLOAD_SIZE > 0) {
+        } else if (test_params.f_payload_size > 0) {
 
             send_custom_frame(&app_params, &frame_headers, &test_interface,
                               &test_params);
@@ -220,9 +218,9 @@ int main(int argc, char *argv[]) {
 
         }
         
-        app_params.TS_NOW = time(0);
-        app_params.TM_LOCAL = localtime(&app_params.TS_NOW);
-        printf("Ending test on %s\n\n", asctime(app_params.TM_LOCAL));
+        app_params.ts_now = time(0);
+        app_params.tm_local = localtime(&app_params.ts_now);
+        printf("Ending test on %s\n\n", asctime(app_params.tm_local));
 
         if (remove_interface_promisc(&test_interface) != EXIT_SUCCESS)
         {
@@ -232,7 +230,7 @@ int main(int argc, char *argv[]) {
         reset_app(&frame_headers, &test_interface, &test_params, &qm_test);
 
         // End the testing loop if TX host
-        if (app_params.TX_MODE == true) testing = false;
+        if (app_params.tx_mode == true) testing = false;
 
 
     }
