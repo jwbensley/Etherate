@@ -1,4 +1,4 @@
-AC_INIT([etherate],[0.12.0],[jwbensley@gmail.com],,[https://null.53bits.co.uk/index.php?page=etherate])
+AC_INIT([etherate],[0.13.0],[jwbensley@gmail.com],,[https://null.53bits.co.uk/index.php?page=etherate])
 
 AM_INIT_AUTOMAKE([1.9 tar-pax])
 
