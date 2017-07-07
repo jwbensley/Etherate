@@ -1,3 +1,19 @@
+-----Etherate 0.13 Beta 2017-07
+
+[FEATURE] Added enhancement #20; Test if interface is IFF_UP && IFF_RUNNING
+
+[MAJOR] Fixed issue #19; Quality Tests are stil very buggy
+
+[MINOR] Fixed issue #23; Regression bug with speed limit display on Rx host
+
+[MINOR] Fixed issue #11; Uneeded +1 with result print on latency_test()
+
+[MINOR] Updated documentation regarding usage and troubleshooting
+
+[MINOR] Cody tidy up with perrors, more work to standardise lower case naming of variables, typos etc
+
+
+
 -----Etherate 0.12 Beta 2017-05
 
 [FEATURE] Added enhancement #16; PACKET_QDISC_BYPASS
@@ -8,12 +24,6 @@
 
 [MINOR] Finally finished migrating from C++ to C
 
-[MINOR] Fixed error with double close() on socket file descriptor
-
-[MINOR] Fixed missing net/if.h include
-
-[MINOR] Added error check for fclose() in cli_args()
-
 [MINOR] Fixed issue #17; Multiple ioctl() calls have no error checking
 
 [MINOR] Fixed issue #15; cli_args() IF_NAME copy error
@@ -21,6 +31,12 @@
 [MINOR] Fixed issue #14; Make strncpy() zero value safe
 
 [MINOR] Fixed issue #12; Function prototype is missing parameter setup_frame()
+
+[MINOR] Fixed error with double close() on socket file descriptor
+
+[MINOR] Fixed missing net/if.h include
+
+[MINOR] Added error check for fclose() in cli_args()
 
 [MINOR] Cody tidy up, started to standardise lower case naming of variables
 
