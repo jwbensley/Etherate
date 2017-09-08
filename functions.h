@@ -48,7 +48,7 @@ inline void build_tlv(struct frame_headers *frame_headers, uint16_t TLV_TYPE,
 
     *((uint16_t *) buffer_offset) = TLV_TYPE;
     buffer_offset += sizeof(TLV_TYPE);
-    *buffer_offset++ = sizeof(uint8_t);
+    *buffer_offset++ = sizeof(TLV_VALUE);
     *((uint32_t *) buffer_offset) = TLV_VALUE;
 
     frame_headers->rx_tlv_type  = (uint16_t*) frame_headers->rx_data;

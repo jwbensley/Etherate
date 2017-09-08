@@ -1,3 +1,9 @@
+-----Etherate 1.14 2017-09
+
+[MAJOR] Fixed issue 22; Test not starting
+
+
+
 -----Etherate 0.13 Beta 2017-07
 
 [FEATURE] Added enhancement #20; Test if interface is IFF_UP && IFF_RUNNING
