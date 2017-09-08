@@ -7,7 +7,7 @@ PayPal Donate: https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=jam
 
 Update:
 
-    EtheratMT is now in alpha which is a multi-threaded (MT) version of
+    EtheratMT is now in beta which is a multi-threaded (MT) version of
     Etherate. EtherateMT is a simple high volume traffic generator with less
     features than Etherate aimed at testing network and device load rather
     than specific traffic properties like Etherate.
@@ -24,12 +24,12 @@ What is it
 
 Why was it made
 
-    Programs such as iPerf/jPerf/Ostinato/PathEth/Scapy (to name just a few) 
-    are excellent! They can saturate a link to measure throughput, or simulate
-    congestion, or allow the user to set custom DSCP values to test QoS, etc.
-    They usually operate at layer 3 or 4 of the OSI model using either TCP or
-    UDP for data transport. Some of them use sockets defined by the OS that
-    rely on a convoluted OS TCP/IP stack, others use 3rd party libraries
+    Programs such as iPerf/jPerf/Ostinato/PathEth/Scapy/PtkGen/MoonGen (to name
+    just a few) are excellent! They can saturate a link to measure throughput,
+    or simulate congestion, or allow the user to set custom DSCP values to test
+    QoS, etc. They usually operate at layer 3 or 4 of the OSI model using either
+    TCP or UDP for data transport. Some of them use sockets defined by the OS
+    that rely on a convoluted OS TCP/IP stack, others use 3rd party libraries
     (such as libpcap, NetMap etc).
 
     These programs are great for testing over a layer 3 boundary such as across
@@ -51,14 +51,14 @@ Why was it made
 
 Current version
 
-    Beta 0.13 (2017-07)
+    1.14 (2017-09)
 
 
 Current features
 
-    Having moved from alpha to beta the current focus is to increase the
-    feature set of Etherate, improve efficiency and fix bugs, before declaring
-    it "production" ready.
+    Having moved from alpha, to beta, and now to production version 1.x the
+    focus now is to finish the remaining features of Etherate, then provide bug
+    fixes only. This is to support the development of EtherateMT instead.
 
     Currently working features which all operate directly over layer 2:
   
@@ -80,7 +80,7 @@ Current features
   - Simulate MPLS label stacks
   - Insert MPLS pseudowire control word
   - Load a custom frame from file for transmission
-   - Some examples are provided to simulate BPDUs, ARP, ICMP, TCP
+  - Some examples are provided to simulate BPDUs, ARP, ICMP, TCP
 
 
 Development plan
@@ -88,7 +88,7 @@ Development plan
     These are features currently being worked upon:
   
   - Report throughput if additional headers (IPv4/6/TCP/UDP) were present
-  - The Etherate code is not object orientated, single threaded and only 
+  - The Etherate code is partially object orientated, single threaded and only
     uni-directionl so once the above feature list is completed development will
     cease (except for bug fixes), a new multi-threaded version is currently
     being developed: https://github.com/jwbensley/EtherateMT

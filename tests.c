@@ -857,9 +857,20 @@ void latency_test(struct app_params *app_params,
             if (ntohl(*frame_headers->rx_tlv_value) == VALUE_TEST_SUB_TLV &&
                 ntohs(*frame_headers->rx_sub_tlv_type) == TYPE_PING)
             {
+
                 first_frame = true;
                 qm_test->test_count += 1;
                 printf("%" PRIu32 ":\t", qm_test->test_count);
+
+            } else {
+
+               // If the frame is not an Etherate frame it needs to be
+               // "consumed" otherwise the next MSG_PEEK will show the
+               // same frame:
+               rx_len = recvfrom(test_interface->sock_fd, frame_headers->rx_buffer,
+                                 test_params->f_size_total, MSG_DONTWAIT, NULL,
+                                 NULL);
+
             }
 
         }
@@ -1320,7 +1331,18 @@ void speed_test(struct app_params *app_params,
             if (ntohl(*frame_headers->rx_tlv_value) == VALUE_TEST_SUB_TLV &&
                 ntohs(*frame_headers->rx_sub_tlv_type) == TYPE_FRAMEINDEX)
             {
+
                 first_frame = true;
+
+            }  else {
+
+               // If the frame is not an Etherate frame it needs to be
+               // "consumed" otherwise the next MSG_PEEK will show the
+               // same frame:
+               rx_len = recvfrom(test_interface->sock_fd, frame_headers->rx_buffer,
+                                 test_params->f_size_total, MSG_DONTWAIT, NULL,
+                                 NULL);
+
             }
 
         }
