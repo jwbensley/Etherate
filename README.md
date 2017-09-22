@@ -95,6 +95,14 @@ Etherate
     being developed: https://github.com/jwbensley/EtherateMT
 
 
+#### Contributing
+
+    There is a Code of Conduct for contributing to the project in any way:
+    https://github.com/jwbensley/Etherate/blob/master/CODE_OF_CONDUCT.md
+    Ultimately, just be friendly and I'll do my best to accept patches and
+    accept bug fixes etc.
+
+
 #### Technical details
 
     Etherate is a single threaded application, despite which 10G throughput
