@@ -3,7 +3,7 @@
 There are no specific rules or guides for contributing to this project.
 
 Try and be respectful of others. If submitting and issue of feature request
-try to follow the [ISSUE_TEMPLATE][1] and adhear to the[CODE_OF_CONDUCT][2].
+try to follow the [ISSUE_TEMPLATE][1] and adhear to the [CODE_OF_CONDUCT][2].
 
 The Dude abides man.
 
