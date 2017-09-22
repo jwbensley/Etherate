@@ -12,7 +12,7 @@ Etherate
     Etherate. EtherateMT is a simple high volume traffic generator with less
     features than Etherate aimed at testing network and device load rather
     than specific traffic properties like Etherate.
-    https://github.com/jwbensley/EtherateMT
+https://github.com/jwbensley/EtherateMT
 
 
 #### What is it
@@ -97,10 +97,10 @@ Etherate
 
 #### Contributing
 
-    There is a Code of Conduct for contributing to the project in any way:
-    https://github.com/jwbensley/Etherate/blob/master/CODE_OF_CONDUCT.md
+    There is a Code of Conduct for contributing to the project in any way.
     Ultimately, just be friendly and I'll do my best to accept patches and
-    accept bug fixes etc.
+    accept bug fixes etc:
+https://github.com/jwbensley/Etherate/blob/master/CODE_OF_CONDUCT.md
 
 
 #### Technical details
@@ -121,7 +121,7 @@ Etherate
 
 #### More info, usage info, examples, FAQs can be found here:
 
-    http://null.53bits.co.uk/index.php?page=etherate
+http://null.53bits.co.uk/index.php?page=etherate
 
 
 #### Who made it (where to send your hate mail or nude pics)
