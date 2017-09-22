@@ -103,10 +103,13 @@ https://github.com/jwbensley/EtherateMT
 
 #### Contributing
 
-    There is a Code of Conduct for contributing to the project in any way.
+    There is a Code of Conduct for contributing to the project in any way,
+    but no specific guidlines about how to contribute.
     Ultimately, just be friendly and I'll do my best to accept patches and
     accept bug fixes etc:
 https://github.com/jwbensley/Etherate/blob/master/CODE_OF_CONDUCT.md
+
+https://github.com/jwbensley/Etherate/blob/master/CONTRIBUTING.md
 
 
 #### Technical details
