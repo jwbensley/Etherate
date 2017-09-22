@@ -6,7 +6,7 @@ Please also test with any OS updates applied if they are available.
 
 ##### ISSUE TYPE
 <!--- Pick from the below: -->
-- [ ] Bug Report
+- [X] Bug Report
 - [ ] Enhancement/Feature Request
 - [ ] Question
 
@@ -41,4 +41,5 @@ as you can.
 
 ```
 
-<!--- You can also paste gist.github.com links for larger files -->
+<!--- You can also paste gist.github.com links for larger files.
+You can also include screenshots if you like. -->
