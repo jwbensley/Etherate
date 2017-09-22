@@ -86,10 +86,16 @@ https://github.com/jwbensley/EtherateMT
 
 #### Development plan
 
-    These are features currently being worked upon:
+    Etherate is developed primarily for use on Ubuntu and CentOS as these are
+    the authors day to day platforms. If it doesn't work on your bedroom Linux
+    based OS, it's unlikely I'll have time help you. If it doesn't work on some
+    other major Linux based OS I'll try and find the time to spin up a VM and
+    replicate your issues. Ubuntu and CentOS are the main focus though.
+    
+    The features currently being worked upon can be seen in the issues section:
+    https://github.com/jwbensley/Etherate/issues?q=is%3Aopen+is%3Aissue+label%3Aenhancement
   
-  - Report throughput if additional headers (IPv4/6/TCP/UDP) were present
-  - The Etherate code is partially object orientated, single threaded and only 
+    The Etherate code is partially object orientated, single threaded and only 
     uni-directionl so once the above feature list is completed development will
     cease (except for bug fixes), a new multi-threaded version is currently
     being developed: https://github.com/jwbensley/EtherateMT
