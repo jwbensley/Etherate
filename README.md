@@ -52,7 +52,7 @@ https://github.com/jwbensley/EtherateMT
 
 #### Current version
 
-    1.14 (2017-09)
+    1.15 (2017-10)
 
 
 #### Current features
