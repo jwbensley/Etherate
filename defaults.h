@@ -36,9 +36,10 @@
 void set_default_values(struct app_params *app_params,
                         struct frame_headers *frame_headers,
                         struct mtu_test *mtu_test,
+                        struct qm_test *qm_test,
+                        struct speed_test *speed_test,
                         struct test_interface *test_interface,
-                        struct test_params * test_params,
-                        struct qm_test *qm_test);
+                        struct test_params * test_params);
 
 // Set up Etherate test frame
 int16_t setup_frame(struct app_params * app_params,

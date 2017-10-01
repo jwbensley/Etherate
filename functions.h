@@ -90,9 +90,11 @@ void build_sub_tlv(frame_headers_t *frame_headers, uint16_t sub_tlv_type, uint64
 // Process the CLI arguments
 int16_t cli_args(int argc, char *argv[], struct app_params *app_params,
                  struct frame_headers *frame_headers,
+                 struct mtu_test *mtu_test,
+                 struct qm_test *qm_test,
+                 struct speed_test *speed_test,
                  struct test_interface *test_interface,
-                 struct test_params *test_params, struct mtu_test *mtu_test,
-                 struct qm_test *qm_test);
+                 struct test_params *test_params);
 
 // Explode a char string based on the passed field delimiter
 uint8_t explode_char(char *string, char *delim, char *tokens[]);
@@ -103,8 +105,17 @@ int32_t get_interface_mtu_by_name(struct test_interface *test_interface);
 // Try to automatically chose an interface to run the test on
 int16_t get_sock_interface(struct test_interface *test_interface);
 
+// Print the results of the latency test to the screen
+void latency_test_results(struct qm_test *qm_test,
+                          struct test_params *test_params,
+                          uint8_t tx_mode);
+
 // List interfaces and hardware (MAC) address
 void list_interfaces();
+
+// Print the results of the MTU sweep test to the screen
+void mtu_sweep_test_results(uint16_t largest, struct test_params *test_params,
+                            uint8_t tx_mode);
 
 // Print CLI args and usage
 void print_usage(struct app_params *app_params,
@@ -115,8 +126,9 @@ int16_t remove_interface_promisc(struct test_interface *test_interface);
 
 // Free's allocated memory and closes sockets etc
 void reset_app(struct frame_headers *frame_headers,
-               struct test_interface *test_interface,
-               struct test_params *test_params, struct qm_test *qm_test);
+               struct qm_test *qm_test,
+               struct speed_test *speed_test,
+               struct test_interface *test_interface);
 
 // Set the interface into promiscuous mode
 int16_t set_interface_promisc(struct test_interface *test_interface);
@@ -130,10 +142,20 @@ int16_t set_sock_interface_name(struct test_interface *test_interface);
 // Signal handler to notify remote host of local application termiantion
 void signal_handler(int signal);
 
+// Print the results of the speed test to the screen
+void speed_test_results(struct speed_test *speed_test,
+                        struct test_params *test_params, uint8_t tx_mode);
+
 // Send the settings from TX to RX
 void sync_settings(struct app_params *app_params,
                    struct frame_headers *frame_headers,
+                   struct mtu_test *mtu_test,
+                   struct qm_test *qm_test,
+                   struct speed_test *speed_test,
                    struct test_interface *test_interface,
-                   struct test_params * test_params,
-                   struct mtu_test *mtu_test, struct qm_test *qm_test);
+                   struct test_params * test_params);
 
+// Update the frame size value and check it against the PHY MTU
+void update_frame_size(struct frame_headers *frame_headers,
+                       struct test_interface *test_interface,
+                       struct test_params *test_params);

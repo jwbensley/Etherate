@@ -61,7 +61,7 @@
  ************************************************************* GLOBAL CONSTANTS
  */
 
-#define APP_VERSION        "0.13.beta 2017-07"
+#define APP_VERSION        "1.15 2017-10"
 #define F_SIZE_MAX         10000 // Maximum frame size on the wire (payload+headers)
 #define F_SIZE_DEF         1500  // Default frame payload size in bytes
 #define F_DURATION_DEF     30    // Default test duration in seconds
@@ -176,61 +176,10 @@ struct frame_headers           // Frame header settings
 };
 
 
-struct test_interface          // Settings for the physical test interface
-{
-
-    int     if_index;
-    uint8_t if_name[IFNAMSIZ];
-    struct  sockaddr_ll sock_addr;   // Link-layer details
-    int     sock_fd;                 // Socket file descriptor
-
-};
-
-
-struct test_params             // Gerneral testing parameters
-{
-
-    uint16_t    f_size;              // Frame payload in bytes
-    uint16_t    f_size_total;        // Total frame size including headers
-    uint64_t    f_duration;          // Maximum duration in seconds
-    uint64_t    f_count;             // Maximum number of frames to send
-    uint64_t    f_bytes;             // Maximum amount of data to transmit in bytes
-    uint8_t*    f_payload;           // Custom payload loaded from file
-    uint16_t    f_payload_size;      // Size of the custom payload  from file
-    uint64_t    b_tx_speed_max;      // Maximum transmit speed in bytes per second
-    uint64_t    b_tx_speed_prev;     // Transmission speed for the previous second
-    uint64_t    s_elapsed;           // Seconds the test has been running
-    uint64_t    f_tx_count;          // Total number of frames transmitted
-    uint64_t    f_tx_count_prev;     // Total number of frames sent one second ago
-    uint32_t    f_tx_count_max;      // Maximum transmit speed in frames per second
-    uint64_t    f_speed;             // Current frames per second during a test
-    uint64_t    f_speed_avg;         // Average frames per second during a test
-    uint64_t    f_speed_max;         // Max frames per second achieved during the test
-    uint64_t    b_tx;                // Total number of bytes transmitted
-    uint64_t    b_tx_prev;           // Bytes sent up to one second ago
-    uint64_t    f_rx_count;          // Total number of frames received
-    uint64_t    f_rx_count_prev;     // Total number of frames received one second ago
-    uint64_t    f_rx_other;          // Number of non test frames received
-    uint64_t    b_rx;                // Total number of bytes received
-    uint64_t    b_rx_prev;           // Bytes received one second ago
-    uint64_t    f_index_prev;        // Index of the last test frame sent/received
-    uint64_t    f_rx_ontime;         // Frames received on time
-    uint64_t    f_rx_early;          // Frames received out of order that are early
-    uint64_t    f_rx_late;           // Frames received out of order that are late
-    double      b_speed;             // Current speed
-    double      b_speed_max;         // Maximum speed achieved during the test
-    long double b_speed_avg;         // Average speed achieved during the test
-    uint8_t     f_ack;               // Testing in ACK mode during transmition
-    uint8_t     f_waiting_ack;       // Test is waiting for a frame to be ACK'ed
-    struct timespec ts_current_time; // Two timers for timing a test and calculating stats
-    struct timespec ts_elapsed_time;
-
-};
-
-
 struct mtu_test {              // Settings specific to the MTU sweep test
 
     uint8_t  enabled;                // Enable the MTU sweep test mode
+    uint16_t largest;                // Largest MTU ACK'ed at Tx or recieved by Rx
     uint16_t mtu_tx_min;             // Default minmum MTU size
     uint16_t mtu_tx_max;             // Default maximum MTU size
 
@@ -268,10 +217,73 @@ struct qm_test {               // Settings specific to the quality measurement t
 };
 
 
+struct test_interface          // Settings for the physical test interface
+{
+
+    int     if_index;
+    uint8_t if_name[IFNAMSIZ];
+    struct  sockaddr_ll sock_addr;   // Link-layer details
+    int     sock_fd;                 // Socket file descriptor
+
+};
+
+
+struct speed_test             // Speed test parameters
+{
+
+    uint8_t     enabled;             // Enable the speed test
+    uint64_t    b_rx;                // Total number of bytes received
+    uint64_t    b_rx_prev;           // Bytes received one second ago
+    uint64_t    b_tx;                // Total number of bytes transmitted
+    uint64_t    b_tx_prev;           // Bytes sent up to one second ago
+    uint64_t    b_tx_speed_max;      // Maximum transmit speed in bytes per second
+    uint64_t    b_tx_speed_prev;     // Transmission speed for the previous second
+    uint8_t*    f_payload;           // Custom payload loaded from file
+    uint16_t    f_payload_size;      // Size of the custom payload from file
+    uint64_t    f_index_prev;        // Index of the last test frame sent/received
+    uint64_t    f_speed;             // Current frames per second during a test
+    uint64_t    f_speed_avg;         // Average frames per second during a test
+    uint64_t    f_speed_max;         // Max frames per second achieved during the test
+    double      b_speed;             // Current speed
+    double      b_speed_max;         // Maximum speed achieved during the test
+    long double b_speed_avg;         // Average speed achieved during the test
+
+};
+
+
+struct test_params             // Gerneral testing parameters
+{
+
+    uint64_t    f_bytes;             // Maximum amount of data to transmit in bytes
+    uint64_t    f_count;             // Maximum number of frames to send
+    uint64_t    f_duration;          // Maximum duration in seconds
+    uint16_t    f_size;              // Frame payload in bytes
+    uint16_t    f_size_total;        // Total frame size including headers
+    uint64_t    s_elapsed;           // Seconds the test has been running
+    uint64_t    f_tx_count;          // Total number of frames transmitted
+    uint64_t    f_tx_count_prev;     // Total number of frames sent one second ago
+    uint32_t    f_tx_count_max;      // Maximum transmit speed in frames per second
+    uint64_t    f_rx_count;          // Total number of frames received
+    uint64_t    f_rx_count_prev;     // Total number of frames received one second ago
+    uint64_t    f_rx_other;          // Number of non test frames received
+    uint64_t    f_rx_ontime;         // Frames received on time
+    uint64_t    f_rx_early;          // Frames received out of order that are early
+    uint64_t    f_rx_late;           // Frames received out of order that are late
+    uint8_t     f_ack;               // Testing in ACK mode during transmition
+    uint8_t     f_waiting_ack;       // Test is waiting for a frame to be ACK'ed
+    struct timespec ts_current_time; // Two timers for timing a test and calculating stats
+    struct timespec ts_elapsed_time;
+
+};
+
+
 // These need to be global so that signal_handler() can send a dying gasp
 // and the allocated buffers can be free()'d
 struct ifreq ethreq;
+struct app_params *papp_params;
+struct mtu_test *pmtu_test;
 struct qm_test *pqm_test;
+struct speed_test *pspeed_test;
 struct test_interface *ptest_interface;
 struct test_params *ptest_params;
 struct frame_headers *pframe_headers;

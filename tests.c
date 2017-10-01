@@ -29,7 +29,7 @@
  * void delay_test()
  * void mtu_sweep_test()
  * void latency_test()
- * void speed_test()
+ * void speed_test_default()
  * void send_custom_frame()
  *
  */
@@ -41,7 +41,8 @@
 void delay_test(struct app_params *app_params,
                 struct frame_headers *frame_headers,
                 struct test_interface *test_interface,
-                struct test_params * test_params,
+                struct test_param
+                s * test_params,
                 struct qm_test *qm_test)
 {
 // Calculate the delay between Tx and Rx hosts. The uptime is exchanged twice
@@ -76,11 +77,11 @@ void delay_test(struct app_params *app_params,
             build_sub_tlv(frame_headers, htons(TYPE_DELAY1), htonll(tx_uptime));
 
             tx_ret = sendto(test_interface->sock_fd,
-                                frame_headers->tx_buffer,
-                                frame_headers->length+frame_headers->sub_tlv_size,
-                                0,
-                                (struct sockaddr*)&test_interface->sock_addr,
-                                sizeof(test_interface->sock_addr));
+                            frame_headers->tx_buffer,
+                            frame_headers->length+frame_headers->sub_tlv_size,
+                            0,
+                            (struct sockaddr*)&test_interface->sock_addr,
+                            sizeof(test_interface->sock_addr));
 
             if (tx_ret <= 0)
             {
@@ -97,11 +98,11 @@ void delay_test(struct app_params *app_params,
             build_sub_tlv(frame_headers, htons(TYPE_DELAY2), htonll(tx_uptime));
 
             tx_ret = sendto(test_interface->sock_fd,
-                                frame_headers->tx_buffer,
-                                frame_headers->length+frame_headers->sub_tlv_size,
-                                0,
-                                (struct sockaddr*)&test_interface->sock_addr,
-                                sizeof(test_interface->sock_addr));
+                            frame_headers->tx_buffer,
+                            frame_headers->length+frame_headers->sub_tlv_size,
+                            0,
+                            (struct sockaddr*)&test_interface->sock_addr,
+                            sizeof(test_interface->sock_addr));
 
             if (tx_ret <= 0)
             {
@@ -147,11 +148,11 @@ void delay_test(struct app_params *app_params,
                       htonll(VALUE_DELAY_END));
 
         tx_ret = sendto(test_interface->sock_fd,
-                            frame_headers->tx_buffer,
-                            frame_headers->length+frame_headers->sub_tlv_size,
-                            0,
-                            (struct sockaddr*)&test_interface->sock_addr,
-                            sizeof(test_interface->sock_addr));
+                        frame_headers->tx_buffer,
+                        frame_headers->length+frame_headers->sub_tlv_size,
+                        0,
+                        (struct sockaddr*)&test_interface->sock_addr,
+                        sizeof(test_interface->sock_addr));
 
         if (tx_ret <= 0)
         {
@@ -321,7 +322,6 @@ void mtu_sweep_test(struct app_params *app_params,
         uint16_t mtu_tx_current   = 0;
         uint16_t mtu_ack_previous = 0;
         uint16_t mtu_ack_current  = 0;
-        uint16_t mtu_ack_largest  = 0;
         uint8_t  WAITING          = true;
 
         for (mtu_tx_current = mtu_test->mtu_tx_min; mtu_tx_current <= mtu_test->mtu_tx_max; mtu_tx_current += 1)
@@ -331,17 +331,17 @@ void mtu_sweep_test(struct app_params *app_params,
             clock_gettime(CLOCK_MONOTONIC_RAW, &test_params->ts_elapsed_time);
 
             // Send each MTU test frame 3 times
-            for (uint16_t i = 1; i <= 3; i += 1)
+            for (uint16_t i = 1; i <= 3; i += 1) ///// Document the 3 try
             {
 
                 build_sub_tlv(frame_headers, htons(TYPE_FRAMEINDEX), htonll(mtu_tx_current));
 
                 tx_ret = sendto(test_interface->sock_fd,
-                                    frame_headers->tx_buffer,
-                                    frame_headers->length+mtu_tx_current,
-                                    0, 
-                                    (struct sockaddr*)&test_interface->sock_addr,
-                                    sizeof(test_interface->sock_addr));
+                                frame_headers->tx_buffer,
+                                frame_headers->length+mtu_tx_current,
+                                0, 
+                                (struct sockaddr*)&test_interface->sock_addr,
+                                sizeof(test_interface->sock_addr));
 
                 if (tx_ret <=0)
                 {
@@ -356,7 +356,7 @@ void mtu_sweep_test(struct app_params *app_params,
 
             }
 
-            // Wait for the ACK from back from Rx
+            // Wait for the ACK from back from Rx ///// Document the max wait time (3 seconds)
             while(WAITING)
             {
 
@@ -380,9 +380,9 @@ void mtu_sweep_test(struct app_params *app_params,
 
                         // Get the MTU size Rx is ACK'ing
                         mtu_ack_current = (uint32_t)ntohll(*frame_headers->rx_sub_tlv_value);
-                        if (mtu_ack_current > mtu_ack_largest) 
+                        if (mtu_ack_current > mtu_test->largest) 
                         {
-                            mtu_ack_largest = mtu_ack_current;
+                            mtu_test->largest = mtu_ack_current;
                         }
 
 
@@ -394,13 +394,13 @@ void mtu_sweep_test(struct app_params *app_params,
                             // Frame received out of order, earlier than expected
                             test_params->f_rx_early += 1;
                             mtu_ack_previous = mtu_ack_current;
-                        } else if (mtu_ack_current == (mtu_ack_previous + 1)) {
+                        } else if (mtu_ack_current == (mtu_ack_previous + 1) && mtu_ack_current < mtu_test->mtu_tx_max) {
                             // Fame received in order
                             mtu_ack_previous = mtu_ack_current;
                             test_params->f_rx_ontime += 1;
+                            WAITING = false;
                         } else if (mtu_ack_current == mtu_ack_previous) {
                             // Frame received in order
-                            mtu_ack_previous = mtu_ack_current;
                             test_params->f_rx_ontime += 1;
                         }
 
@@ -424,21 +424,8 @@ void mtu_sweep_test(struct app_params *app_params,
             
         } // End of Tx transmit
 
-
-        printf("Largest MTU ACK'ed from Rx is %u\n\n", mtu_ack_largest);
-
-        printf("Test frames transmitted: %" PRIu64 "\n"
-               "Test frames received: %" PRIu64 "\n"
-               "Non test frames received: %" PRIu64 "\n"
-               "In order ACK frames received: %" PRIu64 "\n"
-               "Out of order ACK frames received early: %" PRIu64 "\n"
-               "Out of order ACK frames received late: %" PRIu64 "\n",
-               test_params->f_tx_count,
-               test_params->f_rx_count,
-               test_params->f_rx_other,
-               test_params->f_rx_ontime,
-               test_params->f_rx_early,
-               test_params->f_rx_late);
+        printf("MTU sweep test complete\n");
+        mtu_sweep_test_results(mtu_test->largest, test_params, app_params->tx_mode);
 
 
     // Running in Rx mode
@@ -446,8 +433,7 @@ void mtu_sweep_test(struct app_params *app_params,
 
         uint32_t mtu_rx_previous = 0;
         uint32_t mtu_rx_current  = 0;
-        uint32_t mtu_rx_largets  = 0;
-        uint8_t  WAITING          = true;
+        uint8_t  WAITING         = true;
 
         // If 5 seconds pass without receiving a frame, end the MTU sweep test
         // (assume MTU has been exceeded)
@@ -480,10 +466,10 @@ void mtu_sweep_test(struct app_params *app_params,
                     // Get the MTU size Tx is sending
                     mtu_rx_current = (uint32_t)ntohll(*frame_headers->rx_sub_tlv_value);
 
-                    if (mtu_rx_current > mtu_rx_largets)
+                    if (mtu_rx_current > mtu_test->largest)
                     {
 
-                        mtu_rx_largets = mtu_rx_current;
+                        mtu_test->largest = mtu_rx_current;
 
                         // ACK that back to Tx as new largest MTU received
                         // (send the ACK 3 times)
@@ -493,10 +479,10 @@ void mtu_sweep_test(struct app_params *app_params,
                         build_sub_tlv(frame_headers, htons(TYPE_ACKINDEX), htonll(mtu_rx_current));
 
                         tx_ret = sendto(test_interface->sock_fd,
-                                            frame_headers->tx_buffer,
-                                            frame_headers->length+frame_headers->sub_tlv_size, 0, 
-                                            (struct sockaddr*)&test_interface->sock_addr,
-                                            sizeof(test_interface->sock_addr));
+                                        frame_headers->tx_buffer,
+                                        frame_headers->length+frame_headers->sub_tlv_size, 0, 
+                                        (struct sockaddr*)&test_interface->sock_addr,
+                                        sizeof(test_interface->sock_addr));
 
                         if (tx_ret <=0)
                         {
@@ -510,7 +496,7 @@ void mtu_sweep_test(struct app_params *app_params,
                         }
 
 
-                    } // mtu_rx_current > mtu_rx_largets
+                    } // mtu_rx_current > mtu_test->largest
 
 
 
@@ -546,27 +532,14 @@ void mtu_sweep_test(struct app_params *app_params,
 
             // If Rx has received the largest MTU Tx hoped to send,
             // the MTU sweep test is over
-            if (mtu_rx_largets == mtu_test->mtu_tx_max)
+            if (mtu_test->largest == mtu_test->mtu_tx_max)
             {
 
                 // Signal back to Tx the largest MTU Rx recieved at the end
                 WAITING = false;
 
-                printf("MTU sweep test complete\n"
-                      "Largest MTU received was %u\n\n", mtu_rx_largets);
-
-                printf("Test frames transmitted: %" PRIu64 "\n"
-                       "Test frames received: %" PRIu64 "\n"
-                       "Non test frames received: %" PRIu64 "\n"
-                       "In order test frames received: %" PRIu64 "\n"
-                       "Out of order test frames received early: %" PRIu64 "\n"
-                       "Out of order test frames received late: %" PRIu64 "\n",
-                       test_params->f_tx_count,
-                       test_params->f_rx_count,
-                       test_params->f_rx_other,
-                       test_params->f_rx_ontime,
-                       test_params->f_rx_early,
-                       test_params->f_rx_late);
+                printf("MTU sweep test complete\n");
+                mtu_sweep_test_results(mtu_test->largest, test_params, app_params->tx_mode);
 
                 return;
 
@@ -574,14 +547,14 @@ void mtu_sweep_test(struct app_params *app_params,
 
             // 5 seconds have passed without any MTU sweep frames being receeved
             // Assume the max MTU has been exceeded
-            if ((test_params->ts_current_time.tv_sec-test_params->ts_elapsed_time.tv_sec) >= 5)
+            if ((test_params->ts_current_time.tv_sec-test_params->ts_elapsed_time.tv_sec) >= 5)  ///// Document this timeout
             {
 
                 if (mtu_rx_any == false)
                 {
                     printf("Timeout waiting for MTU sweep frames from Tx, "
                            "ending the test.\nLargest MTU received %u\n\n",
-                           mtu_rx_largets);
+                           mtu_test->largest);
 
                     WAITING = false;
 
@@ -614,7 +587,7 @@ void latency_test(struct app_params *app_params,
 
     build_tlv(frame_headers, htons(TYPE_TESTFRAME), htonl(VALUE_TEST_SUB_TLV));
 
-    int16_t     tx_ret   = 0;
+    int16_t     tx_ret       = 0;
     int16_t     rx_len       = 0;
     long double uptime_1     = 0.0;
     long double uptime_2     = 0.0;
@@ -667,11 +640,11 @@ void latency_test(struct app_params *app_params,
             build_sub_tlv(frame_headers, htons(TYPE_PING), htonll(tx_uptime));
 
             tx_ret = sendto(test_interface->sock_fd,
-                                frame_headers->tx_buffer,
-                                frame_headers->length+frame_headers->sub_tlv_size,
-                                0, 
-                                (struct sockaddr*)&test_interface->sock_addr,
-                                sizeof(test_interface->sock_addr));
+                            frame_headers->tx_buffer,
+                            frame_headers->length+frame_headers->sub_tlv_size,
+                            0, 
+                            (struct sockaddr*)&test_interface->sock_addr,
+                            sizeof(test_interface->sock_addr));
 
             if (tx_ret <=0 )
             {
@@ -765,6 +738,7 @@ void latency_test(struct app_params *app_params,
                     } else if (ntohl(*frame_headers->rx_tlv_value) == VALUE_DYINGGASP) {
 
                         printf("\nRx host has quit\n");
+                        latency_test_results(qm_test, test_params, app_params->tx_mode);
                         return;
 
                     } else {
@@ -807,20 +781,8 @@ void latency_test(struct app_params *app_params,
 
         } // testBase<=testMax
 
-        printf("Test frames transmitted: %" PRIu64 "\n"
-               "Test frames received: %" PRIu64 "\n"
-               "Non test or out-of-order frames received: %" PRIu64 "\n"
-               "Number of timeouts: %" PRIu32 "\n"
-               "Min/Max rtt during test: %.9Lfs/%.9Lfs\n"
-               "Min/Max jitter during test: %.9Lfs/%.9Lfs\n",
-               test_params->f_tx_count,
-               test_params->f_rx_count,
-               test_params->f_rx_other,
-               qm_test->timeout_count,
-               qm_test->rtt_min,
-               qm_test->rtt_max,
-               qm_test->jitter_min,
-               qm_test->jitter_max);
+        printf("Link quality test complete\n");
+        latency_test_results(qm_test, test_params, app_params->tx_mode);
 
 
     // Else, Rx mode
@@ -926,11 +888,11 @@ void latency_test(struct app_params *app_params,
                                       *frame_headers->rx_sub_tlv_value);
 
                         tx_ret = sendto(test_interface->sock_fd,
-                                            frame_headers->tx_buffer,
-                                            frame_headers->length+frame_headers->sub_tlv_size,
-                                            0, 
-                                            (struct sockaddr*)&test_interface->sock_addr,
-                                            sizeof(test_interface->sock_addr));
+                                        frame_headers->tx_buffer,
+                                        frame_headers->length+frame_headers->sub_tlv_size,
+                                        0, 
+                                        (struct sockaddr*)&test_interface->sock_addr,
+                                        sizeof(test_interface->sock_addr));
 
                         if (tx_ret <= 0)
                         {
@@ -1006,7 +968,8 @@ void latency_test(struct app_params *app_params,
                 if (ntohl(*frame_headers->rx_tlv_value) == VALUE_DYINGGASP)
                 {
 
-                    printf("Tx host has quit\n");
+                    printf("\nTx host has quit\n");
+                    latency_test_results(qm_test, test_params, app_params->tx_mode);
                     return;
 
                 }
@@ -1017,18 +980,8 @@ void latency_test(struct app_params *app_params,
 
         } // testBase<=testMax
 
-        printf("Test frames transmitted: %" PRIu64 "\n"
-               "Test frames received: %" PRIu64 "\n"
-               "Non test frames received: %" PRIu64 "\n"
-               "Number of timeouts: %u\n"
-               "Min/Max interval during test %.9Lfs/%.9Lfs\n",
-               test_params->f_tx_count,
-               test_params->f_rx_count,
-               test_params->f_rx_other,
-               qm_test->timeout_count,
-               qm_test->interval_min,
-               qm_test->interval_max);
-
+        printf("Link quality test complete\n");
+        latency_test_results(qm_test, test_params, app_params->tx_mode);
 
     } // End of Tx/Rx
 
@@ -1036,14 +989,15 @@ void latency_test(struct app_params *app_params,
 
 
 
-void speed_test(struct app_params *app_params,
-                struct frame_headers *frame_headers,
-                struct test_interface *test_interface,
-                struct test_params *test_params)
+void speed_test_default(struct app_params *app_params,
+                        struct frame_headers *frame_headers,
+                        struct speed_test *speed_test,
+                        struct test_interface *test_interface,
+                        struct test_params *test_params)
 {
 
     int16_t tx_ret = 0;
-    int16_t rx_len     = 0;
+    int16_t rx_len = 0;
 
     build_tlv(frame_headers, htons(TYPE_TESTFRAME), htonl(VALUE_TEST_SUB_TLV));
 
@@ -1061,7 +1015,7 @@ void speed_test(struct app_params *app_params,
         {    
             // Testing until N bytes sent
             testMax  = &test_params->f_bytes;
-            testBase = &test_params->b_tx;
+            testBase = &speed_test->b_tx;
 
         } else if (test_params->f_count > 0) {   
             // Testing until N frames sent
@@ -1087,30 +1041,30 @@ void speed_test(struct app_params *app_params,
             if ((test_params->ts_current_time.tv_sec - test_params->ts_elapsed_time.tv_sec) >= 1)
             {
                 test_params->s_elapsed += 1;
-                test_params->b_speed   = (((double)test_params->b_tx-test_params->b_tx_prev) * 8) / 1000 / 1000;
-                test_params->b_tx_prev = test_params->b_tx;
-                test_params->f_speed   = (test_params->f_tx_count - test_params->f_tx_count_prev);
+                speed_test->b_speed   = (((double)speed_test->b_tx-speed_test->b_tx_prev) * 8) / 1000 / 1000;
+                speed_test->b_tx_prev = speed_test->b_tx;
+                speed_test->f_speed   = (test_params->f_tx_count - test_params->f_tx_count_prev);
                 test_params->f_tx_count_prev = test_params->f_tx_count;
 
                 printf("%" PRIu64 "\t\t%.2f\t\t%" PRIu64 "\t\t%" PRIu64"\t\t%" PRIu64 "\n",
                        test_params->s_elapsed,
-                       test_params->b_speed,
-                       (test_params->b_tx / 1024) / 1024,
-                       (test_params->f_speed),
+                       speed_test->b_speed,
+                       (speed_test->b_tx / 1024) / 1024,
+                       (speed_test->f_speed),
                        test_params->f_tx_count);
 
-                if (test_params->b_speed > test_params->b_speed_max)
-                    test_params->b_speed_max = test_params->b_speed;
+                if (speed_test->b_speed > speed_test->b_speed_max)
+                    speed_test->b_speed_max = speed_test->b_speed;
 
-                if (test_params->f_speed > test_params->f_speed_max)
-                    test_params->f_speed_max = test_params->f_speed;
+                if (speed_test->f_speed > speed_test->f_speed_max)
+                    speed_test->f_speed_max = speed_test->f_speed;
 
-                test_params->b_speed_avg += test_params->b_speed;
-                test_params->f_speed_avg += test_params->f_speed;
+                speed_test->b_speed_avg += speed_test->b_speed;
+                speed_test->f_speed_avg += speed_test->f_speed;
                 test_params->ts_elapsed_time.tv_sec  = test_params->ts_current_time.tv_sec;
                 test_params->ts_elapsed_time.tv_nsec = test_params->ts_current_time.tv_nsec;
 
-                test_params->b_tx_speed_prev = 0;
+                speed_test->b_tx_speed_prev = 0;
 
             } else {
 
@@ -1131,11 +1085,11 @@ void speed_test(struct app_params *app_params,
                             test_params->f_rx_count    += 1;
                             test_params->f_waiting_ack = false;
 
-                        if (ntohll(*frame_headers->rx_sub_tlv_value) == (test_params->f_index_prev+1)) {
+                        if (ntohll(*frame_headers->rx_sub_tlv_value) == (speed_test->f_speed_max+1)) {
                             test_params->f_rx_ontime  += 1;
-                            test_params->f_index_prev += 1;
+                            speed_test->f_speed_max += 1;
                         } else if (ntohll(*frame_headers->rx_sub_tlv_value) > (test_params->f_rx_count)) {
-                            test_params->f_index_prev = ntohll(*frame_headers->rx_sub_tlv_value);
+                            speed_test->f_speed_max = ntohll(*frame_headers->rx_sub_tlv_value);
                             test_params->f_rx_early += 1;
                         } else if (ntohll(*frame_headers->rx_sub_tlv_value) <= test_params->f_rx_count) {
                             test_params->f_rx_late += 1;
@@ -1144,7 +1098,8 @@ void speed_test(struct app_params *app_params,
                         } else if (ntohs(*frame_headers->rx_tlv_type) == TYPE_APPLICATION &&
                                    ntohl(*frame_headers->rx_tlv_value) == VALUE_DYINGGASP) {
 
-                            printf("Rx host has quit\n");
+                            printf("\nRx host has quit\n");
+                            speed_test_results(speed_test, test_params, app_params->tx_mode);
                             return;
 
                         // Received a non-test frame
@@ -1156,7 +1111,8 @@ void speed_test(struct app_params *app_params,
                     } else if (ntohs(*frame_headers->rx_tlv_type) == TYPE_APPLICATION &&
                                ntohll(*frame_headers->rx_tlv_value) == VALUE_DYINGGASP) {
 
-                        printf("Rx host has quit\n");
+                        printf("\nRx host has quit\n");
+                        speed_test_results(speed_test, test_params, app_params->tx_mode);
                         return;
 
                     // Received a non-test frame
@@ -1171,11 +1127,11 @@ void speed_test(struct app_params *app_params,
                 {
 
                     // Check if a max speed has been configured
-                    if (test_params->b_tx_speed_max != B_TX_SPEED_MAX_DEF)
+                    if (speed_test->b_tx_speed_max != B_TX_SPEED_MAX_DEF)
                     {
 
                         // Check if sending another frame exceeds the max speed configured
-                        if ((test_params->b_tx_speed_prev + test_params->f_size) <= test_params->b_tx_speed_max)
+                        if ((speed_test->b_tx_speed_prev + test_params->f_size_total) <= speed_test->b_tx_speed_max)
                         {
 
 
@@ -1183,10 +1139,10 @@ void speed_test(struct app_params *app_params,
                                           htonll(test_params->f_tx_count+1));
 
                             tx_ret = sendto(test_interface->sock_fd,
-                                                frame_headers->tx_buffer,
-                                                test_params->f_size_total, 0, 
-                                                (struct sockaddr*)&test_interface->sock_addr,
-                                                sizeof(test_interface->sock_addr));
+                                            frame_headers->tx_buffer,
+                                            test_params->f_size_total, 0, 
+                                            (struct sockaddr*)&test_interface->sock_addr,
+                                            sizeof(test_interface->sock_addr));
 
                             if (tx_ret <= 0)
                             {
@@ -1196,8 +1152,8 @@ void speed_test(struct app_params *app_params,
 
 
                             test_params->f_tx_count += 1;
-                            test_params->b_tx += test_params->f_size;
-                            test_params->b_tx_speed_prev += test_params->f_size;
+                            speed_test->b_tx += test_params->f_size_total;
+                            speed_test->b_tx_speed_prev += test_params->f_size_total;
                             if (test_params->f_ack) test_params->f_waiting_ack = true;
 
                         }
@@ -1213,10 +1169,10 @@ void speed_test(struct app_params *app_params,
                                           htonll(test_params->f_tx_count+1));
 
                             tx_ret = sendto(test_interface->sock_fd,
-                                                frame_headers->tx_buffer,
-                                                test_params->f_size_total, 0, 
-                                                (struct sockaddr*)&test_interface->sock_addr,
-                                                sizeof(test_interface->sock_addr));
+                                            frame_headers->tx_buffer,
+                                            test_params->f_size_total, 0, 
+                                            (struct sockaddr*)&test_interface->sock_addr,
+                                            sizeof(test_interface->sock_addr));
 
                             if (tx_ret <= 0)
                             {
@@ -1226,8 +1182,8 @@ void speed_test(struct app_params *app_params,
 
 
                             test_params->f_tx_count += 1;
-                            test_params->b_tx += test_params->f_size;
-                            test_params->b_tx_speed_prev += test_params->f_size;
+                            speed_test->b_tx += test_params->f_size_total;
+                            speed_test->b_tx_speed_prev += test_params->f_size_total;
                             if (test_params->f_ack) test_params->f_waiting_ack = true;
 
                         }
@@ -1239,10 +1195,10 @@ void speed_test(struct app_params *app_params,
                                       htonll(test_params->f_tx_count+1));
 
                         tx_ret = sendto(test_interface->sock_fd,
-                                            frame_headers->tx_buffer,
-                                            test_params->f_size_total, 0, 
-                                            (struct sockaddr*)&test_interface->sock_addr,
-                                            sizeof(test_interface->sock_addr));
+                                        frame_headers->tx_buffer,
+                                        test_params->f_size_total, 0, 
+                                        (struct sockaddr*)&test_interface->sock_addr,
+                                        sizeof(test_interface->sock_addr));
 
                         if (tx_ret <= 0)
                         {
@@ -1252,8 +1208,8 @@ void speed_test(struct app_params *app_params,
 
 
                         test_params->f_tx_count += 1;
-                        test_params->b_tx += test_params->f_size;
-                        test_params->b_tx_speed_prev += test_params->f_size;
+                        speed_test->b_tx += test_params->f_size_total;
+                        speed_test->b_tx_speed_prev += test_params->f_size_total;
                         if (test_params->f_ack) test_params->f_waiting_ack = true;
 
                     }
@@ -1267,30 +1223,12 @@ void speed_test(struct app_params *app_params,
 
         if (test_params->s_elapsed > 0)
         {
-            test_params->b_speed_avg = (test_params->b_speed_avg/test_params->s_elapsed);
-            test_params->f_speed_avg = (test_params->f_speed_avg/test_params->s_elapsed);
+            speed_test->b_speed_avg = (speed_test->b_speed_avg/test_params->s_elapsed);
+            speed_test->f_speed_avg = (speed_test->f_speed_avg/test_params->s_elapsed);
         }
 
-        printf("Test frames transmitted: %" PRIu64 "\n"
-               "Test frames received: %" PRIu64 "\n"
-               "Non test frames received: %" PRIu64 "\n"
-               "In order ACK frames received: %" PRIu64 "\n"
-               "Out of order ACK frames received early: %" PRIu64 "\n"
-               "Out of order ACK frames received late: %" PRIu64 "\n"
-               "Maximum speed during test: %.2fMbps, %" PRIu64 "Fps\n"
-               "Average speed during test: %.2LfMbps, %" PRIu64 "Fps\n"
-               "Data transmitted during test: %" PRIu64 "MBs\n",
-               test_params->f_tx_count,
-               test_params->f_rx_count,
-               test_params->f_rx_other,
-               test_params->f_rx_ontime,
-               test_params->f_rx_early,
-               test_params->f_rx_late,
-               test_params->b_speed_max,
-               test_params->f_speed_max,
-               test_params->b_speed_avg,
-               test_params->f_speed_avg,
-               (test_params->b_tx / 1024) / 1024);
+        printf("Speed test complete\n");
+        speed_test_results(speed_test, test_params, app_params->tx_mode);
 
 
     // Else, Rx mode
@@ -1306,7 +1244,7 @@ void speed_test(struct app_params *app_params,
         if (test_params->f_bytes > 0)
         {
             testMax  = &test_params->f_bytes;
-            testBase = &test_params->b_rx;
+            testBase = &speed_test->b_rx;
 
         // Testing until N frames received
         } else if (test_params->f_count > 0) {
@@ -1359,26 +1297,26 @@ void speed_test(struct app_params *app_params,
             if ((test_params->ts_current_time.tv_sec-test_params->ts_elapsed_time.tv_sec) >= 1)
             {
                 test_params->s_elapsed += 1;
-                test_params->b_speed   = (double)(test_params->b_rx-test_params->b_rx_prev) * 8 / 1000000;
-                test_params->b_rx_prev = test_params->b_rx;
-                test_params->f_speed   = (test_params->f_rx_count - test_params->f_rx_count_prev);
+                speed_test->b_speed   = (double)(speed_test->b_rx - speed_test->b_rx_prev) * 8 / 1000000;
+                speed_test->b_rx_prev = speed_test->b_rx;
+                speed_test->f_speed   = (test_params->f_rx_count - test_params->f_rx_count_prev);
                 test_params->f_rx_count_prev = test_params->f_rx_count;
 
                 printf("%" PRIu64 "\t\t%.2f\t\t%" PRIu64 "\t\t%" PRIu64 "\t\t%" PRIu64 "\n",
                        test_params->s_elapsed,
-                       test_params->b_speed,
-                       (test_params->b_rx / 1024) / 1024,
-                       (test_params->f_speed),
+                       speed_test->b_speed,
+                       (speed_test->b_rx / 1024) / 1024,
+                       (speed_test->f_speed),
                        test_params->f_rx_count);
 
-                if (test_params->b_speed > test_params->b_speed_max)
-                    test_params->b_speed_max = test_params->b_speed;
+                if (speed_test->b_speed > speed_test->b_speed_max)
+                    speed_test->b_speed_max = speed_test->b_speed;
 
-                if (test_params->f_speed > test_params->f_speed_max)
-                    test_params->f_speed_max = test_params->f_speed;
+                if (speed_test->f_speed > speed_test->f_speed_max)
+                    speed_test->f_speed_max = speed_test->f_speed;
 
-                test_params->b_speed_avg += test_params->b_speed;
-                test_params->f_speed_avg += test_params->f_speed;
+                speed_test->b_speed_avg += speed_test->b_speed;
+                speed_test->f_speed_avg += speed_test->f_speed;
                 test_params->ts_elapsed_time.tv_sec = test_params->ts_current_time.tv_sec;
                 test_params->ts_elapsed_time.tv_nsec = test_params->ts_current_time.tv_nsec;
 
@@ -1398,16 +1336,19 @@ void speed_test(struct app_params *app_params,
                     ntohs(*frame_headers->rx_sub_tlv_type) == TYPE_FRAMEINDEX))
                 {
 
+                    // If a VLAN tag is used Linux helpfully strips it off
+                    if (frame_headers->vlan_id != VLAN_ID_DEF) rx_len += 4;
+
                     // Update test stats
                     test_params->f_rx_count += 1;
-                    test_params->b_rx+=(rx_len-frame_headers->length);
+                    speed_test->b_rx += (rx_len - frame_headers->length);
 
                     // Record if the frame is in-order, early or late
-                    if (likely(ntohll(*frame_headers->rx_sub_tlv_value) == (test_params->f_index_prev + 1))) {
+                    if (likely(ntohll(*frame_headers->rx_sub_tlv_value) == (speed_test->f_speed_max + 1))) {
                         test_params->f_rx_ontime  += 1;
-                        test_params->f_index_prev += 1;
+                        speed_test->f_speed_max += 1;
                     } else if (ntohll(*frame_headers->rx_sub_tlv_value) > (test_params->f_rx_count)) {
-                        test_params->f_index_prev = ntohll(*frame_headers->rx_sub_tlv_value);
+                        speed_test->f_speed_max = ntohll(*frame_headers->rx_sub_tlv_value);
                         test_params->f_rx_early   += 1;
                     } else if (ntohll(*frame_headers->rx_sub_tlv_value) <= test_params->f_rx_count) {
                         test_params->f_rx_late    += 1;
@@ -1421,10 +1362,10 @@ void speed_test(struct app_params *app_params,
                                       *frame_headers->rx_sub_tlv_value);
 
                         tx_ret = sendto(test_interface->sock_fd,
-                                            frame_headers->tx_buffer,
-                                            frame_headers->length+frame_headers->sub_tlv_size, 0, 
-                                            (struct sockaddr*)&test_interface->sock_addr,
-                                            sizeof(test_interface->sock_addr));
+                                        frame_headers->tx_buffer,
+                                        frame_headers->length+frame_headers->sub_tlv_size, 0, 
+                                        (struct sockaddr*)&test_interface->sock_addr,
+                                        sizeof(test_interface->sock_addr));
 
                         if (tx_ret <= 0)
                         {
@@ -1446,7 +1387,8 @@ void speed_test(struct app_params *app_params,
                 if (unlikely(ntohl(*frame_headers->rx_tlv_value) == VALUE_DYINGGASP))
                 {
 
-                    printf("Tx host has quit\n");
+                    printf("\nTx host has quit\n");
+                    speed_test_results(speed_test, test_params, app_params->tx_mode);
                     return;
 
                 }
@@ -1460,44 +1402,28 @@ void speed_test(struct app_params *app_params,
 
         if (test_params->s_elapsed > 0)
         {
-            test_params->b_speed_avg = (test_params->b_speed_avg/test_params->s_elapsed);
-            test_params->f_speed_avg = (test_params->f_speed_avg/test_params->s_elapsed);
+            speed_test->b_speed_avg = (speed_test->b_speed_avg/test_params->s_elapsed);
+            speed_test->f_speed_avg = (speed_test->f_speed_avg/test_params->s_elapsed);
         }
 
-        printf("Test frames transmitted: %" PRIu64 "\n"
-               "Test frames received: %" PRIu64 "\n"
-               "Non test frames received: %" PRIu64 "\n"
-               "In order test frames received: %" PRIu64 "\n"
-               "Out of order test frames received early: %" PRIu64 "\n"
-               "Out of order test frames received late: %" PRIu64 "\n"
-               "Maximum speed during test: %.2fMbps, %" PRIu64 "Fps\n"
-               "Average speed during test: %.2LfMbps, %" PRIu64 "Fps\n"
-               "Data received during test: %" PRIu64 "MBs\n",
-               test_params->f_tx_count,
-               test_params->f_rx_count,
-               test_params->f_rx_other,
-               test_params->f_rx_ontime,
-               test_params->f_rx_early,
-               test_params->f_rx_late,
-               test_params->b_speed_max,
-               test_params->f_speed_max,
-               test_params->b_speed_avg,
-               test_params->f_speed_avg,
-               (test_params->b_rx / 1024) / 1024);
+        printf("Speed test complete\n");
+        speed_test_results(speed_test, test_params, app_params->tx_mode);
 
     }
 
- }
+}
 
 
 
 void send_custom_frame(struct app_params *app_params,
                        struct frame_headers *frame_headers,
+                       struct speed_test *speed_test,
                        struct test_interface *test_interface,
                        struct test_params *test_params)
 {
 
     int16_t tx_ret = 0;
+    int16_t rx_len = 0;
 
     printf("Seconds\t\tMbps Tx\t\tMBs Tx\t\tFrmTx/s\t\tFrames Tx\n");
 
@@ -1509,7 +1435,7 @@ void send_custom_frame(struct app_params *app_params,
     {    
         // Testing until N bytes sent
         testMax  = &test_params->f_bytes;
-        testBase = &test_params->b_tx;
+        testBase = &speed_test->b_tx;
 
     } else if (test_params->f_count > 0) {   
         // Testing until N frames sent
@@ -1535,48 +1461,69 @@ void send_custom_frame(struct app_params *app_params,
         if ((test_params->ts_current_time.tv_sec - test_params->ts_elapsed_time.tv_sec) >= 1)
         {
             test_params->s_elapsed += 1;
-            test_params->b_speed   = ((double)(test_params->b_tx - test_params->b_tx_prev) * 8) / 1000 / 1000;
-            test_params->b_tx_prev = test_params->b_tx;
-            test_params->f_speed   = (test_params->f_tx_count - test_params->f_tx_count_prev);
+            speed_test->b_speed   = ((double)(speed_test->b_tx - speed_test->b_tx_prev) * 8) / 1000 / 1000;
+            speed_test->b_tx_prev = speed_test->b_tx;
+            speed_test->f_speed   = (test_params->f_tx_count - test_params->f_tx_count_prev);
             test_params->f_tx_count_prev = test_params->f_tx_count;
 
             printf("%" PRIu64 "\t\t%.2f\t\t%" PRIu64 "\t\t%" PRIu64"\t\t%" PRIu64 "\n",
                    test_params->s_elapsed,
-                   test_params->b_speed,
-                   (test_params->b_tx / 1024) / 1024,
-                   (test_params->f_speed),
+                   speed_test->b_speed,
+                   (speed_test->b_tx / 1024) / 1024,
+                   (speed_test->f_speed),
                    test_params->f_tx_count);
 
-            if (test_params->b_speed > test_params->b_speed_max)
-                test_params->b_speed_max = test_params->b_speed;
+            if (speed_test->b_speed > speed_test->b_speed_max)
+                speed_test->b_speed_max = speed_test->b_speed;
 
-            if (test_params->f_speed > test_params->f_speed_max)
-                test_params->f_speed_max = test_params->f_speed;
+            if (speed_test->f_speed > speed_test->f_speed_max)
+                speed_test->f_speed_max = speed_test->f_speed;
 
-            test_params->b_speed_avg += test_params->b_speed;
-            test_params->f_speed_avg += test_params->f_speed;
+            speed_test->b_speed_avg += speed_test->b_speed;
+            speed_test->f_speed_avg += speed_test->f_speed;
             test_params->ts_elapsed_time.tv_sec  = test_params->ts_current_time.tv_sec;
             test_params->ts_elapsed_time.tv_nsec = test_params->ts_current_time.tv_nsec;
 
-            test_params->b_tx_speed_prev = 0;
+            speed_test->b_tx_speed_prev = 0;
 
         } else {
 
+            // Poll has been disabled in favour of a non-blocking recvfrom (for now)
+            rx_len = recvfrom(test_interface->sock_fd, frame_headers->rx_buffer,
+                              test_params->f_size_total, MSG_DONTWAIT, NULL, NULL);
+
+            if (rx_len > 0) {
+
+                // Check for dying gasp from Rx host
+                if (ntohs(*frame_headers->rx_tlv_type) == TYPE_APPLICATION &&
+                    ntohll(*frame_headers->rx_tlv_value) == VALUE_DYINGGASP) {
+
+                    printf("\nRx host has quit\n");
+                    speed_test_results(speed_test, test_params, app_params->tx_mode);
+                    return;
+
+                // Received a non-test frame
+                } else {
+                    test_params->f_rx_other += 1;
+                }
+
+            }
+
 
             // Check if a max speed has been configured
-            if (test_params->b_tx_speed_max != B_TX_SPEED_MAX_DEF)
+            if (speed_test->b_tx_speed_max != B_TX_SPEED_MAX_DEF)
             {
 
                 // Check if sending another frame exceeds the max speed configured
-                if ((test_params->b_tx_speed_prev + test_params->f_payload_size) <= test_params->b_tx_speed_max)
+                if ((speed_test->b_tx_speed_prev + speed_test->f_payload_size) <= speed_test->b_tx_speed_max)
                 {
 
 
                     tx_ret = sendto(test_interface->sock_fd,
-                                        test_params->f_payload,
-                                        test_params->f_payload_size, 0, 
-                                        (struct sockaddr*)&test_interface->sock_addr,
-                                        sizeof(test_interface->sock_addr));
+                                    speed_test->f_payload,
+                                    speed_test->f_payload_size, 0, 
+                                    (struct sockaddr*)&test_interface->sock_addr,
+                                    sizeof(test_interface->sock_addr));
 
                     if (tx_ret <= 0)
                     {
@@ -1586,8 +1533,8 @@ void send_custom_frame(struct app_params *app_params,
 
 
                     test_params->f_tx_count += 1;
-                    test_params->b_tx += test_params->f_payload_size;
-                    test_params->b_tx_speed_prev += test_params->f_payload_size;
+                    speed_test->b_tx += speed_test->f_payload_size;
+                    speed_test->b_tx_speed_prev += speed_test->f_payload_size;
 
                 }
 
@@ -1599,10 +1546,10 @@ void send_custom_frame(struct app_params *app_params,
                 {
 
                     tx_ret = sendto(test_interface->sock_fd,
-                                        test_params->f_payload,
-                                        test_params->f_payload_size, 0, 
-                                        (struct sockaddr*)&test_interface->sock_addr,
-                                        sizeof(test_interface->sock_addr));
+                                    speed_test->f_payload,
+                                    speed_test->f_payload_size, 0, 
+                                    (struct sockaddr*)&test_interface->sock_addr,
+                                    sizeof(test_interface->sock_addr));
 
                     if (tx_ret <= 0)
                     {
@@ -1612,8 +1559,8 @@ void send_custom_frame(struct app_params *app_params,
 
 
                     test_params->f_tx_count += 1;
-                    test_params->b_tx += test_params->f_payload_size;
-                    test_params->b_tx_speed_prev += test_params->f_payload_size;
+                    speed_test->b_tx += speed_test->f_payload_size;
+                    speed_test->b_tx_speed_prev += speed_test->f_payload_size;
 
                 }
 
@@ -1621,10 +1568,10 @@ void send_custom_frame(struct app_params *app_params,
             } else {
 
                 tx_ret = sendto(test_interface->sock_fd,
-                                    test_params->f_payload,
-                                    test_params->f_payload_size, 0, 
-                                    (struct sockaddr*)&test_interface->sock_addr,
-                                    sizeof(test_interface->sock_addr));
+                                speed_test->f_payload,
+                                speed_test->f_payload_size, 0, 
+                                (struct sockaddr*)&test_interface->sock_addr,
+                                sizeof(test_interface->sock_addr));
 
                 if (tx_ret <= 0)
                 {
@@ -1634,8 +1581,8 @@ void send_custom_frame(struct app_params *app_params,
 
 
                 test_params->f_tx_count += 1;
-                test_params->b_tx += test_params->f_payload_size;
-                test_params->b_tx_speed_prev += test_params->f_payload_size;
+                speed_test->b_tx += speed_test->f_payload_size;
+                speed_test->b_tx_speed_prev += speed_test->f_payload_size;
             }
 
         } // End of ts_current_time.tv_sec - ts_elapsed_time.tv_sec
@@ -1645,30 +1592,11 @@ void send_custom_frame(struct app_params *app_params,
 
     if (test_params->s_elapsed > 0)
     {
-        test_params->b_speed_avg = (test_params->b_speed_avg/test_params->s_elapsed);
-        test_params->f_speed_avg = (test_params->f_speed_avg/test_params->s_elapsed);
+        speed_test->b_speed_avg = (speed_test->b_speed_avg/test_params->s_elapsed);
+        speed_test->f_speed_avg = (speed_test->f_speed_avg/test_params->s_elapsed);
     }
 
-    printf("Test frames transmitted: %" PRIu64 "\n"
-           "Test frames received: %" PRIu64 "\n"
-           "Non test frames received: %" PRIu64 "\n"
-           "In order ACK frames received: %" PRIu64 "\n"
-           "Out of order ACK frames received early: %" PRIu64 "\n"
-           "Out of order ACK frames received late: %" PRIu64 "\n"
-           "Maximum speed during test: %.2fMbps, %" PRIu64 "Fps\n"
-           "Average speed during test: %.2LfMbps, %" PRIu64 "Fps\n"
-           "Data transmitted during test: %" PRIu64 "MBs\n",
-           test_params->f_tx_count,
-           test_params->f_rx_count,
-           test_params->f_rx_other,
-           test_params->f_rx_ontime,
-           test_params->f_rx_early,
-           test_params->f_rx_late,
-           test_params->b_speed_max,
-           test_params->f_speed_max,
-           test_params->b_speed_avg,
-           test_params->f_speed_avg,
-           (test_params->b_tx / 1024) / 1024);
-
+    printf("Speed test complete\n");
+    speed_test_results(speed_test, test_params, app_params->tx_mode);
 
  }
