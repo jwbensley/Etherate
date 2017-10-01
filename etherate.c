@@ -76,12 +76,13 @@
 
 int main(int argc, char *argv[]) {
 
+    struct app_params app_params;
     struct frame_headers frame_headers;
-    struct test_interface test_interface;
-    struct test_params test_params;
     struct mtu_test mtu_test;
     struct qm_test qm_test;
-    struct app_params app_params;
+    struct speed_test speed_test;
+    struct test_interface test_interface;
+    struct test_params test_params;
 
     uint8_t testing = true;
     while(testing == true)
@@ -93,8 +94,8 @@ int main(int argc, char *argv[]) {
          ******************************************************* DEFAULT VALUES
          */
 
-        set_default_values(&app_params, &frame_headers, &mtu_test,
-                           &test_interface, &test_params, &qm_test);
+        set_default_values(&app_params, &frame_headers, &mtu_test, &qm_test,
+                           &speed_test, &test_interface, &test_params);
 
 
 
@@ -103,11 +104,11 @@ int main(int argc, char *argv[]) {
          */
 
         int16_t cli_ret = cli_args(argc, argv, &app_params, &frame_headers,
-                                       &test_interface, &test_params, &mtu_test,
-                                       &qm_test);
+                                   &mtu_test, &qm_test, &speed_test,
+                                   &test_interface, &test_params);
 
         if (cli_ret != EXIT_SUCCESS) {
-            reset_app(&frame_headers, &test_interface, &test_params, &qm_test);
+            reset_app(&frame_headers, &qm_test, &speed_test, &test_interface);
         
             if (cli_ret == RET_EXIT_APP) {
                 return EXIT_SUCCESS;
@@ -119,7 +120,7 @@ int main(int argc, char *argv[]) {
         // Check for root privs, low level socket access is required
         if (getuid() != 0) {
             printf("Must be root to use this program!\n");
-            reset_app(&frame_headers, &test_interface, &test_params, &qm_test);
+            reset_app(&frame_headers, &qm_test, &speed_test, &test_interface);
             return EX_NOPERM;
         }
 
@@ -131,22 +132,24 @@ int main(int argc, char *argv[]) {
 
         if (setup_socket(&test_interface) != EXIT_SUCCESS) {
             int32_t errnum = errno;
-            reset_app(&frame_headers, &test_interface, &test_params, &qm_test);
+            reset_app(&frame_headers, &qm_test, &speed_test, &test_interface);
             return errnum;
         }
 
         if (setup_socket_interface(&frame_headers, &test_interface, &test_params) != EXIT_SUCCESS)                                             
         {
             int32_t errnum = errno;
-            reset_app(&frame_headers, &test_interface, &test_params, &qm_test);
+            reset_app(&frame_headers, &qm_test, &speed_test, &test_interface);
             return errnum;
         }
-        
+
+        update_frame_size(&frame_headers, &test_interface, &test_params);
+
         // Set the network interface to promiscuos mode
         if (set_interface_promisc(&test_interface) != EXIT_SUCCESS)
         {
             int32_t errnum = errno;
-            reset_app(&frame_headers, &test_interface, &test_params, &qm_test);
+            reset_app(&frame_headers, &qm_test, &speed_test, &test_interface);
             return errnum;
         }
 
@@ -158,7 +161,7 @@ int main(int argc, char *argv[]) {
         if (setup_frame(&app_params, &frame_headers, &test_interface, &test_params) != EXIT_SUCCESS)
         {
             int32_t errnum = errno;
-            reset_app(&frame_headers, &test_interface, &test_params, &qm_test);
+            reset_app(&frame_headers, &qm_test, &speed_test, &test_interface);
             return errnum;
         }
 
@@ -169,8 +172,8 @@ int main(int argc, char *argv[]) {
          */
 
         if (app_params.tx_sync == true)
-            sync_settings(&app_params, &frame_headers, &test_interface,
-                          &test_params, &mtu_test, &qm_test);
+            sync_settings(&app_params, &frame_headers, &mtu_test, &qm_test,
+                          &speed_test, &test_interface, &test_params);
 
         // Pause to allow the RX host to process the sent settings
         sleep(2);
@@ -206,15 +209,17 @@ int main(int argc, char *argv[]) {
             latency_test(&app_params, &frame_headers, &test_interface,
                          &test_params, &qm_test);
 
-        } else if (test_params.f_payload_size > 0) {
+        } else if (speed_test.f_payload_size > 0) {
 
-            send_custom_frame(&app_params, &frame_headers, &test_interface,
-                              &test_params);
+            speed_test.enabled = true;
+            send_custom_frame(&app_params, &frame_headers, &speed_test,
+                              &test_interface, &test_params);
 
-        }else {
+        } else {
 
-            speed_test(&app_params, &frame_headers, &test_interface,
-                       &test_params);
+            speed_test.enabled = true;
+            speed_test_default(&app_params, &frame_headers, &speed_test,
+                               &test_interface, &test_params);
 
         }
         
@@ -227,7 +232,7 @@ int main(int argc, char *argv[]) {
             printf("Error leaving promiscuous mode\n");
         }
 
-        reset_app(&frame_headers, &test_interface, &test_params, &qm_test);
+        reset_app(&frame_headers, &qm_test, &speed_test, &test_interface);
 
         // End the testing loop if TX host
         if (app_params.tx_mode == true) testing = false;

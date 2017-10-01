@@ -1,3 +1,20 @@
+
+-----Etherate 1.15 2017-10
+
+[FEATURE] Added enhancement #35; Add test stats output when stopping with CTRL+C
+
+[MINOR] Fixed issue #34; MTU test frame count
+
+[MINOR] Fixed issue #27; VLAN tag not included frame size and rate limit
+
+[MINOR] Fixed issue #26; Rx host shows Rx rate lower that Tx host's Tx rate
+
+[MINOR] Fixed issue #24; Doubling of stats on Rx host
+
+[MINOR] Code tidy up with typos and styling
+
+
+
 -----Etherate 1.14 2017-09
 
 [MAJOR] Fixed issue 22; Test not starting

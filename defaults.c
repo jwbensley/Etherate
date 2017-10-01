@@ -40,51 +40,59 @@
 void set_default_values(struct app_params *app_params,
                         struct frame_headers *frame_headers,
                         struct mtu_test *mtu_test,
+                        struct qm_test *qm_test,
+                        struct speed_test *speed_test,
                         struct test_interface *test_interface,
-                        struct test_params * test_params,
-                        struct qm_test *qm_test)
+                        struct test_params * test_params)
 {
 
+    papp_params             = app_params;
+    app_params->broadcast   = true;
+    app_params->tx_mode     = true;
+    app_params->tx_sync     = true;
+    app_params->tx_delay    = TX_DELAY_DEF;
+
+
     pframe_headers                   = frame_headers;
-    frame_headers->src_mac[0]     = 0x00;
-    frame_headers->src_mac[1]     = 0x00;
-    frame_headers->src_mac[2]     = 0x5E;
-    frame_headers->src_mac[3]     = 0x00;
-    frame_headers->src_mac[4]     = 0x00;
-    frame_headers->src_mac[5]     = 0x01;
-    frame_headers->dst_mac[0]       = 0x00;
-    frame_headers->dst_mac[1]       = 0x00;
-    frame_headers->dst_mac[2]       = 0x5E;
-    frame_headers->dst_mac[3]       = 0x00;
-    frame_headers->dst_mac[4]       = 0x00;
-    frame_headers->dst_mac[5]       = 0x02;
+    frame_headers->src_mac[0]        = 0x00;
+    frame_headers->src_mac[1]        = 0x00;
+    frame_headers->src_mac[2]        = 0x5E;
+    frame_headers->src_mac[3]        = 0x00;
+    frame_headers->src_mac[4]        = 0x00;
+    frame_headers->src_mac[5]        = 0x01;
+    frame_headers->dst_mac[0]        = 0x00;
+    frame_headers->dst_mac[1]        = 0x00;
+    frame_headers->dst_mac[2]        = 0x5E;
+    frame_headers->dst_mac[3]        = 0x00;
+    frame_headers->dst_mac[4]        = 0x00;
+    frame_headers->dst_mac[5]        = 0x02;
     frame_headers->length            = HEADERS_LEN_DEF;
-    frame_headers->etype         = ETYPE_DEF;
+    frame_headers->etype             = ETYPE_DEF;
     frame_headers->pcp               = PCP_DEF;
     frame_headers->vlan_id           = VLAN_ID_DEF;
     frame_headers->vlan_dei          = 0;
     frame_headers->qinq_id           = QINQ_ID_DEF;
     frame_headers->qinq_pcp          = QINQ_PCP_DEF;
     frame_headers->qinq_dei          = 0;
-    frame_headers->lsp_src_mac[0] = 0x00;
-    frame_headers->lsp_src_mac[1] = 0x00;
-    frame_headers->lsp_src_mac[2] = 0x00;
-    frame_headers->lsp_src_mac[3] = 0x00;
-    frame_headers->lsp_src_mac[4] = 0x00;
-    frame_headers->lsp_src_mac[5] = 0x00;
-    frame_headers->lsp_dst_mac[0]   = 0x00;
-    frame_headers->lsp_dst_mac[1]   = 0x00;
-    frame_headers->lsp_dst_mac[2]   = 0x00;
-    frame_headers->lsp_dst_mac[3]   = 0x00;
-    frame_headers->lsp_dst_mac[4]   = 0x00;
-    frame_headers->lsp_dst_mac[5]   = 0x00;
+    frame_headers->lsp_src_mac[0]    = 0x00;
+    frame_headers->lsp_src_mac[1]    = 0x00;
+    frame_headers->lsp_src_mac[2]    = 0x00;
+    frame_headers->lsp_src_mac[3]    = 0x00;
+    frame_headers->lsp_src_mac[4]    = 0x00;
+    frame_headers->lsp_src_mac[5]    = 0x00;
+    frame_headers->lsp_dst_mac[0]    = 0x00;
+    frame_headers->lsp_dst_mac[1]    = 0x00;
+    frame_headers->lsp_dst_mac[2]    = 0x00;
+    frame_headers->lsp_dst_mac[3]    = 0x00;
+    frame_headers->lsp_dst_mac[4]    = 0x00;
+    frame_headers->lsp_dst_mac[5]    = 0x00;
     frame_headers->mpls_labels       = 0;
     for (uint16_t i = 0; i<MPLS_LABELS_MAX; i += 1) {
         frame_headers->mpls_label[i] = 0;
         frame_headers->mpls_exp[i]   = 0;
         frame_headers->mpls_ttl[i]   = 0;
     }
-    frame_headers->pwe_ctrl_word  = 0;
+    frame_headers->pwe_ctrl_word     = 0;
     frame_headers->tlv_size          = sizeof(uint8_t) + sizeof(uint16_t) +
                                        sizeof(uint32_t);
     frame_headers->sub_tlv_size      = frame_headers->tlv_size + 
@@ -95,51 +103,13 @@ void set_default_values(struct app_params *app_params,
     frame_headers->rx_buffer = (uint8_t*)calloc(1, F_SIZE_MAX);
     frame_headers->tx_buffer = (uint8_t*)calloc(1, F_SIZE_MAX);
 
-    ptest_interface          = test_interface;
-    test_interface->if_index = IF_INDEX_DEF;
-    for (uint16_t i = 0; i<IFNAMSIZ; i += 1) {
-        test_interface->if_name[i] = 0;
-    }
-    test_interface->sock_fd = SOCK_FD_DEF;
 
-
-    ptest_params                 = test_params;
-    test_params->f_size          = F_SIZE_DEF;
-    test_params->f_size_total    = F_SIZE_DEF + frame_headers->length;
-    test_params->f_duration      = F_DURATION_DEF;
-    test_params->f_count         = F_COUNT_DEF; 
-    test_params->f_bytes         = F_BYTES_DEF;
-    test_params->f_payload       = (uint8_t*)calloc(1, F_SIZE_MAX);
-    test_params->f_payload_size  = 0;
-    test_params->s_elapsed       = 0;
-    test_params->b_tx_speed_max  = B_TX_SPEED_MAX_DEF;
-    test_params->b_tx_speed_prev = 0;
-    test_params->f_tx_count      = 0;
-    test_params->f_tx_count_prev = 0;
-    test_params->f_tx_count_max  = F_TX_COUNT_MAX_DEF;
-    test_params->f_speed         = 0;
-    test_params->f_speed_avg     = 0;
-    test_params->f_speed_max     = 0;
-    test_params->b_tx            = 0;
-    test_params->b_tx_prev       = 0;
-    test_params->f_rx_count      = 0;
-    test_params->f_rx_count_prev = 0;
-    test_params->b_rx            = 0;
-    test_params->b_rx_prev       = 0;
-    test_params->f_index_prev    = 0;
-    test_params->f_rx_ontime     = 0;
-    test_params->f_rx_early      = 0;
-    test_params->f_rx_late       = 0;
-    test_params->f_rx_other      = 0;
-    test_params->b_speed         = 0;
-    test_params->b_speed_max     = 0;
-    test_params->b_speed_avg     = 0;
-    test_params->f_ack           = false;
-    test_params->f_waiting_ack   = false;
-
+    pmtu_test            = mtu_test;
     mtu_test->enabled    = false;
+    mtu_test->largest    = 0;
     mtu_test->mtu_tx_min = 1400;
     mtu_test->mtu_tx_max = 1500;
+
 
     pqm_test                  = qm_test;
     qm_test->enabled          = false;
@@ -164,13 +134,55 @@ void set_default_values(struct app_params *app_params,
     qm_test->timeout_nsec     = 0;
     qm_test->timeout_sec      = 0;
     qm_test->timeout_count    = 0;
-    qm_test->delay_results   = (double*)calloc(qm_test->delay_test_count,
-                                               sizeof(double));
+    qm_test->delay_results    = (double*)calloc(qm_test->delay_test_count,
+                                                sizeof(double));
 
-    app_params->broadcast   = true;
-    app_params->tx_mode     = true;
-    app_params->tx_sync     = true;
-    app_params->tx_delay    = TX_DELAY_DEF;
+
+    pspeed_test                 = speed_test;
+    speed_test->enabled         = false;
+    speed_test->b_rx            = 0;
+    speed_test->b_rx_prev       = 0;
+    speed_test->b_tx            = 0;
+    speed_test->b_tx_prev       = 0;
+    speed_test->b_tx_speed_max  = B_TX_SPEED_MAX_DEF;
+    speed_test->b_tx_speed_prev = 0;
+    speed_test->f_payload       = (uint8_t*)calloc(1, F_SIZE_MAX);
+    speed_test->f_payload_size  = 0;
+    speed_test->f_index_prev    = 0;
+    speed_test->f_speed         = 0;
+    speed_test->f_speed_avg     = 0;
+    speed_test->f_speed_max     = 0;
+    speed_test->b_speed         = 0;
+    speed_test->b_speed_max     = 0;
+    speed_test->b_speed_avg     = 0;
+
+
+    ptest_interface          = test_interface;
+    test_interface->if_index = IF_INDEX_DEF;
+    for (uint16_t i = 0; i<IFNAMSIZ; i += 1) {
+        test_interface->if_name[i] = 0;
+    }
+    test_interface->sock_fd = SOCK_FD_DEF;
+
+
+    ptest_params                 = test_params;
+    test_params->f_size          = F_SIZE_DEF;
+    test_params->f_size_total    = F_SIZE_DEF + frame_headers->length;
+    test_params->f_duration      = F_DURATION_DEF;
+    test_params->f_count         = F_COUNT_DEF; 
+    test_params->f_bytes         = F_BYTES_DEF;
+    test_params->s_elapsed       = 0;
+    test_params->f_tx_count      = 0;
+    test_params->f_tx_count_prev = 0;
+    test_params->f_tx_count_max  = F_TX_COUNT_MAX_DEF;
+    test_params->f_rx_count      = 0;
+    test_params->f_rx_count_prev = 0;
+    test_params->f_rx_ontime     = 0;
+    test_params->f_rx_early      = 0;
+    test_params->f_rx_late       = 0;
+    test_params->f_rx_other      = 0;
+    test_params->f_ack           = false;
+    test_params->f_waiting_ack   = false;
     
 }
 
@@ -285,8 +297,8 @@ int16_t setup_socket_interface(struct frame_headers *frame_headers,
 
 
     // Link layer socket setup
-    test_interface->sock_addr.sll_family   = PF_PACKET;    
-    test_interface->sock_addr.sll_protocol = htons(ETH_P_IP);
+    test_interface->sock_addr.sll_family   = AF_PACKET;    
+    test_interface->sock_addr.sll_protocol = htons(ETH_P_ALL);
     test_interface->sock_addr.sll_ifindex  = test_interface->if_index;    
     test_interface->sock_addr.sll_hatype   = ARPHRD_ETHER;
     test_interface->sock_addr.sll_pkttype  = PACKET_OTHERHOST;
@@ -300,30 +312,19 @@ int16_t setup_socket_interface(struct frame_headers *frame_headers,
     test_interface->sock_addr.sll_addr[6]  = 0x00;
     test_interface->sock_addr.sll_addr[7]  = 0x00;
 
-    build_headers(frame_headers);
+    // Bind the socket to the physical interface to remove duplicate frames
+    // when VLAN tagged sub-interfaces are present
+    int32_t sock_bind = bind(test_interface->sock_fd,
+                             (struct sockaddr *)&test_interface->sock_addr,
+                             sizeof(test_interface->sock_addr));
 
-    // Total size of the frame data (paylod size+headers), this excludes the
-    // preamble & start frame delimiter, FCS and inter frame gap
-    test_params->f_size_total = test_params->f_size + frame_headers->length;
-
-
-    int16_t PHY_MTU = get_interface_mtu_by_name(test_interface);
-    
-    if (PHY_MTU <= 0) {
-
-        printf("\nPhysical interface MTU unknown, "
-               "test might exceed physical MTU!\n\n");
-
-    } else if (test_params->f_size_total > PHY_MTU + 14) {
-        
-        printf("\nPhysical interface MTU (%d with headers) is less than\n"
-               "the test frame size (%u with headers). Test frames shall\n"
-               "be limited to the interface MTU size\n\n",
-               PHY_MTU+14, test_params->f_size_total);
-        
-        test_params->f_size_total = PHY_MTU + 14;
-
+    if (sock_bind == -1) {
+        perror("Can't bind socket to interface ");
+        return EXIT_FAILURE;
     }
+
+ 
+    build_headers(frame_headers);
 
     return EXIT_SUCCESS;
 

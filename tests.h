@@ -54,13 +54,15 @@ void latency_test(struct app_params *app_params,
                   struct qm_test *qm_test);
 
 // Run a speedtest (which is the default test operation if none is specified)
-void speed_test(struct app_params *app_params,
-                struct frame_headers *frame_headers,
-                struct test_interface *test_interface,
-                struct test_params *test_params);
+void speed_test_default(struct app_params *app_params,
+                        struct frame_headers *frame_headers,
+                        struct speed_test *speed_test,
+                        struct test_interface *test_interface,
+                        struct test_params *test_params);
 
 // Tx a custom frame loaded from file
 void send_custom_frame(struct app_params *app_params,
                        struct frame_headers *frame_headers,
+                       struct speed_test *speed_test,
                        struct test_interface *test_interface,
                        struct test_params *test_params);

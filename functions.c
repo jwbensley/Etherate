@@ -26,23 +26,27 @@
  * File: Etherate Gerneral Functions
  *
  * File Contents:
- * broadcast_etherate()
- * build_headers()
- * build_tlv()
- * build_sub_tlv()
- * cli_args()
- * explode_char()
- * get_interface_mtu_by_name()
- * get_sock_interface()
- * list_interfaces()
- * print_usage()
- * remove_interface_promisc()
- * reset_app()
- * set_interface_promisc()
- * set_sock_interface_index()
- * set_sock_interface_name()
- * signal_handler()
- * sync_settings()
+ * int16_t broadcast_etherate()
+ * void build_headers()
+ * void build_tlv()
+ * void build_sub_tlv()
+ * int16_t cli_args()
+ * uint8_t explode_char()
+ * int32_t get_interface_mtu_by_name()
+ * int16_t get_sock_interface()
+ * void latency_test_results
+ * void list_interfaces()
+ * void mtu_sweep_test_results
+ * void print_usage()
+ * int16_t remove_interface_promisc()
+ * void reset_app()
+ * int16_t set_interface_promisc()
+ * int16_t set_sock_interface_index()
+ * int16_t set_sock_interface_name()
+ * void signal_handler()
+ * void speed_test_results
+ * void sync_settings()
+ * void update_frame_size()
  *
  */
 
@@ -361,10 +365,12 @@ void build_sub_tlv(struct frame_headers *frame_headers, uint16_t SUB_TLV_TYPE,
 
 
 int16_t cli_args(int argc, char *argv[], struct app_params *app_params,
-             struct frame_headers *frame_headers,
-             struct test_interface *test_interface,
-             struct test_params *test_params, struct mtu_test *mtu_test,
-             struct qm_test *qm_test)
+                 struct frame_headers *frame_headers,
+                 struct mtu_test *mtu_test,
+                 struct qm_test *qm_test,
+                 struct speed_test *speed_test,
+                 struct test_interface *test_interface,
+                 struct test_params *test_params)
 {
 
     if (argc > 1) 
@@ -541,17 +547,17 @@ int16_t cli_args(int argc, char *argv[], struct app_params *app_params,
                     }
 
                     int file_ret = 0;
-                    test_params->f_payload_size = 0;
+                    speed_test->f_payload_size = 0;
                     while (file_ret != EOF &&
-                          (test_params->f_payload_size < F_SIZE_MAX)) {
+                          (speed_test->f_payload_size < F_SIZE_MAX)) {
 
                         file_ret = fscanf(f_payload, "%hhx",
-                                          test_params->f_payload + test_params->f_payload_size);
+                                          speed_test->f_payload + speed_test->f_payload_size);
 
                         if (file_ret == EOF)
                             break;
 
-                        test_params->f_payload_size += 1;
+                        speed_test->f_payload_size += 1;
                     }
                     if (fclose(f_payload) != 0)
                     {
@@ -559,7 +565,7 @@ int16_t cli_args(int argc, char *argv[], struct app_params *app_params,
                     }
 
                     printf("Using custom frame (%d octets loaded)\n",
-                            test_params->f_payload_size);
+                            speed_test->f_payload_size);
 
                     // Disable initial broadcast
                     app_params->broadcast = false;
@@ -611,7 +617,7 @@ int16_t cli_args(int argc, char *argv[], struct app_params *app_params,
             } else if (strncmp(argv[i], "-m", 2)==0) {
                 if (argc > (i+1))
                 {
-                    test_params->b_tx_speed_max = strtoull(argv[i+1], NULL, 0);
+                    speed_test->b_tx_speed_max = strtoull(argv[i+1], NULL, 0);
                     i += 1;
                 } else {
                     printf("Oops! Missing max TX rate\n"
@@ -624,7 +630,7 @@ int16_t cli_args(int argc, char *argv[], struct app_params *app_params,
             } else if (strncmp(argv[i], "-M", 2)==0) {
                 if (argc > (i+1))
                 {
-                    test_params->b_tx_speed_max = (uint64_t)floor(strtoull(argv[i+1], NULL, 0) / 8);
+                    speed_test->b_tx_speed_max = (uint64_t)floor(strtoull(argv[i+1], NULL, 0) / 8);
                     i += 1;
                 } else {
                     printf("Oops! Missing max TX rate\n"
@@ -1003,6 +1009,46 @@ int16_t get_sock_interface(struct test_interface *test_interface)
 
 
 
+void latency_test_results(struct qm_test *qm_test,
+                          struct test_params *test_params, uint8_t tx_mode)
+{
+    if (tx_mode) {
+
+        printf("Test frames transmitted: %" PRIu64 "\n"
+               "Test frames received: %" PRIu64 "\n"
+               "Non test or out-of-order frames received: %" PRIu64 "\n"
+               "Number of timeouts: %" PRIu32 "\n"
+               "Min/Max rtt during test: %.9Lfs/%.9Lfs\n"
+               "Min/Max jitter during test: %.9Lfs/%.9Lfs\n",
+               test_params->f_tx_count,
+               test_params->f_rx_count,
+               test_params->f_rx_other,
+               qm_test->timeout_count,
+               qm_test->rtt_min,
+               qm_test->rtt_max,
+               qm_test->jitter_min,
+               qm_test->jitter_max);
+
+    } else {
+
+        printf("Test frames transmitted: %" PRIu64 "\n"
+               "Test frames received: %" PRIu64 "\n"
+               "Non test frames received: %" PRIu64 "\n"
+               "Number of timeouts: %u\n"
+               "Min/Max interval during test %.9Lfs/%.9Lfs\n",
+               test_params->f_tx_count,
+               test_params->f_rx_count,
+               test_params->f_rx_other,
+               qm_test->timeout_count,
+               qm_test->interval_min,
+               qm_test->interval_max);
+
+    }
+
+}
+
+
+
 void list_interfaces()
 {
 
@@ -1073,6 +1119,51 @@ void list_interfaces()
         perror("Couldn't close socket ");
     }
     freeifaddrs(ifaddr);
+
+}
+
+
+
+void mtu_sweep_test_results(uint16_t largest,
+                            struct test_params *test_params,
+                            uint8_t tx_mode)
+{
+
+    if (tx_mode) {
+
+        printf("Largest MTU ACK'ed from Rx is %u\n\n"
+               "Test frames transmitted: %" PRIu64 "\n"
+               "Test frames received: %" PRIu64 "\n"
+               "Non test frames received: %" PRIu64 "\n"
+               "In order ACK frames received: %" PRIu64 "\n"
+               "Out of order ACK frames received early: %" PRIu64 "\n"
+               "Out of order ACK frames received late: %" PRIu64 "\n",
+               largest,
+               test_params->f_tx_count,
+               test_params->f_rx_count,
+               test_params->f_rx_other,
+               test_params->f_rx_ontime,
+               test_params->f_rx_early,
+               test_params->f_rx_late);
+
+    } else {
+
+        printf("Largest MTU received was %u\n\n"
+               "Test frames transmitted: %" PRIu64 "\n"
+               "Test frames received: %" PRIu64 "\n"
+               "Non test frames received: %" PRIu64 "\n"
+               "In order test frames received: %" PRIu64 "\n"
+               "Out of order test frames received early: %" PRIu64 "\n"
+               "Out of order test frames received late: %" PRIu64 "\n",
+               largest,
+               test_params->f_tx_count,
+               test_params->f_rx_count,
+               test_params->f_rx_other,
+               test_params->f_rx_ontime,
+               test_params->f_rx_early,
+               test_params->f_rx_late);
+
+    }
 
 }
 
@@ -1198,13 +1289,14 @@ int16_t remove_interface_promisc(struct test_interface *test_interface)
 
 
 void reset_app(struct frame_headers *frame_headers,
-               struct test_interface *test_interface,
-               struct test_params *test_params, struct qm_test *qm_test)
+               struct qm_test *qm_test,
+               struct speed_test *speed_test,
+               struct test_interface *test_interface)
 {
 
     free(frame_headers->rx_buffer);
     free(frame_headers->tx_buffer);
-    free(test_params->f_payload);
+    free(speed_test->f_payload);
     free(qm_test->delay_results);
     
     if (test_interface->sock_fd > 0) {
@@ -1419,13 +1511,32 @@ void signal_handler(int signal)
 
     printf("Quitting...\n");
 
-    // Send a dying gasp to the other host in case the application is ending
-    // before the running test has finished
 
+    struct app_params *app_params = papp_params;
     struct frame_headers *frame_headers = pframe_headers;
+    struct mtu_test *mtu_test = pmtu_test;
+    struct qm_test *qm_test = pqm_test;
+    struct speed_test *speed_test = pspeed_test;
     struct test_interface *test_interface = ptest_interface;
     struct test_params *test_params = ptest_params;
-    struct qm_test *qm_test = pqm_test;
+
+    // If a test was running, print the results so far
+    if (mtu_test->enabled) {
+
+        mtu_sweep_test_results(mtu_test->largest, test_params,
+                               app_params->tx_mode);
+
+    } else if (qm_test->enabled) {
+
+        latency_test_results(qm_test, test_params, app_params->tx_mode);
+
+    } else if (speed_test->enabled) {
+
+        speed_test_results(pspeed_test, ptest_params, app_params->tx_mode);
+    }
+
+    // Send a dying gasp to the other host in case the application is ending
+    // before the running test has finished
 
     build_tlv(frame_headers, htons(TYPE_APPLICATION), htonl(VALUE_DYINGGASP));
 
@@ -1471,7 +1582,7 @@ void signal_handler(int signal)
     free (qm_test->delay_results);
     free (frame_headers->rx_buffer);
     free (frame_headers->tx_buffer);
-    free (test_params->f_payload);
+    free (speed_test->f_payload);
 
     exit(signal);
 
@@ -1479,11 +1590,69 @@ void signal_handler(int signal)
 
 
 
+void speed_test_results(struct speed_test *speed_test,
+                        struct test_params *test_params, uint8_t tx_mode)
+{
+
+    if (tx_mode) {
+
+        printf("Test frames transmitted: %" PRIu64 "\n"
+               "Test frames received: %" PRIu64 "\n"
+               "Non test frames received: %" PRIu64 "\n"
+               "In order ACK frames received: %" PRIu64 "\n"
+               "Out of order ACK frames received early: %" PRIu64 "\n"
+               "Out of order ACK frames received late: %" PRIu64 "\n"
+               "Maximum speed during test: %.2fMbps, %" PRIu64 "Fps\n"
+               "Average speed during test: %.2LfMbps, %" PRIu64 "Fps\n"
+               "Data transmitted during test: %" PRIu64 "MBs\n",
+               test_params->f_tx_count,
+               test_params->f_rx_count,
+               test_params->f_rx_other,
+               test_params->f_rx_ontime,
+               test_params->f_rx_early,
+               test_params->f_rx_late,
+               speed_test->b_speed_max,
+               speed_test->f_speed_max,
+               speed_test->b_speed_avg,
+               speed_test->f_speed_max,
+               (speed_test->b_tx / 1024) / 1024);
+    } else {
+
+        printf("Test frames transmitted: %" PRIu64 "\n"
+               "Test frames received: %" PRIu64 "\n"
+               "Non test frames received: %" PRIu64 "\n"
+               "In order test frames received: %" PRIu64 "\n"
+               "Out of order test frames received early: %" PRIu64 "\n"
+               "Out of order test frames received late: %" PRIu64 "\n"
+               "Maximum speed during test: %.2fMbps, %" PRIu64 "Fps\n"
+               "Average speed during test: %.2LfMbps, %" PRIu64 "Fps\n"
+               "Data received during test: %" PRIu64 "MBs\n",
+               test_params->f_tx_count,
+               test_params->f_rx_count,
+               test_params->f_rx_other,
+               test_params->f_rx_ontime,
+               test_params->f_rx_early,
+               test_params->f_rx_late,
+               speed_test->b_speed_max,
+               speed_test->f_speed_max,
+               speed_test->b_speed_avg,
+               speed_test->f_speed_max,
+               (speed_test->b_rx / 1024) / 1024);
+
+    }
+
+}
+
+
+
+
 void sync_settings(struct app_params *app_params,
                    struct frame_headers *frame_headers,
+                   struct mtu_test *mtu_test,
+                   struct qm_test *qm_test,
+                   struct speed_test *speed_test,
                    struct test_interface *test_interface,
-                   struct test_params * test_params,
-                   struct mtu_test *mtu_test, struct qm_test *qm_test)
+                   struct test_params * test_params)
 {
 
     int16_t tx_ret;
@@ -1568,7 +1737,7 @@ void sync_settings(struct app_params *app_params,
             }
 
 
-            printf("Frame size set to %u\n", test_params->f_size);
+            printf("Frame payload size set to %u\n", test_params->f_size);
 
         }
 
@@ -1648,11 +1817,11 @@ void sync_settings(struct app_params *app_params,
         }
 
         // Testing with a custom max speed limit
-        if (test_params->b_tx_speed_max != B_TX_SPEED_MAX_DEF)
+        if (speed_test->b_tx_speed_max != B_TX_SPEED_MAX_DEF)
         {
 
             build_sub_tlv(frame_headers, htons(TYPE_MAXSPEED),
-                          htonll(test_params->b_tx_speed_max));
+                          htonll(speed_test->b_tx_speed_max));
 
             tx_ret = sendto(test_interface->sock_fd,
                                 frame_headers->tx_buffer,
@@ -1669,7 +1838,7 @@ void sync_settings(struct app_params *app_params,
 
 
             printf("Max TX speed set to %.2fMbps\n",
-                   (((double)test_params->b_tx_speed_max * 8) / 1000 / 1000));
+                   (((double)speed_test->b_tx_speed_max * 8) / 1000 / 1000));
 
         }
 
@@ -1931,7 +2100,8 @@ void sync_settings(struct app_params *app_params,
                 } else if (ntohs(*frame_headers->rx_sub_tlv_type) == TYPE_FRAMESIZE) {
 
                     test_params->f_size = (uint16_t)ntohll(*frame_headers->rx_sub_tlv_value);
-                    printf("Frame size set to %hu\n", test_params->f_size);
+                    printf("Frame payload size set to %hu\n", test_params->f_size);
+                    update_frame_size(frame_headers, test_interface, test_params);
 
                 // TX has sent a non-default transmition duration
                 } else if (ntohs(*frame_headers->rx_sub_tlv_type) == TYPE_DURATION) {
@@ -1954,8 +2124,8 @@ void sync_settings(struct app_params *app_params,
                 // TX speed is limited
                 } else if (ntohs(*frame_headers->rx_sub_tlv_type) == TYPE_MAXSPEED) {
 
-                    test_params->b_tx_speed_max = (uint64_t)ntohll(*frame_headers->rx_sub_tlv_value);
-                    printf("Max TX speed set to %.2fMbps\n", ((double)(test_params->b_tx_speed_max * 8) / 1000 / 1000));
+                    speed_test->b_tx_speed_max = (uint64_t)ntohll(*frame_headers->rx_sub_tlv_value);
+                    printf("Max TX speed set to %.2fMbps\n", ((double)(speed_test->b_tx_speed_max * 8) / 1000 / 1000));
 
                 // TX has set a custom pcp value
                 } else if (ntohs(*frame_headers->rx_sub_tlv_type) == TYPE_VLANPCP) {
@@ -2032,5 +2202,36 @@ void sync_settings(struct app_params *app_params,
 
       
     } // TX or RX mode
+
+}
+
+
+
+void update_frame_size(struct frame_headers *frame_headers,
+                       struct test_interface *test_interface,
+                       struct test_params *test_params)
+{
+
+    // Total size of the frame data (paylod size+headers), this excludes the
+    // preamble & start frame delimiter, FCS and inter frame gap
+    test_params->f_size_total = test_params->f_size + frame_headers->length;
+
+    int16_t PHY_MTU = get_interface_mtu_by_name(test_interface);
+    
+    if (PHY_MTU <= 0) {
+
+        printf("\nPhysical interface MTU unknown, "
+               "test might exceed physical MTU!\n\n");
+
+    } else if (test_params->f_size_total > PHY_MTU + 14) {
+        
+        printf("\nPhysical interface MTU (%d with headers) is less than\n"
+               "the test frame size (%u with headers). Test frames shall\n"
+               "be limited to the interface MTU size\n\n",
+               PHY_MTU+14, test_params->f_size_total);
+        
+        test_params->f_size_total = PHY_MTU + 14;
+
+    }
 
 }
