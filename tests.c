@@ -41,8 +41,7 @@
 void delay_test(struct app_params *app_params,
                 struct frame_headers *frame_headers,
                 struct test_interface *test_interface,
-                struct test_param
-                s * test_params,
+                struct test_params *test_params,
                 struct qm_test *qm_test)
 {
 // Calculate the delay between Tx and Rx hosts. The uptime is exchanged twice
