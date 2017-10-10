@@ -2221,7 +2221,7 @@ void update_frame_size(struct frame_headers *frame_headers,
     if (PHY_MTU <= 0) {
 
         printf("\nPhysical interface MTU unknown, "
-               "test might exceed physical MTU!\n\n");
+               "tests might exceed physical MTU!\n\n");
 
     } else if (test_params->f_size_total > PHY_MTU + 14) {
         
