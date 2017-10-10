@@ -1163,7 +1163,7 @@ void speed_test_default(struct app_params *app_params,
 
                             tx_ret = sendto(test_interface->sock_fd,
                                             frame_headers->tx_buffer,
-                                            test_params->f_size_total, 0, 
+                                            test_params->f_size_total, 0,
                                             (struct sockaddr*)&test_interface->sock_addr,
                                             sizeof(test_interface->sock_addr));
 
@@ -1334,7 +1334,7 @@ void speed_test_default(struct app_params *app_params,
 
                     // Update test stats
                     test_params->f_rx_count += 1;
-                    speed_test->b_rx += (rx_len - frame_headers->length);
+                    speed_test->b_rx += rx_len;
 
                     // Record if the frame is in-order, early or late
                     if (likely(ntohll(*frame_headers->rx_sub_tlv_value) == (speed_test->f_speed_max + 1))) {
