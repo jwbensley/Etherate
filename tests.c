@@ -299,6 +299,7 @@ void mtu_sweep_test(struct app_params *app_params,
     int32_t phy_mtu = get_interface_mtu_by_name(test_interface);
 
     if (mtu_test->mtu_tx_max > phy_mtu) {
+
         printf("Starting MTU sweep from %u to %d (interface max)\n",
                mtu_test->mtu_tx_min, phy_mtu);
         mtu_test->mtu_tx_max = phy_mtu;
@@ -329,31 +330,24 @@ void mtu_sweep_test(struct app_params *app_params,
             // Get the current time
             clock_gettime(CLOCK_MONOTONIC_RAW, &test_params->ts_elapsed_time);
 
-            // Send each MTU test frame 3 times
-            for (uint16_t i = 1; i <= 3; i += 1) ///// Document the 3 try
+            build_sub_tlv(frame_headers, htons(TYPE_FRAMEINDEX), htonll(mtu_tx_current));
+
+            tx_ret = sendto(test_interface->sock_fd,
+                            frame_headers->tx_buffer,
+                            frame_headers->length+mtu_tx_current,
+                            0, 
+                            (struct sockaddr*)&test_interface->sock_addr,
+                            sizeof(test_interface->sock_addr));
+
+            if (tx_ret <=0)
             {
-
-                build_sub_tlv(frame_headers, htons(TYPE_FRAMEINDEX), htonll(mtu_tx_current));
-
-                tx_ret = sendto(test_interface->sock_fd,
-                                frame_headers->tx_buffer,
-                                frame_headers->length+mtu_tx_current,
-                                0, 
-                                (struct sockaddr*)&test_interface->sock_addr,
-                                sizeof(test_interface->sock_addr));
-
-                if (tx_ret <=0)
-                {
-                    perror("MTU test Tx error ");
-                    return;
-                }
-
-
+                perror("MTU test Tx error ");
+                return;
+            } else {
                 test_params->f_tx_count += 1;
-
-                WAITING = true;
-
             }
+
+            WAITING = true;
 
             // Wait for the ACK from back from Rx ///// Document the max wait time (3 seconds)
             while(WAITING)
@@ -389,15 +383,22 @@ void mtu_sweep_test(struct app_params *app_params,
                         {
                             // Frame received out of order, later than expected
                             test_params->f_rx_late += 1;
+                        } else if (mtu_ack_previous == 0) {
+                            // First frame
+                            test_params->f_rx_ontime += 1;
+                            mtu_ack_previous = mtu_ack_current;
                         } else if (mtu_ack_current > (mtu_ack_previous + 2)) {
                             // Frame received out of order, earlier than expected
                             test_params->f_rx_early += 1;
                             mtu_ack_previous = mtu_ack_current;
                         } else if (mtu_ack_current == (mtu_ack_previous + 1) && mtu_ack_current < mtu_test->mtu_tx_max) {
                             // Fame received in order
-                            mtu_ack_previous = mtu_ack_current;
                             test_params->f_rx_ontime += 1;
+                            mtu_ack_previous = mtu_ack_current;
                             WAITING = false;
+                        } else if (mtu_ack_current == (mtu_ack_previous + 1)) {
+                            // Frame received in order
+                            test_params->f_rx_ontime += 1;
                         } else if (mtu_ack_current == mtu_ack_previous) {
                             // Frame received in order
                             test_params->f_rx_ontime += 1;
@@ -434,140 +435,133 @@ void mtu_sweep_test(struct app_params *app_params,
         uint32_t mtu_rx_current  = 0;
         uint8_t  WAITING         = true;
 
-        // If 5 seconds pass without receiving a frame, end the MTU sweep test
-        // (assume MTU has been exceeded)
-        uint8_t mtu_rx_any = false;
-        
-        clock_gettime(CLOCK_MONOTONIC_RAW, &test_params->ts_elapsed_time);
 
-        while (WAITING)
+        while(true)
         {
+        
+            clock_gettime(CLOCK_MONOTONIC_RAW, &test_params->ts_elapsed_time);
 
-            // Get the current time
-            clock_gettime(CLOCK_MONOTONIC_RAW, &test_params->ts_current_time);
+            WAITING    = true;
 
-            // Check for test frame from Tx
-            rx_len = recvfrom(test_interface->sock_fd,
-                              frame_headers->rx_buffer,
-                              mtu_test->mtu_tx_max,
-                              MSG_DONTWAIT, NULL, NULL);
+            while (WAITING)
+            {
 
-            if (rx_len > 0) {
+                // Get the current time
+                clock_gettime(CLOCK_MONOTONIC_RAW, &test_params->ts_current_time);
 
-                if (ntohl(*frame_headers->rx_tlv_value) == VALUE_TEST_SUB_TLV &&
-                    ntohs(*frame_headers->rx_sub_tlv_type) == TYPE_FRAMEINDEX)
-                {
+                // Check for test frame from Tx
+                rx_len = recvfrom(test_interface->sock_fd,
+                                  frame_headers->rx_buffer,
+                                  mtu_test->mtu_tx_max,
+                                  MSG_DONTWAIT, NULL, NULL);
 
-                    mtu_rx_any = true;
+                if (rx_len > 0) {
 
-                    test_params->f_rx_count += 1;
-
-                    // Get the MTU size Tx is sending
-                    mtu_rx_current = (uint32_t)ntohll(*frame_headers->rx_sub_tlv_value);
-
-                    if (mtu_rx_current > mtu_test->largest)
+                    if (ntohl(*frame_headers->rx_tlv_value) == VALUE_TEST_SUB_TLV &&
+                        ntohs(*frame_headers->rx_sub_tlv_type) == TYPE_FRAMEINDEX)
                     {
 
-                        mtu_test->largest = mtu_rx_current;
+                        test_params->f_rx_count += 1;
 
-                        // ACK that back to Tx as new largest MTU received
-                        // (send the ACK 3 times)
-                        for(uint8_t i = 1; i <= 3; i += 1)
+                        // Get the MTU size Tx is sending
+                        mtu_rx_current = (uint32_t)ntohll(*frame_headers->rx_sub_tlv_value);
+
+                        if (mtu_rx_current > mtu_test->largest)
                         {
 
-                        build_sub_tlv(frame_headers, htons(TYPE_ACKINDEX), htonll(mtu_rx_current));
+                            mtu_test->largest = mtu_rx_current;
 
-                        tx_ret = sendto(test_interface->sock_fd,
-                                        frame_headers->tx_buffer,
-                                        frame_headers->length+frame_headers->sub_tlv_size, 0, 
-                                        (struct sockaddr*)&test_interface->sock_addr,
-                                        sizeof(test_interface->sock_addr));
+                            // ACK that back to Tx as new largest MTU received
+                            build_sub_tlv(frame_headers, htons(TYPE_ACKINDEX),
+                                          htonll(mtu_rx_current));
 
-                        if (tx_ret <=0)
+                            tx_ret = sendto(test_interface->sock_fd,
+                                            frame_headers->tx_buffer,
+                                            frame_headers->length+frame_headers->sub_tlv_size,
+                                            0, 
+                                            (struct sockaddr*)&test_interface->sock_addr,
+                                            sizeof(test_interface->sock_addr));
+
+                            if (tx_ret <=0)
+                            {
+                                perror("MTU test Rx error ");
+                                return;
+                            } else {
+                                test_params->f_tx_count += 1;
+                            }
+
+
+                        } // mtu_rx_current > mtu_test->largest
+
+
+                        if (mtu_rx_current < mtu_rx_previous)
                         {
-                            perror("MTU test Rx error ");
-                            return;
+                            // Frame received out of order, later than expected
+                            test_params->f_rx_late += 1;
+                        } else if (mtu_rx_previous == 0) {
+                            // First frame
+                            test_params->f_rx_ontime += 1;
+                            mtu_rx_previous = mtu_rx_current;
+                        } else if (mtu_rx_current > (mtu_rx_previous + 2)) {
+                            // Frame received out of order, earlier than expected
+                            test_params->f_rx_early += 1;
+                            mtu_rx_previous = mtu_rx_current;
+                        } else if (mtu_rx_current == (mtu_rx_previous + 1) && mtu_rx_current < mtu_test->mtu_tx_max) {
+                            // Frame received in order
+                            test_params->f_rx_ontime += 1;
+                            mtu_rx_previous = mtu_rx_current;
+                            WAITING = false;
+                        } else if (mtu_rx_current == (mtu_rx_previous + 1)) {
+                            // Frame received in order
+                            mtu_rx_previous = mtu_rx_current;
+                            test_params->f_rx_ontime += 1;
+                        } else if (mtu_rx_current == mtu_rx_previous) {
+                            // Frame received in order
+                            mtu_rx_previous = mtu_rx_current;
+                            test_params->f_rx_ontime += 1;
                         }
 
 
-                        test_params->f_tx_count += 1;
+                    // A non-test frame was recieved
+                    } else {
 
-                        }
+                        test_params->f_rx_other += 1;
 
-
-                    } // mtu_rx_current > mtu_test->largest
-
-
-
-                    if (mtu_rx_current < mtu_rx_previous)
-                    {
-                        // Frame received out of order, later than expected
-                        test_params->f_rx_late += 1;
-                    } else if (mtu_rx_current > (mtu_rx_previous + 2)) {
-                        // Frame received out of order, earlier than expected
-                        test_params->f_rx_early += 1;
-                        mtu_rx_previous = mtu_rx_current;
-                    } else if (mtu_rx_current == (mtu_rx_previous + 1)) {
-                        // Fame received in order
-                        mtu_rx_previous = mtu_rx_current;
-                        test_params->f_rx_ontime += 1;
-                    } else if (mtu_rx_current == mtu_rx_previous) {
-                        // Frame received in order
-                        mtu_rx_previous = mtu_rx_current;
-                        test_params->f_rx_ontime += 1;
-                    }
+                    } //End of TEST_FRAME
 
 
-                // A non-test frame was recieved
-                } else {
-
-                    test_params->f_rx_other += 1;
-
-                } //End of TEST_FRAME
+                } // rx_len > 0
 
 
-            } // rx_len > 0
-
-
-            // If Rx has received the largest MTU Tx hoped to send,
-            // the MTU sweep test is over
-            if (mtu_test->largest == mtu_test->mtu_tx_max)
-            {
-
-                // Signal back to Tx the largest MTU Rx recieved at the end
-                WAITING = false;
-
-                printf("MTU sweep test complete\n");
-                mtu_sweep_test_results(mtu_test->largest, test_params, app_params->tx_mode);
-
-                return;
-
-            }
-
-            // 5 seconds have passed without any MTU sweep frames being receeved
-            // Assume the max MTU has been exceeded
-            if ((test_params->ts_current_time.tv_sec-test_params->ts_elapsed_time.tv_sec) >= 5)  ///// Document this timeout
-            {
-
-                if (mtu_rx_any == false)
+                // If Rx has received the largest MTU Tx hoped to send,
+                // the MTU sweep test is over
+                if (mtu_test->largest == mtu_test->mtu_tx_max)
                 {
-                    printf("Timeout waiting for MTU sweep frames from Tx, "
-                           "ending the test.\nLargest MTU received %u\n\n",
-                           mtu_test->largest);
 
-                    WAITING = false;
+                    printf("MTU sweep test complete\n");
+                    mtu_sweep_test_results(mtu_test->largest, test_params, app_params->tx_mode);
 
-                } else {
-
-                    clock_gettime(CLOCK_MONOTONIC_RAW, &test_params->ts_elapsed_time);
-                    mtu_rx_any = false;
+                    return;
 
                 }
 
-            }
+                // 5 seconds have passed without any MTU sweep frames being receeved,
+                // assume the max MTU has been exceeded
+                if ((test_params->ts_current_time.tv_sec-test_params->ts_elapsed_time.tv_sec) >= 5)  ///// Document this timeout
+                {
+
+                    printf("Timeout waiting for MTU sweep frames from Tx, "
+                           "ending the test.\nEnding test.\n");
+
+                    mtu_sweep_test_results(mtu_test->largest, test_params, app_params->tx_mode);
+                    return;
+
+                }
 
 
-        } // End of WAITING
+            } // End of WAITING
+
+        } // while(true)
 
 
     } // End of Tx/Rx mode
