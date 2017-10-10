@@ -1616,6 +1616,7 @@ void speed_test_results(struct speed_test *speed_test,
                speed_test->b_speed_avg,
                speed_test->f_speed_max,
                (speed_test->b_tx / 1024) / 1024);
+
     } else {
 
         printf("Test frames transmitted: %" PRIu64 "\n"
