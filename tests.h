@@ -1,7 +1,7 @@
 /*
  * License: MIT
  *
- * Copyright (c) 2012-2017 James Bensley.
+ * Copyright (c) 2012-2018 James Bensley.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -52,13 +52,6 @@ void latency_test(struct app_params *app_params,
                   struct test_interface *test_interface,
                   struct test_params *test_params,
                   struct qm_test *qm_test);
-
-// Run a speedtest (which is the default test operation if none is specified)
-void speed_test_default(struct app_params *app_params,
-                        struct frame_headers *frame_headers,
-                        struct speed_test *speed_test,
-                        struct test_interface *test_interface,
-                        struct test_params *test_params);
 
 // Tx a custom frame loaded from file
 void send_custom_frame(struct app_params *app_params,

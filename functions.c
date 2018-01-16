@@ -1,7 +1,7 @@
 /*
  * License: MIT
  *
- * Copyright (c) 2012-2017 James Bensley.
+ * Copyright (c) 2012-2018 James Bensley.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -510,6 +510,19 @@ int16_t cli_args(int argc, char *argv[], struct app_params *app_params,
                 }
 
 
+            // Limit TX rate using a frame pacing interval
+            } else if (strncmp(argv[i], "-T", 2)==0) {
+                if (argc > (i+1))
+                {
+                    test_params->f_tx_dly = strtoul(argv[i+1], NULL, 0);
+                    i += 1;
+                } else {
+                    printf("Oops! Missing max TX rate\n"
+                           "Usage info: %s -h|--h\n", argv[0]);
+                    return RET_EXIT_FAILURE;
+                }
+
+
             // Specifying a custom transmission duration in seconds
             } else if (strncmp(argv[i], "-t", 2)==0) {
                 if (argc > (i+1))
@@ -564,7 +577,7 @@ int16_t cli_args(int argc, char *argv[], struct app_params *app_params,
                         perror("Error closing file ");
                     }
 
-                    printf("Using custom frame (%d octets loaded)\n",
+                    printf("Using custom frame (%" PRIu16 " octets loaded)\n",
                             speed_test->f_payload_size);
 
                     // Disable initial broadcast
@@ -595,9 +608,20 @@ int16_t cli_args(int argc, char *argv[], struct app_params *app_params,
                 }
 
 
-            // Enable ACK mode testing
+            // Enable ACK mode when testing
             } else if (strncmp(argv[i], "-a", 2)==0) {
-                test_params->f_ack = true;
+                if (argc > (i+2))
+                {
+                    test_params->f_ack = true;
+                    test_params->f_ack_timeout = strtoul(argv[i+1], NULL, 0);
+                    test_params->f_ack_count = strtoul(argv[i+2], NULL, 0);
+                    i += 2;
+                } else {
+                    printf("Oops! Missing timeout and ACK frame count\n"
+                           "Usage info: %s -h|--h\n", argv[0]);
+                    return RET_EXIT_FAILURE;
+                }
+                
 
 
             // Specify the max frames per second rate
@@ -785,7 +809,7 @@ int16_t cli_args(int argc, char *argv[], struct app_params *app_params,
 
                     } else {
                         printf("Oops! You have exceeded the maximum number of "
-                               "MPLS labels (%d)\n", MPLS_LABELS_MAX);
+                               "MPLS labels (%" PRIu16 ")\n", MPLS_LABELS_MAX);
                         return RET_EXIT_FAILURE;
                     }
                 } else {
@@ -809,7 +833,7 @@ int16_t cli_args(int argc, char *argv[], struct app_params *app_params,
 
                     if (mtu_test->mtu_tx_max > F_SIZE_MAX) { 
                         printf("MTU size can not exceed the maximum hard coded"
-                               " size: %u\n", F_SIZE_MAX);
+                               " size: %" PRIu16 "\n", F_SIZE_MAX);
                              return RET_EXIT_FAILURE;
                     }
 
@@ -985,7 +1009,7 @@ int16_t get_sock_interface(struct test_interface *test_interface)
 
 
                 printf("Using device %s with address "
-                       "%02x:%02x:%02x:%02x:%02x:%02x, interface index %u\n",
+                       "%02x:%02x:%02x:%02x:%02x:%02x, interface index %" PRId32 "\n",
                        ifreq.ifr_name,
                        (uint8_t)mac[0],
                        (uint8_t)mac[1],
@@ -1034,7 +1058,7 @@ void latency_test_results(struct qm_test *qm_test,
         printf("Test frames transmitted: %" PRIu64 "\n"
                "Test frames received: %" PRIu64 "\n"
                "Non test frames received: %" PRIu64 "\n"
-               "Number of timeouts: %u\n"
+               "Number of timeouts: %" PRIu32 "\n"
                "Min/Max interval during test %.9Lfs/%.9Lfs\n",
                test_params->f_tx_count,
                test_params->f_rx_count,
@@ -1098,7 +1122,7 @@ void list_interfaces()
                 }
 
                 printf("Device %s with address %02x:%02x:%02x:%02x:%02x:%02x, "
-                       "has interface index %d\n",
+                       "has interface index %" PRId32 "\n",
                        ifreq.ifr_name,
                        (uint8_t)mac[0],
                        (uint8_t)mac[1],
@@ -1131,7 +1155,7 @@ void mtu_sweep_test_results(uint16_t largest,
 
     if (tx_mode) {
 
-        printf("Largest MTU ACK'ed from Rx is %u\n\n"
+        printf("Largest MTU ACK'ed from Rx is %" PRIu16 "\n\n"
                "Test frames transmitted: %" PRIu64 "\n"
                "Test frames received: %" PRIu64 "\n"
                "Non test frames received: %" PRIu64 "\n"
@@ -1148,7 +1172,7 @@ void mtu_sweep_test_results(uint16_t largest,
 
     } else {
 
-        printf("Largest MTU received was %u\n\n"
+        printf("Largest MTU received was %" PRIu16 "\n\n"
                "Test frames transmitted: %" PRIu64 "\n"
                "Test frames received: %" PRIu64 "\n"
                "Non test frames received: %" PRIu64 "\n"
@@ -1173,7 +1197,7 @@ void print_usage (struct app_params *app_params,
                   struct frame_headers *frame_headers)
 {
 
-    printf ("Usage info; [Mode] [Destination] [Source] [Transport] [Shortcuts] [Other]\n"
+    printf ("Usage info; [Mode] [Destination] [Source] [Transport] [Additonal Tests] [Other]\n"
             "[Mode]\n"
             "\t-r\tChange to receive (listening) mode.\n"
             "\t\tDefault is transmit mode.\n"
@@ -1197,22 +1221,23 @@ void print_usage (struct app_params *app_params,
             "\t\tinterface to use.\n"
             "\t-l\tList interface indexes (then quit) for use with -I option.\n"
             "[Test Options]\n"
-            "\t-a\tAck mode, have the receiver ack each frame during the test\n"
-            "\t\t(This will significantly reduce the speed of the test).\n"
-            "\t-b\tNumber of bytes to send, default is %u, default behaviour\n"
+            "\t-a\tAck mode, acknowledge frames received back to the Tx host,\n"
+            "\t\tspecify timeout in ms then number of frames to ack, -a 50 10\n"
+            "\t-b\tNumber of bytes to send, default is %" PRIu32 ", default behaviour\n"
             "\t\tis to wait for duration.\n"
             "\t\tOnly one of -t, -c or -b can be used, both override -t,\n"
             "\t\t-b overrides -c.\n"
-            "\t-c\tNumber of frames to send, default is %u, default behaviour\n"
+            "\t-c\tNumber of frames to send, default is %" PRIu32 ", default behaviour\n"
             "\t\tis to wait for duration.\n"
             "\t-C\tLoad a custom frame as hex from file\n"
             "\t\t-C ./tcp-syn.txt\n"
             "\t-e\tSet a custom ethertype, the default is 0x%04x.\n"
-            "\t-f\tFrame payload size in bytes, default is %u\n"
-            "\t\t(excluding headers, %u bytes on the wire).\n"
+            "\t-f\tFrame payload size in bytes, default is %" PRIu16 "\n"
+            "\t\t(excluding headers, %" PRIu16 " bytes on the wire).\n"
             "\t-F\tMax frames per/second to send, -F 83 (1Mbps).\n"
             "\t-m\tMax bytes per/second to send, -m 125000 (1Mps).\n"
             "\t-M\tMax bits per/second to send, -M 1000000 (1Mbps).\n"
+            "\t-T\tMax bits per/second to send (frame pacing), -T 1000000 (1Mbps).\n"
             "\t-t\tTransmition duration, seconds as integer, default is %" PRId32 ".\n"
             "[Transport]\n"
             "\t-v\tAdd an 802.1q VLAN tag. Not in the header by default.\n"
@@ -1395,7 +1420,7 @@ int16_t set_sock_interface_index(struct test_interface *test_interface)
 
 
                     printf("Using device %s with address "
-                           "%02x:%02x:%02x:%02x:%02x:%02x, interface index %u\n",
+                           "%02x:%02x:%02x:%02x:%02x:%02x, interface index %" PRId32 "\n",
                            ifreq.ifr_name,
                            (uint8_t)mac[0],
                            (uint8_t)mac[1],
@@ -1476,7 +1501,7 @@ int16_t set_sock_interface_name(struct test_interface *test_interface)
 
 
                     printf("Using device %s with address "
-                           "%02x:%02x:%02x:%02x:%02x:%02x, interface index %u\n",
+                           "%02x:%02x:%02x:%02x:%02x:%02x, interface index %" PRId32 "\n",
                            ifreq.ifr_name,
                            (uint8_t)mac[0],
                            (uint8_t)mac[1],
@@ -1675,11 +1700,11 @@ void sync_settings(struct app_params *app_params,
                           htonll(app_params->tx_delay));
 
             tx_ret = sendto(test_interface->sock_fd,
-                                frame_headers->tx_buffer,
-                                frame_headers->length+frame_headers->sub_tlv_size,
-                                0,
-                                (struct sockaddr*)&test_interface->sock_addr,
-                                sizeof(test_interface->sock_addr));
+                            frame_headers->tx_buffer,
+                            frame_headers->length+frame_headers->sub_tlv_size,
+                            0,
+                            (struct sockaddr*)&test_interface->sock_addr,
+                            sizeof(test_interface->sock_addr));
 
             if (tx_ret <= 0)
             {
@@ -1700,11 +1725,11 @@ void sync_settings(struct app_params *app_params,
                           htonll(frame_headers->etype));
 
             tx_ret = sendto(test_interface->sock_fd,
-                                frame_headers->tx_buffer,
-                                frame_headers->length+frame_headers->sub_tlv_size,
-                                0,
-                                (struct sockaddr*)&test_interface->sock_addr,
-                                sizeof(test_interface->sock_addr));
+                            frame_headers->tx_buffer,
+                            frame_headers->length+frame_headers->sub_tlv_size,
+                            0,
+                            (struct sockaddr*)&test_interface->sock_addr,
+                            sizeof(test_interface->sock_addr));
 
             if (tx_ret <= 0)
             {
@@ -1725,11 +1750,11 @@ void sync_settings(struct app_params *app_params,
                           htonll(test_params->f_size));
 
             tx_ret = sendto(test_interface->sock_fd,
-                                frame_headers->tx_buffer,
-                                frame_headers->length+frame_headers->sub_tlv_size,
-                                0,
-                                (struct sockaddr*)&test_interface->sock_addr,
-                                sizeof(test_interface->sock_addr));
+                            frame_headers->tx_buffer,
+                            frame_headers->length+frame_headers->sub_tlv_size,
+                            0,
+                            (struct sockaddr*)&test_interface->sock_addr,
+                            sizeof(test_interface->sock_addr));
 
             if (tx_ret <= 0)
             {
@@ -1738,7 +1763,7 @@ void sync_settings(struct app_params *app_params,
             }
 
 
-            printf("Frame payload size set to %u\n", test_params->f_size);
+            printf("Frame payload size set to %" PRIu16 "\n", test_params->f_size);
 
         }
 
@@ -1750,11 +1775,11 @@ void sync_settings(struct app_params *app_params,
                           htonll(test_params->f_duration));
 
             tx_ret = sendto(test_interface->sock_fd,
-                                frame_headers->tx_buffer,
-                                frame_headers->length+frame_headers->sub_tlv_size,
-                                0,
-                                (struct sockaddr*)&test_interface->sock_addr,
-                                sizeof(test_interface->sock_addr));
+                            frame_headers->tx_buffer,
+                            frame_headers->length+frame_headers->sub_tlv_size,
+                            0,
+                            (struct sockaddr*)&test_interface->sock_addr,
+                            sizeof(test_interface->sock_addr));
 
             if (tx_ret <= 0)
             {
@@ -1775,11 +1800,11 @@ void sync_settings(struct app_params *app_params,
                           htonll(test_params->f_count));
 
             tx_ret = sendto(test_interface->sock_fd,
-                                frame_headers->tx_buffer,
-                                frame_headers->length+frame_headers->sub_tlv_size,
-                                0,
-                                (struct sockaddr*)&test_interface->sock_addr,
-                                sizeof(test_interface->sock_addr));
+                            frame_headers->tx_buffer,
+                            frame_headers->length+frame_headers->sub_tlv_size,
+                            0,
+                            (struct sockaddr*)&test_interface->sock_addr,
+                            sizeof(test_interface->sock_addr));
 
             if (tx_ret <= 0)
             {
@@ -1800,11 +1825,11 @@ void sync_settings(struct app_params *app_params,
                           htonll(test_params->f_bytes));
 
             tx_ret = sendto(test_interface->sock_fd,
-                                frame_headers->tx_buffer,
-                                frame_headers->length+frame_headers->sub_tlv_size,
-                                0,
-                                (struct sockaddr*)&test_interface->sock_addr,
-                                sizeof(test_interface->sock_addr));
+                            frame_headers->tx_buffer,
+                            frame_headers->length+frame_headers->sub_tlv_size,
+                            0,
+                            (struct sockaddr*)&test_interface->sock_addr,
+                            sizeof(test_interface->sock_addr));
 
             if (tx_ret <= 0)
             {
@@ -1825,11 +1850,11 @@ void sync_settings(struct app_params *app_params,
                           htonll(speed_test->b_tx_speed_max));
 
             tx_ret = sendto(test_interface->sock_fd,
-                                frame_headers->tx_buffer,
-                                frame_headers->length+frame_headers->sub_tlv_size,
-                                0,
-                                (struct sockaddr*)&test_interface->sock_addr,
-                                sizeof(test_interface->sock_addr));
+                            frame_headers->tx_buffer,
+                            frame_headers->length+frame_headers->sub_tlv_size,
+                            0,
+                            (struct sockaddr*)&test_interface->sock_addr,
+                            sizeof(test_interface->sock_addr));
 
             if (tx_ret <= 0)
             {
@@ -1851,11 +1876,11 @@ void sync_settings(struct app_params *app_params,
                           htonll(frame_headers->pcp));
 
             tx_ret = sendto(test_interface->sock_fd,
-                                frame_headers->tx_buffer,
-                                frame_headers->length+frame_headers->sub_tlv_size,
-                                0,
-                                (struct sockaddr*)&test_interface->sock_addr,
-                                sizeof(test_interface->sock_addr));
+                            frame_headers->tx_buffer,
+                            frame_headers->length+frame_headers->sub_tlv_size,
+                            0,
+                            (struct sockaddr*)&test_interface->sock_addr,
+                            sizeof(test_interface->sock_addr));
 
             if (tx_ret <= 0)
             {
@@ -1876,11 +1901,11 @@ void sync_settings(struct app_params *app_params,
                           htonll(frame_headers->qinq_pcp));
 
             tx_ret = sendto(test_interface->sock_fd,
-                                frame_headers->tx_buffer,
-                                frame_headers->length+frame_headers->sub_tlv_size,
-                                0,
-                                (struct sockaddr*)&test_interface->sock_addr,
-                                sizeof(test_interface->sock_addr));
+                            frame_headers->tx_buffer,
+                            frame_headers->length+frame_headers->sub_tlv_size,
+                            0,
+                            (struct sockaddr*)&test_interface->sock_addr,
+                            sizeof(test_interface->sock_addr));
 
             if (tx_ret <= 0)
             {
@@ -1901,11 +1926,44 @@ void sync_settings(struct app_params *app_params,
                           htonll(test_params->f_ack));
 
             tx_ret = sendto(test_interface->sock_fd,
-                                frame_headers->tx_buffer,
-                                frame_headers->length+frame_headers->sub_tlv_size,
-                                0,
-                                (struct sockaddr*)&test_interface->sock_addr,
-                                sizeof(test_interface->sock_addr));
+                            frame_headers->tx_buffer,
+                            frame_headers->length+frame_headers->sub_tlv_size,
+                            0,
+                            (struct sockaddr*)&test_interface->sock_addr,
+                            sizeof(test_interface->sock_addr));
+
+            if (tx_ret <= 0)
+            {
+                perror("Sync settings transmit error ");
+                return;
+            }
+
+            build_sub_tlv(frame_headers, htons(TYPE_ACKTIMEOUT),
+                          htonll(test_params->f_ack_timeout));
+
+            tx_ret = sendto(test_interface->sock_fd,
+                            frame_headers->tx_buffer,
+                            frame_headers->length+frame_headers->sub_tlv_size,
+                            0,
+                            (struct sockaddr*)&test_interface->sock_addr,
+                            sizeof(test_interface->sock_addr));
+
+            if (tx_ret <= 0)
+            {
+                perror("Sync settings transmit error ");
+                return;
+            }
+
+
+            build_sub_tlv(frame_headers, htons(TYPE_ACKCOUNT),
+                          htonll(test_params->f_ack_count));
+
+            tx_ret = sendto(test_interface->sock_fd,
+                            frame_headers->tx_buffer,
+                            frame_headers->length+frame_headers->sub_tlv_size,
+                            0,
+                            (struct sockaddr*)&test_interface->sock_addr,
+                            sizeof(test_interface->sock_addr));
 
             if (tx_ret <= 0)
             {
@@ -1915,6 +1973,7 @@ void sync_settings(struct app_params *app_params,
 
 
             printf("ACK mode enabled\n");
+
         }
 
         // Tell RX an MTU sweep test will be performed
@@ -1925,11 +1984,11 @@ void sync_settings(struct app_params *app_params,
                           htonll(mtu_test->enabled));
 
             tx_ret = sendto(test_interface->sock_fd,
-                                frame_headers->tx_buffer,
-                                frame_headers->length+frame_headers->sub_tlv_size,
-                                0,
-                                (struct sockaddr*)&test_interface->sock_addr,
-                                sizeof(test_interface->sock_addr));
+                            frame_headers->tx_buffer,
+                            frame_headers->length+frame_headers->sub_tlv_size,
+                            0,
+                            (struct sockaddr*)&test_interface->sock_addr,
+                            sizeof(test_interface->sock_addr));
 
             if (tx_ret <= 0)
             {
@@ -1942,11 +2001,11 @@ void sync_settings(struct app_params *app_params,
                           htonll(mtu_test->mtu_tx_min));
 
             tx_ret = sendto(test_interface->sock_fd,
-                                frame_headers->tx_buffer,
-                                frame_headers->length+frame_headers->sub_tlv_size,
-                                0,
-                                (struct sockaddr*)&test_interface->sock_addr,
-                                sizeof(test_interface->sock_addr));
+                            frame_headers->tx_buffer,
+                            frame_headers->length+frame_headers->sub_tlv_size,
+                            0,
+                            (struct sockaddr*)&test_interface->sock_addr,
+                            sizeof(test_interface->sock_addr));
 
             if (tx_ret <= 0)
             {
@@ -1959,11 +2018,11 @@ void sync_settings(struct app_params *app_params,
                           htonll(mtu_test->mtu_tx_max));
 
             tx_ret = sendto(test_interface->sock_fd,
-                                frame_headers->tx_buffer,
-                                frame_headers->length+frame_headers->sub_tlv_size,
-                                0,
-                                (struct sockaddr*)&test_interface->sock_addr,
-                                sizeof(test_interface->sock_addr));
+                            frame_headers->tx_buffer,
+                            frame_headers->length+frame_headers->sub_tlv_size,
+                            0,
+                            (struct sockaddr*)&test_interface->sock_addr,
+                            sizeof(test_interface->sock_addr));
 
             if (tx_ret <= 0)
             {
@@ -1972,7 +2031,7 @@ void sync_settings(struct app_params *app_params,
             }
 
 
-            printf("MTU sweep test enabled from %u to %u\n",
+            printf("MTU sweep test enabled from %" PRIu16 " to %" PRIu16 "\n",
                    mtu_test->mtu_tx_min, mtu_test->mtu_tx_max);
         
         }
@@ -1985,11 +2044,11 @@ void sync_settings(struct app_params *app_params,
                           htonll(qm_test->enabled));
 
             tx_ret = sendto(test_interface->sock_fd,
-                                frame_headers->tx_buffer,
-                                frame_headers->length+frame_headers->sub_tlv_size,
-                                0,
-                                (struct sockaddr*)&test_interface->sock_addr,
-                                sizeof(test_interface->sock_addr));
+                            frame_headers->tx_buffer,
+                            frame_headers->length+frame_headers->sub_tlv_size,
+                            0,
+                            (struct sockaddr*)&test_interface->sock_addr,
+                            sizeof(test_interface->sock_addr));
 
             if (tx_ret <= 0)
             {
@@ -2002,11 +2061,11 @@ void sync_settings(struct app_params *app_params,
                           htonll(qm_test->interval));
 
             tx_ret = sendto(test_interface->sock_fd,
-                                frame_headers->tx_buffer,
-                                frame_headers->length+frame_headers->sub_tlv_size,
-                                0,
-                                (struct sockaddr*)&test_interface->sock_addr,
-                                sizeof(test_interface->sock_addr));
+                            frame_headers->tx_buffer,
+                            frame_headers->length+frame_headers->sub_tlv_size,
+                            0,
+                            (struct sockaddr*)&test_interface->sock_addr,
+                            sizeof(test_interface->sock_addr));
 
             if (tx_ret <= 0)
             {
@@ -2019,11 +2078,11 @@ void sync_settings(struct app_params *app_params,
                           htonll(qm_test->timeout));
 
             tx_ret = sendto(test_interface->sock_fd,
-                                frame_headers->tx_buffer,
-                                frame_headers->length+frame_headers->sub_tlv_size,
-                                0,
-                                (struct sockaddr*)&test_interface->sock_addr,
-                                sizeof(test_interface->sock_addr));
+                            frame_headers->tx_buffer,
+                            frame_headers->length+frame_headers->sub_tlv_size,
+                            0,
+                            (struct sockaddr*)&test_interface->sock_addr,
+                            sizeof(test_interface->sock_addr));
 
             if (tx_ret <= 0)
             {
@@ -2041,11 +2100,11 @@ void sync_settings(struct app_params *app_params,
                   htonl(VALUE_SETTING_END));
 
         tx_ret = sendto(test_interface->sock_fd,
-                            frame_headers->tx_buffer,
-                            frame_headers->length+frame_headers->tlv_size,
-                            0,
-                            (struct sockaddr*)&test_interface->sock_addr,
-                            sizeof(test_interface->sock_addr));
+                        frame_headers->tx_buffer,
+                        frame_headers->length+frame_headers->tlv_size,
+                        0,
+                        (struct sockaddr*)&test_interface->sock_addr,
+                        sizeof(test_interface->sock_addr));
 
         if (tx_ret <= 0)
         {
@@ -2146,6 +2205,18 @@ void sync_settings(struct app_params *app_params,
                     test_params->f_ack = true;
                     printf("ACK mode enabled\n");
 
+                // TX has set ACK mode timeout
+                } else if (ntohs(*frame_headers->rx_sub_tlv_type) == TYPE_ACKTIMEOUT) {
+
+                    test_params->f_ack_timeout = (uint16_t)ntohll(*frame_headers->rx_sub_tlv_value);
+                    printf("ACK mode timeout set to %" PRIu16"ms\n", test_params->f_ack_timeout);
+
+                // TX has set ACK mode frame count
+                } else if (ntohs(*frame_headers->rx_sub_tlv_type) == TYPE_ACKCOUNT) {
+
+                    test_params->f_ack_timeout = (uint32_t)ntohll(*frame_headers->rx_sub_tlv_value);
+                    printf("ACK mode set to ACK every %" PRIu32 " frames\n", test_params->f_ack_count);
+
                 // TX has requested MTU sweep test
                 } else if (ntohs(*frame_headers->rx_sub_tlv_type) == TYPE_MTUTEST) {
 
@@ -2156,13 +2227,13 @@ void sync_settings(struct app_params *app_params,
                 } else if (ntohs(*frame_headers->rx_sub_tlv_type) == TYPE_MTUMIN) {
 
                     mtu_test->mtu_tx_min = (uint16_t)ntohll(*frame_headers->rx_sub_tlv_value);
-                    printf("Minimum MTU set to %u\n", mtu_test->mtu_tx_min);
+                    printf("Minimum MTU set to %" PRIu16 "\n", mtu_test->mtu_tx_min);
 
                 // TX has set MTU sweep test maximum MTU size
                 } else if (ntohs(*frame_headers->rx_sub_tlv_type) == TYPE_MTUMAX) {
 
                     mtu_test->mtu_tx_max = (uint16_t)ntohll(*frame_headers->rx_sub_tlv_value);
-                    printf("Maximum MTU set to %u\n", mtu_test->mtu_tx_max);
+                    printf("Maximum MTU set to %" PRIu16 "\n", mtu_test->mtu_tx_max);
 
                 // TX has enabled link quality tests
                 } else if (ntohs(*frame_headers->rx_sub_tlv_type) == TYPE_QMTEST) {
@@ -2226,8 +2297,8 @@ void update_frame_size(struct frame_headers *frame_headers,
 
     } else if (test_params->f_size_total > PHY_MTU + 14) {
         
-        printf("\nPhysical interface MTU (%d with headers) is less than\n"
-               "the test frame size (%u with headers). Test frames shall\n"
+        printf("\nPhysical interface MTU (%" PRId16 " with headers) is less than\n"
+               "the test frame size (%" PRIu16 " with headers). Test frames shall\n"
                "be limited to the interface MTU size\n\n",
                PHY_MTU+14, test_params->f_size_total);
         

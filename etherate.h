@@ -1,9 +1,9 @@
 /*
  * License: MIT
  *
- * Copyright (c) 2012-2017 James Bensley.
+ * Copyright (c) 2012-2018 James Bensley.
  *
- * Permission is hereby granted, free of uint8_tge, to any person obtaining
+ * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
  * without limitation the rights to use, copy, modify, merge, publish,
@@ -61,19 +61,20 @@
  ************************************************************* GLOBAL CONSTANTS
  */
 
-#define APP_VERSION        "1.15 2017-10"
-#define F_SIZE_MAX         10000 // Maximum frame size on the wire (payload+headers)
+#define APP_VERSION        "1.16 2018-01"
+#define F_SIZE_MAX         10000 // Max frame size on the wire (payload+headers)
 #define F_SIZE_DEF         1500  // Default frame payload size in bytes
 #define F_DURATION_DEF     30    // Default test duration in seconds
 #define F_COUNT_DEF        0     // Default total number of frames to transmit
 #define F_BYTES_DEF        0     // Default amount of data to transmit in bytes
 #define B_TX_SPEED_MAX_DEF 0     // Default max speed in bytes, 0 == no limit
 #define F_TX_COUNT_MAX_DEF 0     // Default max frames per second, 0 == no limit
+#define F_TX_DLY_DEF       0.0   // Default frame tx interval, 0 == no delay
 #define PCP_DEF            0     // Default pcp value
 #define VLAN_ID_DEF        0     // Default VLAN ID
 #define QINQ_ID_DEF        0     // Default QinQ VLAN ID
 #define QINQ_PCP_DEF       0     // Default QinQ pcp value
-#define MPLS_LABELS_MAX    10    // Maximum number of MPLS labels
+#define MPLS_LABELS_MAX    10    // Max number of MPLS labels
 #define HEADERS_LEN_DEF    14    // Default frame headers length
 #define ETYPE_DEF          13107 // Default Ethertype (0x3333)
 #define IF_INDEX_DEF       -1    // Default interface index number
@@ -108,13 +109,15 @@
 #define TYPE_VLANPCP             307
 #define TYPE_QINQPCP             308
 #define TYPE_ACKMODE             309
-#define TYPE_MTUTEST             310
-#define TYPE_MTUMIN              311
-#define TYPE_MTUMAX              312
-#define TYPE_QMTEST              313
-#define TYPE_QMINTERVAL          314
-#define TYPE_QMTIMEOUT           315
-#define TYPE_TXDELAY             316
+#define TYPE_ACKTIMEOUT          310
+#define TYPE_ACKCOUNT            311
+#define TYPE_MTUTEST             312
+#define TYPE_MTUMIN              313
+#define TYPE_MTUMAX              314
+#define TYPE_QMTEST              315
+#define TYPE_QMINTERVAL          316
+#define TYPE_QMTIMEOUT           317
+#define TYPE_TXDELAY             318
 
 #define TYPE_TESTFRAME           4
 #define VALUE_TEST_SUB_TLV       40
@@ -247,6 +250,8 @@ struct speed_test             // Speed test parameters
     double      b_speed;             // Current speed
     double      b_speed_max;         // Maximum speed achieved during the test
     long double b_speed_avg;         // Average speed achieved during the test
+    uint64_t    *testBase;           // Speed test duration start
+    uint64_t    *testMax;            // Speed test duration end
 
 };
 
@@ -254,25 +259,30 @@ struct speed_test             // Speed test parameters
 struct test_params             // Gerneral testing parameters
 {
 
-    uint64_t    f_bytes;             // Maximum amount of data to transmit in bytes
-    uint64_t    f_count;             // Maximum number of frames to send
-    uint64_t    f_duration;          // Maximum duration in seconds
-    uint16_t    f_size;              // Frame payload in bytes
-    uint16_t    f_size_total;        // Total frame size including headers
-    uint64_t    s_elapsed;           // Seconds the test has been running
-    uint64_t    f_tx_count;          // Total number of frames transmitted
-    uint64_t    f_tx_count_prev;     // Total number of frames sent one second ago
-    uint32_t    f_tx_count_max;      // Maximum transmit speed in frames per second
-    uint64_t    f_rx_count;          // Total number of frames received
-    uint64_t    f_rx_count_prev;     // Total number of frames received one second ago
+    uint64_t    f_bytes;             // Max amount of data to transmit in bytes
+    uint64_t    f_count;             // Max number of frames to send
+    uint64_t    f_duration;          // Max duration in seconds
+    uint64_t    f_rx_count;          // Total number of frames rx
+    uint64_t    f_rx_count_prev;     // Total number of frames rx one second ago
+    uint64_t    f_rx_early;          // Frames rx out of order that are early
+    uint64_t    f_rx_late;           // Frames rx out of order that are late
+    uint64_t    f_rx_ontime;         // Frames rx on time
     uint64_t    f_rx_other;          // Number of non test frames received
-    uint64_t    f_rx_ontime;         // Frames received on time
-    uint64_t    f_rx_early;          // Frames received out of order that are early
-    uint64_t    f_rx_late;           // Frames received out of order that are late
-    uint8_t     f_ack;               // Testing in ACK mode during transmition
+    uint16_t    f_size;              // Frame payload in bytes
+    uint16_t    f_size_total;        // Total frame size with headers (bytes)
+    uint8_t     f_ack;               // Test in ACK mode during transmition
+    uint32_t    f_ack_count;         // Number of frames send before each ACK
+    uint32_t    f_ack_pending;       // Frames in flight pending ACK
+    uint16_t    f_ack_timeout;       // Timeout value in ms for Rx to ACK frames
+    uint64_t    f_tx_count;          // Total number of frames tx
+    uint64_t    f_tx_count_prev;     // Total number of frames tx one second ago
+    uint32_t    f_tx_count_max;      // Max tx speed in frames per second
+    long double f_tx_dly;            // Inter-frame tx delay (pacing) in nano secs
     uint8_t     f_waiting_ack;       // Test is waiting for a frame to be ACK'ed
-    struct timespec ts_current_time; // Two timers for timing a test and calculating stats
-    struct timespec ts_elapsed_time;
+    uint64_t    s_elapsed;           // Seconds the test has been running
+    struct timespec current_time;    // Two timers for test duration and
+    struct timespec elapsed_time;    // stats calculatinons
+    struct timespec last_tx;         // Timer for last tx time
 
 };
 

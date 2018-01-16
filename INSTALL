@@ -24,7 +24,7 @@ gcc -o etherate etherate.c -Wall -Werror -ftrapv -pedantic -lrt -lm -fstack-prot
 
 To compile the binary in the local directory use the following:
 
-gcc -o etherate etherate.c -Wall -Werror -ftrapv -pedantic -lrt -lm -fstack-protector-all -std=gnu11 -O3
+gcc -o etherate etherate.c -Wall -Werror -ftrapv -pedantic -lrt -lm -std=gnu11 -O3
 
 
 

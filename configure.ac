@@ -1,4 +1,4 @@
-AC_INIT([etherate],[1.15.0],[jwbensley@gmail.com],,[https://null.53bits.co.uk/index.php?page=etherate])
+AC_INIT([etherate],[1.16.0],[jwbensley@gmail.com],,[https://null.53bits.co.uk/index.php?page=etherate])
 
 AM_INIT_AUTOMAKE([1.9 tar-pax])
 
@@ -10,7 +10,7 @@ AC_SYS_LARGEFILE
 AC_PROG_LIBTOOL
 
 #CFLAGS="-Wall -D_FILE_OFFSET_BITS=$ac_cv_sys_file_offset_bits"
-CFLAGS="-Wall -ftrapv -lrt -lm -std=gnu1x -fstack-protector-all -D _GNU_SOURCE -DPACKAGE=\\\"\$(PACKAGE)\\\" -DSYSCONFDIR=\\\"\$(sysconfdir)\\\" -DLOCALSTATEDIR=\\\"\$(localstatedir)\\\" -DLIBEXECDIR=\\\"\$(libexecdir)\\\" -DLIBDIR=\\\"\$(libdir)\\\" -DPACKAGE_VERSION=\\\"\$(PACKAGE_VERSION)\\\"" 
+CFLAGS="-Wall -ftrapv -lrt -lm -std=gnu1x -D _GNU_SOURCE -DPACKAGE=\\\"\$(PACKAGE)\\\" -DSYSCONFDIR=\\\"\$(sysconfdir)\\\" -DLOCALSTATEDIR=\\\"\$(localstatedir)\\\" -DLIBEXECDIR=\\\"\$(libexecdir)\\\" -DLIBDIR=\\\"\$(libdir)\\\" -DPACKAGE_VERSION=\\\"\$(PACKAGE_VERSION)\\\"" 
 CXXFLAGS=$CFLAGS
 
 AC_MSG_CHECKING(whether to enable debugging)
@@ -19,8 +19,8 @@ AC_ARG_ENABLE(debug, [  --enable-debug=[no/yes] turn on debugging
                        [default=${debug_default}]],, enable_debug=$debug_default)
 if test "x$enable_debug" = "xyes"; then
 #    AC_DEFINE([DEBUG], [], [Build a Debug Version])
-    CFLAGS="$CFLAGS -g -pipe -Og -DDEBUG"
-    CXXFLAGS="$CXXFLAGS -g -pipe -Og -DDEBUG"
+    CFLAGS="$CFLAGS -g -pipe -Og -fstack-protector-all -DDEBUG"
+    CXXFLAGS="$CXXFLAGS -g -pipe -Og -fstack-protector-all -DDEBUG"
     AC_MSG_RESULT(yes)
     AM_CONDITIONAL(DEBUG, test "x$enable_debug" = "xyes")
 else
