@@ -21,41 +21,53 @@
  * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- * 
- * 
- * File: Etherate Test Functions
+ *
+ *
+ * File: Etherate Setup Functions
  *
  * File Contents:
- * tests.c prototypes
+ * speed_tests.c prototypes
  *
  */
 
 
 
-// Calculate the one-way delay from Tx to Rx
-void delay_test(struct app_params *app_params,
+///// Update protype desctions
+// Run a speedtest (which is the default test operation if none is specified)
+void speed_test_prep(struct app_params *app_params,
                 struct frame_headers *frame_headers,
+                struct speed_test *speed_test,
                 struct test_interface *test_interface,
-                struct test_params * test_params,
-                struct qm_test *qm_test);
+                struct test_params *test_params);
 
-// Run an MTU sweep test from Tx to Rx
-void mtu_sweep_test(struct app_params *app_params,
+void speed_test_bps(struct app_params *app_params,
                     struct frame_headers *frame_headers,
+                    struct speed_test *speed_test,
                     struct test_interface *test_interface,
-                    struct test_params *test_params,
-                    struct mtu_test *mtu_test);
+                    struct test_params *test_params);
 
-// Run some quality measurements from Tx to Rx
-void latency_test(struct app_params *app_params,
-                  struct frame_headers *frame_headers,
-                  struct test_interface *test_interface,
-                  struct test_params *test_params,
-                  struct qm_test *qm_test);
+void speed_test_fps(struct app_params *app_params,
+                    struct frame_headers *frame_headers,
+                    struct speed_test *speed_test,
+                    struct test_interface *test_interface,
+                    struct test_params *test_params);
 
-// Tx a custom frame loaded from file
-void send_custom_frame(struct app_params *app_params,
+///// Change this name
+void speed_test_full(struct app_params *app_params,
+                struct frame_headers *frame_headers,
+                struct speed_test *speed_test,
+                struct test_interface *test_interface,
+                struct test_params *test_params);
+
+void speed_test_pacing(struct app_params *app_params,
                        struct frame_headers *frame_headers,
                        struct speed_test *speed_test,
                        struct test_interface *test_interface,
                        struct test_params *test_params);
+
+///// Change this name
+void speed_test_rx(struct app_params *app_params,
+                   struct frame_headers *frame_headers,
+                   struct speed_test *speed_test,
+                   struct test_interface *test_interface,
+                   struct test_params *test_params);

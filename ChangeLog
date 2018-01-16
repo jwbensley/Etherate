@@ -1,3 +1,12 @@
+-----Etherate 1.16 2018-01
+
+[FEATURE] Added enhancement #38; Remove -fstack-protector-all compile flag
+
+[FEATURE] Added enhancement #37; Add packet pacing feature
+
+[MINOR] Correct some typos in the code and more cody tidying
+
+
 
 -----Etherate 1.15 2017-10
 

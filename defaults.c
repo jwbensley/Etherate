@@ -1,9 +1,9 @@
 /*
  * License: MIT
  *
- * Copyright (c) 2012-2017 James Bensley.
+ * Copyright (c) 2012-2018 James Bensley.
  *
- * Permission is hereby granted, free of uint8_tge, to any person obtaining
+ * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
  * without limitation the rights to use, copy, modify, merge, publish,
@@ -54,54 +54,52 @@ void set_default_values(struct app_params *app_params,
 
 
     pframe_headers                   = frame_headers;
-    frame_headers->src_mac[0]        = 0x00;
-    frame_headers->src_mac[1]        = 0x00;
-    frame_headers->src_mac[2]        = 0x5E;
-    frame_headers->src_mac[3]        = 0x00;
-    frame_headers->src_mac[4]        = 0x00;
-    frame_headers->src_mac[5]        = 0x01;
     frame_headers->dst_mac[0]        = 0x00;
     frame_headers->dst_mac[1]        = 0x00;
     frame_headers->dst_mac[2]        = 0x5E;
     frame_headers->dst_mac[3]        = 0x00;
     frame_headers->dst_mac[4]        = 0x00;
     frame_headers->dst_mac[5]        = 0x02;
-    frame_headers->length            = HEADERS_LEN_DEF;
     frame_headers->etype             = ETYPE_DEF;
-    frame_headers->pcp               = PCP_DEF;
-    frame_headers->vlan_id           = VLAN_ID_DEF;
-    frame_headers->vlan_dei          = 0;
-    frame_headers->qinq_id           = QINQ_ID_DEF;
-    frame_headers->qinq_pcp          = QINQ_PCP_DEF;
-    frame_headers->qinq_dei          = 0;
-    frame_headers->lsp_src_mac[0]    = 0x00;
-    frame_headers->lsp_src_mac[1]    = 0x00;
-    frame_headers->lsp_src_mac[2]    = 0x00;
-    frame_headers->lsp_src_mac[3]    = 0x00;
-    frame_headers->lsp_src_mac[4]    = 0x00;
-    frame_headers->lsp_src_mac[5]    = 0x00;
+    frame_headers->length            = HEADERS_LEN_DEF;
     frame_headers->lsp_dst_mac[0]    = 0x00;
     frame_headers->lsp_dst_mac[1]    = 0x00;
     frame_headers->lsp_dst_mac[2]    = 0x00;
     frame_headers->lsp_dst_mac[3]    = 0x00;
     frame_headers->lsp_dst_mac[4]    = 0x00;
     frame_headers->lsp_dst_mac[5]    = 0x00;
+    frame_headers->lsp_src_mac[0]    = 0x00;
+    frame_headers->lsp_src_mac[1]    = 0x00;
+    frame_headers->lsp_src_mac[2]    = 0x00;
+    frame_headers->lsp_src_mac[3]    = 0x00;
+    frame_headers->lsp_src_mac[4]    = 0x00;
+    frame_headers->lsp_src_mac[5]    = 0x00;
     frame_headers->mpls_labels       = 0;
     for (uint16_t i = 0; i<MPLS_LABELS_MAX; i += 1) {
         frame_headers->mpls_label[i] = 0;
         frame_headers->mpls_exp[i]   = 0;
         frame_headers->mpls_ttl[i]   = 0;
     }
+    frame_headers->pcp               = PCP_DEF;
     frame_headers->pwe_ctrl_word     = 0;
-    frame_headers->tlv_size          = sizeof(uint8_t) + sizeof(uint16_t) +
-                                       sizeof(uint32_t);
+    frame_headers->qinq_dei          = 0;
+    frame_headers->qinq_id           = QINQ_ID_DEF;
+    frame_headers->qinq_pcp          = QINQ_PCP_DEF;
+    frame_headers->rx_buffer         = (uint8_t*)calloc(1, F_SIZE_MAX);
+    frame_headers->src_mac[0]        = 0x00;
+    frame_headers->src_mac[1]        = 0x00;
+    frame_headers->src_mac[2]        = 0x5E;
+    frame_headers->src_mac[3]        = 0x00;
+    frame_headers->src_mac[4]        = 0x00;
+    frame_headers->src_mac[5]        = 0x01;
     frame_headers->sub_tlv_size      = frame_headers->tlv_size + 
                                        sizeof(uint8_t) + sizeof(uint16_t) + 
                                        sizeof(uint64_t);
-
-    // Send and receive buffers for incoming/outgoing ethernet frames
-    frame_headers->rx_buffer = (uint8_t*)calloc(1, F_SIZE_MAX);
-    frame_headers->tx_buffer = (uint8_t*)calloc(1, F_SIZE_MAX);
+    frame_headers->tlv_size          = sizeof(uint8_t) + sizeof(uint16_t) +
+                                       sizeof(uint32_t);
+    frame_headers->tx_buffer         = (uint8_t*)calloc(1, F_SIZE_MAX);
+    frame_headers->vlan_dei          = 0;
+    frame_headers->vlan_id           = VLAN_ID_DEF;
 
 
     pmtu_test            = mtu_test;
@@ -166,23 +164,25 @@ void set_default_values(struct app_params *app_params,
 
 
     ptest_params                 = test_params;
-    test_params->f_size          = F_SIZE_DEF;
-    test_params->f_size_total    = F_SIZE_DEF + frame_headers->length;
-    test_params->f_duration      = F_DURATION_DEF;
-    test_params->f_count         = F_COUNT_DEF; 
+    test_params->f_ack           = false;
+    test_params->f_ack_pending   = 0;
     test_params->f_bytes         = F_BYTES_DEF;
-    test_params->s_elapsed       = 0;
-    test_params->f_tx_count      = 0;
-    test_params->f_tx_count_prev = 0;
-    test_params->f_tx_count_max  = F_TX_COUNT_MAX_DEF;
+    test_params->f_count         = F_COUNT_DEF; 
+    test_params->f_duration      = F_DURATION_DEF;
     test_params->f_rx_count      = 0;
     test_params->f_rx_count_prev = 0;
-    test_params->f_rx_ontime     = 0;
     test_params->f_rx_early      = 0;
     test_params->f_rx_late       = 0;
+    test_params->f_rx_ontime     = 0;
     test_params->f_rx_other      = 0;
-    test_params->f_ack           = false;
+    test_params->f_tx_dly        = F_TX_DLY_DEF;
+    test_params->f_tx_count      = 0;
+    test_params->f_tx_count_max  = F_TX_COUNT_MAX_DEF;
+    test_params->f_tx_count_prev = 0;
+    test_params->f_size          = F_SIZE_DEF;
+    test_params->f_size_total    = F_SIZE_DEF + frame_headers->length;
     test_params->f_waiting_ack   = false;
+    test_params->s_elapsed       = 0;
     
 }
 
@@ -229,7 +229,7 @@ int16_t setup_frame(struct app_params *app_params,
 int16_t setup_socket(struct test_interface *test_interface)
 {
 
-    test_interface->sock_fd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+    test_interface->sock_fd = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_ALL)); ///// Was SOCK_RAW
 
     if (test_interface->sock_fd < 0 )
     {
@@ -267,7 +267,7 @@ int16_t setup_socket_interface(struct frame_headers *frame_headers,
         if (test_interface->if_index <= 0)
         {
             printf("Error: Couldn't set interface with index, "
-                   "returned index was %d!\n", test_interface->if_index);
+                   "returned index was %" PRId32 "!\n", test_interface->if_index);
             return EX_SOFTWARE;
         }
 
@@ -278,7 +278,7 @@ int16_t setup_socket_interface(struct frame_headers *frame_headers,
         if (test_interface->if_index <= 0)
         {
             printf("Error: Couldn't set interface index from name, "
-                   "returned index was %d!\n", test_interface->if_index);
+                   "returned index was %" PRId32 "!\n", test_interface->if_index);
             return EX_SOFTWARE;
         }
 
@@ -289,7 +289,7 @@ int16_t setup_socket_interface(struct frame_headers *frame_headers,
         if (test_interface->if_index <= 0)
         {
             printf("Error: Couldn't find appropriate interface ID, "
-                  "returned ID was %d!\n", test_interface->if_index);
+                  "returned ID was %" PRId32 "!\n", test_interface->if_index);
             return EX_SOFTWARE;
         }
 

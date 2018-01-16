@@ -1,7 +1,7 @@
 /*
  * License: MIT
  *
- * Copyright (c) 2012-2017 James Bensley.
+ * Copyright (c) 2012-2018 James Bensley.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -55,9 +55,9 @@
 #include <stdio.h>           // perror(), printf()
 #include <stdlib.h>          // atoi(), calloc(), EXIT_SUCCESS, free(),
                              // fscanf(), malloc(), strtoul(), strtoull()
-#include <string.h>          // memcpy(), strncmp(), strsep()
-#define MAX_IFS 64
-#include <sys/ioctl.h>
+#include <string.h>          // memcpy(), strncmp(), strsep(), strtok_r()
+#define MAX_IFS 64           // Max struct ifreq
+#include <sys/ioctl.h>       // ioctl()
 #include <sys/socket.h>      // AF_PACKET
 #include "sysexits.h"        // EX_USAGE, EX_NOPERM, EX_PROTOCOL, EX_SOFTWARE
 #include <time.h>            // clock_gettime(), struct timeval, time_t,
@@ -70,6 +70,7 @@
 #include "etherate.h"
 #include "functions.c"
 #include "defaults.c"
+#include "speed_tests.c"
 #include "tests.c"
 
 
@@ -178,11 +179,19 @@ int main(int argc, char *argv[]) {
         // Pause to allow the RX host to process the sent settings
         sleep(2);
 
-        // Rebuild the test frame headers in case any settings have been changed
-        // by the TX host
+        // Rebuild the test frame headers in case any settings have been for
+        // the RX host by the TX host
         if (app_params.tx_mode != true) build_headers(&frame_headers);
-        printf("Frame size is %d bytes\n", test_params.f_size_total);
+        printf("Frame size is %" PRId16 " bytes\n", test_params.f_size_total);
 
+        // If using frame pacing, calculate the inter-frame delay now that the
+        // frame size is no longer subject to change
+        if (test_params.f_tx_dly != F_TX_DLY_DEF) {
+            uint32_t f_tx_max  = (uint32_t)((test_params.f_size_total * 8) / test_params.f_tx_dly);
+            test_params.f_tx_dly = (1000000000 / f_tx_max) * 1e-9;
+            printf("Pacing to a maximum rate of %" PRIu32 " fps (%.9Lfs spacing)\n",
+                   f_tx_max, test_params.f_tx_dly);
+        }
 
         // Try to measure the TX to RX one way delay
         if (app_params.tx_delay == true)
@@ -198,6 +207,7 @@ int main(int argc, char *argv[]) {
         app_params.ts_now =   time(0);
         app_params.tm_local = localtime(&app_params.ts_now);
         printf("Starting test on %s\n", asctime(app_params.tm_local));   
+
 
         if (mtu_test.enabled) {
 
@@ -218,11 +228,13 @@ int main(int argc, char *argv[]) {
         } else {
 
             speed_test.enabled = true;
-            speed_test_default(&app_params, &frame_headers, &speed_test,
-                               &test_interface, &test_params);
+            speed_test_prep(&app_params, &frame_headers, &speed_test,
+                       &test_interface, &test_params);
 
         }
-        
+
+
+
         app_params.ts_now = time(0);
         app_params.tm_local = localtime(&app_params.ts_now);
         printf("Ending test on %s\n\n", asctime(app_params.tm_local));
