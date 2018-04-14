@@ -12,6 +12,8 @@
 
 [MINOR] Fixed issue #44; The average FPS and max FPS are always the same
 
+[FEATURE] Added enhancement #43; Replace sendto() with send()
+
 [MINOR] Fixed issue #42; -h option says "on the wire"
 
 [MINOR] Fixed issue #39; -l option requires sudo
