@@ -25,24 +25,13 @@
  *
  * File: Etherate Test Functions
  *
- * File Contents:
- * void delay_test()
- * void mtu_sweep_test()
- * void latency_test()
- * void speed_test_default()
- * void send_custom_frame()
- *
  */
 
 
 
 #include "tests.h"
 
-void delay_test(struct app_params *app_params,
-                struct frame_headers *frame_headers,
-                struct test_interface *test_interface,
-                struct test_params *test_params,
-                struct qm_test *qm_test)
+void delay_test(struct etherate *eth)
 {
 // Calculate the delay between Tx and Rx hosts. The uptime is exchanged twice
 // to estimate the delay between the hosts. Then the process is repeated so
@@ -56,31 +45,30 @@ void delay_test(struct app_params *app_params,
     uint8_t     WAITING;
 
 
-    build_tlv(frame_headers, htons(TYPE_TESTFRAME), htonl(VALUE_TEST_SUB_TLV));
+    build_tlv(&eth->frm, htons(TYPE_TESTFRAME), htonl(VALUE_TEST_SUB_TLV));
 
     printf("Calculating delay between hosts...\n");
 
-    if (app_params->tx_mode == true)
+    if (eth->app.tx_mode == true)
     {
 
-        for (uint32_t i=0; i < qm_test->delay_test_count; i += 1)
+        for (uint32_t i=0; i < eth->qm_test.delay_test_count; i += 1)
         {
 
             // Get the current time and send it to Rx
-            clock_gettime(CLOCK_MONOTONIC_RAW, &qm_test->ts_rtt);
+            clock_gettime(CLOCK_MONOTONIC_RAW, &eth->qm_test.ts_rtt);
 
             // Convert it to double then long long (uint64t_) for transmission
-            UPTIME = qm_test->ts_rtt.tv_sec + ((double)qm_test->ts_rtt.tv_nsec * 1e-9);
+            UPTIME = eth->qm_test.ts_rtt.tv_sec + ((double)eth->qm_test.ts_rtt.tv_nsec * 1e-9);
             tx_uptime = roundl(UPTIME * 1000000000.0);
 
-            build_sub_tlv(frame_headers, htons(TYPE_DELAY1), htonll(tx_uptime));
+            build_sub_tlv(&eth->frm, htons(TYPE_DELAY1), htonll(tx_uptime));
 
-            tx_ret = sendto(test_interface->sock_fd,
-                            frame_headers->tx_buffer,
-                            frame_headers->length+frame_headers->sub_tlv_size,
-                            0,
-                            (struct sockaddr*)&test_interface->sock_addr,
-                            sizeof(test_interface->sock_addr));
+            tx_ret = send(eth->intf.sock_fd,
+                          eth->frm.tx_buffer,
+                          eth->frm.length + eth->frm.sub_tlv_size,
+                          0);
+
 
             if (tx_ret <= 0)
             {
@@ -89,19 +77,17 @@ void delay_test(struct app_params *app_params,
             }
 
             // Repeat
-            clock_gettime(CLOCK_MONOTONIC_RAW, &qm_test->ts_rtt);
+            clock_gettime(CLOCK_MONOTONIC_RAW, &eth->qm_test.ts_rtt);
 
-            UPTIME = qm_test->ts_rtt.tv_sec + ((double)qm_test->ts_rtt.tv_nsec * 1e-9);
+            UPTIME = eth->qm_test.ts_rtt.tv_sec + ((double)eth->qm_test.ts_rtt.tv_nsec * 1e-9);
             tx_uptime = roundl(UPTIME * 1000000000.0);
 
-            build_sub_tlv(frame_headers, htons(TYPE_DELAY2), htonll(tx_uptime));
+            build_sub_tlv(&eth->frm, htons(TYPE_DELAY2), htonll(tx_uptime));
 
-            tx_ret = sendto(test_interface->sock_fd,
-                            frame_headers->tx_buffer,
-                            frame_headers->length+frame_headers->sub_tlv_size,
-                            0,
-                            (struct sockaddr*)&test_interface->sock_addr,
-                            sizeof(test_interface->sock_addr));
+            tx_ret = send(eth->intf.sock_fd,
+                          eth->frm.tx_buffer,
+                          eth->frm.length + eth->frm.sub_tlv_size,
+                          0);
 
             if (tx_ret <= 0)
             {
@@ -114,17 +100,16 @@ void delay_test(struct app_params *app_params,
             WAITING = true;
             while (WAITING)
             {
-                rx_len = recvfrom(test_interface->sock_fd,
-                                  frame_headers->rx_buffer,
-                                  test_params->f_size_total,
-                                  0, NULL, NULL);
+                rx_len = read(eth->intf.sock_fd,
+                              eth->frm.rx_buffer,
+                              eth->params.f_size_total);
 
                 if (rx_len > 0)
                 {
 
-                    if (ntohs(*frame_headers->rx_sub_tlv_type) == TYPE_DELAY)
+                    if (ntohs(*eth->frm.rx_sub_tlv_type) == TYPE_DELAY)
                     {
-                        qm_test->delay_results[i] = (ntohll(*frame_headers->rx_sub_tlv_value) / 1000000000.0);
+                        eth->qm_test.delay_results[i] = (ntohll(*eth->frm.rx_sub_tlv_value) / 1000000000.0);
                         WAITING = false;
                     }
 
@@ -141,17 +126,15 @@ void delay_test(struct app_params *app_params,
 
 
         // Let the receiver know all delay values have been received
-        build_tlv(frame_headers, htons(TYPE_TESTFRAME), htonl(VALUE_DELAY_END));
+        build_tlv(&eth->frm, htons(TYPE_TESTFRAME), htonl(VALUE_DELAY_END));
 
-        build_sub_tlv(frame_headers, htons(TYPE_TESTFRAME),
+        build_sub_tlv(&eth->frm, htons(TYPE_TESTFRAME),
                       htonll(VALUE_DELAY_END));
 
-        tx_ret = sendto(test_interface->sock_fd,
-                        frame_headers->tx_buffer,
-                        frame_headers->length+frame_headers->sub_tlv_size,
-                        0,
-                        (struct sockaddr*)&test_interface->sock_addr,
-                        sizeof(test_interface->sock_addr));
+        tx_ret = send(eth->intf.sock_fd,
+                      eth->frm.tx_buffer,
+                      eth->frm.length + eth->frm.sub_tlv_size,
+                      0);
 
         if (tx_ret <= 0)
         {
@@ -162,12 +145,12 @@ void delay_test(struct app_params *app_params,
 
         double delay_avg = 0;
 
-        for (uint32_t i=0; i < qm_test->delay_test_count; i += 1)
+        for (uint32_t i=0; i < eth->qm_test.delay_test_count; i += 1)
         {
-            delay_avg += qm_test->delay_results[i];
+            delay_avg += eth->qm_test.delay_results[i];
         }
 
-        delay_avg = (delay_avg/qm_test->delay_test_count);
+        delay_avg = (delay_avg/eth->qm_test.delay_test_count);
 
         printf("Tx to Rx delay calculated as %.9f seconds\n\n", delay_avg);
 
@@ -177,12 +160,23 @@ void delay_test(struct app_params *app_params,
 
 
         // These values are used to calculate the delay between Tx and Rx hosts
-        qm_test->time_tx_1 = (double*)calloc(qm_test->delay_test_count, sizeof(double));
-        qm_test->time_tx_2 = (double*)calloc(qm_test->delay_test_count, sizeof(double));
-        qm_test->time_rx_1 = (double*)calloc(qm_test->delay_test_count, sizeof(double));
-        qm_test->time_rx_2 = (double*)calloc(qm_test->delay_test_count, sizeof(double));
-        qm_test->time_tx_diff = (double*)calloc(qm_test->delay_test_count, sizeof(double));
-        qm_test->time_rx_diff = (double*)calloc(qm_test->delay_test_count, sizeof(double));
+        eth->qm_test.time_tx_1 = (double*)calloc(eth->qm_test.delay_test_count, sizeof(double));
+        eth->qm_test.time_tx_2 = (double*)calloc(eth->qm_test.delay_test_count, sizeof(double));
+        eth->qm_test.time_rx_1 = (double*)calloc(eth->qm_test.delay_test_count, sizeof(double));
+        eth->qm_test.time_rx_2 = (double*)calloc(eth->qm_test.delay_test_count, sizeof(double));
+        eth->qm_test.time_tx_diff = (double*)calloc(eth->qm_test.delay_test_count, sizeof(double));
+        eth->qm_test.time_rx_diff = (double*)calloc(eth->qm_test.delay_test_count, sizeof(double));
+
+        if (eth->qm_test.time_tx_1 == NULL ||
+            eth->qm_test.time_tx_2 == NULL ||
+            eth->qm_test.time_rx_1 == NULL ||
+            eth->qm_test.time_rx_2 == NULL ||
+            eth->qm_test.time_tx_diff == NULL ||
+            eth->qm_test.time_rx_diff == NULL)
+        {
+            perror("Couldn't allocate delay buffers ");
+            return;
+        }
 
         uint32_t delay_index = 0;
         
@@ -191,53 +185,52 @@ void delay_test(struct app_params *app_params,
         while(WAITING)
         {
 
-            rx_len = recvfrom(test_interface->sock_fd,
-                              frame_headers->rx_buffer,
-                              test_params->f_size_total,
-                              0, NULL, NULL);
+            rx_len = read(eth->intf.sock_fd,
+                          eth->frm.rx_buffer,
+                          eth->params.f_size_total);
 
-            if (ntohs(*frame_headers->rx_sub_tlv_type) == TYPE_DELAY1)
+            if (ntohs(*eth->frm.rx_sub_tlv_type) == TYPE_DELAY1)
             {
 
                 // Get the time Rx is receiving Tx's sent time figure
-                clock_gettime(CLOCK_MONOTONIC_RAW, &qm_test->ts_rtt);
+                clock_gettime(CLOCK_MONOTONIC_RAW, &eth->qm_test.ts_rtt);
 
                 // Record the time Rx received this Tx value
-                qm_test->time_rx_1[delay_index] = qm_test->ts_rtt.tv_sec + ((double)qm_test->ts_rtt.tv_nsec * 1e-9);
+                eth->qm_test.time_rx_1[delay_index] = eth->qm_test.ts_rtt.tv_sec + ((double)eth->qm_test.ts_rtt.tv_nsec * 1e-9);
                 // Record the Tx value received
-                qm_test->time_tx_1[delay_index] = (ntohll(*frame_headers->rx_sub_tlv_value) / 1000000000.0);
+                eth->qm_test.time_tx_1[delay_index] = (ntohll(*eth->frm.rx_sub_tlv_value) / 1000000000.0);
 
 
-            } else if (ntohs(*frame_headers->rx_sub_tlv_type) == TYPE_DELAY2) {
+            } else if (ntohs(*eth->frm.rx_sub_tlv_type) == TYPE_DELAY2) {
 
 
                 // Grab the Rx time and sent Tx value for the second time
-                clock_gettime(CLOCK_MONOTONIC_RAW, &qm_test->ts_rtt);
-                qm_test->time_rx_2[delay_index] = qm_test->ts_rtt.tv_sec + ((double)qm_test->ts_rtt.tv_nsec * 1e-9);
-                qm_test->time_tx_2[delay_index] = (ntohll(*frame_headers->rx_sub_tlv_value) / 1000000000.0);
+                clock_gettime(CLOCK_MONOTONIC_RAW, &eth->qm_test.ts_rtt);
+                eth->qm_test.time_rx_2[delay_index] = eth->qm_test.ts_rtt.tv_sec + ((double)eth->qm_test.ts_rtt.tv_nsec * 1e-9);
+                eth->qm_test.time_tx_2[delay_index] = (ntohll(*eth->frm.rx_sub_tlv_value) / 1000000000.0);
 
                 // Calculate the delay
-                qm_test->time_tx_diff[delay_index] = qm_test->time_tx_2[delay_index] - qm_test->time_tx_1[delay_index];
-                qm_test->time_rx_diff[delay_index] = qm_test->time_rx_2[delay_index] - qm_test->time_rx_1[delay_index];
+                eth->qm_test.time_tx_diff[delay_index] = eth->qm_test.time_tx_2[delay_index] - eth->qm_test.time_tx_1[delay_index];
+                eth->qm_test.time_rx_diff[delay_index] = eth->qm_test.time_rx_2[delay_index] - eth->qm_test.time_rx_1[delay_index];
 
                 // Rarely a negative value is calculated
-                if (qm_test->time_rx_diff[delay_index] - qm_test->time_tx_diff[delay_index] > 0) {
-                    qm_test->delay_results[delay_index] = qm_test->time_rx_diff[delay_index] - qm_test->time_tx_diff[delay_index];
+                if (eth->qm_test.time_rx_diff[delay_index] - eth->qm_test.time_tx_diff[delay_index] > 0) {
+                    eth->qm_test.delay_results[delay_index] = eth->qm_test.time_rx_diff[delay_index] - eth->qm_test.time_tx_diff[delay_index];
                 // This value returned is minus and thus invalid
                 } else {
 
-                    qm_test->delay_results[delay_index] = 0;
+                    eth->qm_test.delay_results[delay_index] = 0;
                 }
 
 
                 // Send the calculated delay back to the Tx host
-                build_sub_tlv(frame_headers, htons(TYPE_DELAY),
-                              htonll(roundl(qm_test->delay_results[delay_index]*1000000000.0)));
+                build_sub_tlv(&eth->frm, htons(TYPE_DELAY),
+                              htonll(roundl(eth->qm_test.delay_results[delay_index]*1000000000.0)));
 
-                tx_ret = sendto(test_interface->sock_fd, frame_headers->tx_buffer,
-                                    frame_headers->length+frame_headers->sub_tlv_size,
-                                    0,(struct sockaddr*)&test_interface->sock_addr,
-                                    sizeof(test_interface->sock_addr));
+                tx_ret = send(eth->intf.sock_fd,
+                              eth->frm.tx_buffer,
+                              eth->frm.length + eth->frm.sub_tlv_size,
+                              0);
 
                 if (tx_ret <= 0)
                 {
@@ -249,18 +242,18 @@ void delay_test(struct app_params *app_params,
                 delay_index += 1;
 
 
-            } else if (ntohl(*frame_headers->rx_tlv_value) == VALUE_DELAY_END) {
+            } else if (ntohl(*eth->frm.rx_tlv_value) == VALUE_DELAY_END) {
 
                 WAITING = false;
 
                 double delay_avg = 0;
 
-                for (uint32_t i=0; i < qm_test->delay_test_count; i += 1)
+                for (uint32_t i=0; i < eth->qm_test.delay_test_count; i += 1)
                 {
-                    delay_avg += qm_test->delay_results[i];
+                    delay_avg += eth->qm_test.delay_results[i];
                 }
 
-                delay_avg = (delay_avg/qm_test->delay_test_count);
+                delay_avg = (delay_avg/eth->qm_test.delay_test_count);
 
                 printf("Tx to Rx delay calculated as %.9f seconds\n\n", delay_avg);
 
@@ -269,18 +262,18 @@ void delay_test(struct app_params *app_params,
 
         } // End of WAITING
 
-        free(qm_test->time_tx_1);
-        free(qm_test->time_tx_2);
-        free(qm_test->time_rx_1);
-        free(qm_test->time_rx_2);
-        free(qm_test->time_tx_diff);
-        free(qm_test->time_rx_diff);
-        qm_test->time_tx_1    = NULL;
-        qm_test->time_tx_2    = NULL;
-        qm_test->time_rx_1    = NULL;
-        qm_test->time_rx_2    = NULL;
-        qm_test->time_tx_diff = NULL;
-        qm_test->time_rx_diff = NULL;
+        free(eth->qm_test.time_tx_1);
+        free(eth->qm_test.time_tx_2);
+        free(eth->qm_test.time_rx_1);
+        free(eth->qm_test.time_rx_2);
+        free(eth->qm_test.time_tx_diff);
+        free(eth->qm_test.time_rx_diff);
+        eth->qm_test.time_tx_1    = NULL;
+        eth->qm_test.time_tx_2    = NULL;
+        eth->qm_test.time_rx_1    = NULL;
+        eth->qm_test.time_rx_2    = NULL;
+        eth->qm_test.time_tx_diff = NULL;
+        eth->qm_test.time_rx_diff = NULL;
 
     } // End of Rx mode
 
@@ -288,64 +281,60 @@ void delay_test(struct app_params *app_params,
 
 
 
-void mtu_sweep_test(struct app_params *app_params,
-                    struct frame_headers *frame_headers,
-                    struct test_interface *test_interface,
-                    struct test_params *test_params,
-                    struct mtu_test *mtu_test)
+void mtu_sweep_test(struct etherate *eth)
 {
 
     // Check the interface MTU
-    int32_t phy_mtu = get_interface_mtu_by_name(test_interface);
+    int32_t phy_mtu = get_interface_mtu_by_name(&eth->intf);
 
-    if (mtu_test->mtu_tx_max > phy_mtu) {
+    if (eth->mtu_test.mtu_tx_max > phy_mtu) {
 
-        printf("Starting MTU sweep from %" PRIu16 " to %" PRIu16 " (interface max)\n",
-               mtu_test->mtu_tx_min, phy_mtu);
-        mtu_test->mtu_tx_max = phy_mtu;
+        printf("Running MTU sweep from %" PRIu16 " to %" PRIi32 " (interface max)\n",
+               eth->mtu_test.mtu_tx_min, phy_mtu);
+        eth->mtu_test.mtu_tx_max = phy_mtu;
 
     } else {
 
-        printf("Starting MTU sweep from %" PRIu16 " to %" PRIu16 "\n",
-               mtu_test->mtu_tx_min, mtu_test->mtu_tx_max);
+        printf("Running MTU sweep from %" PRIu16 " to %" PRIu16 "\n",
+               eth->mtu_test.mtu_tx_min, eth->mtu_test.mtu_tx_max);
     
     }
 
 
     int16_t tx_ret = 0;
-    int16_t rx_len     = 0;
+    int16_t rx_len = 0;
 
-    build_tlv(frame_headers, htons(TYPE_TESTFRAME), htonl(VALUE_TEST_SUB_TLV));
+    build_tlv(&eth->frm, htons(TYPE_TESTFRAME), htonl(VALUE_TEST_SUB_TLV));
 
-    if (app_params->tx_mode == true) {
+    if (eth->app.tx_mode == true) {
 
         uint16_t mtu_tx_current   = 0;
         uint16_t mtu_ack_previous = 0;
         uint16_t mtu_ack_current  = 0;
         uint8_t  WAITING          = true;
 
-        for (mtu_tx_current = mtu_test->mtu_tx_min; mtu_tx_current <= mtu_test->mtu_tx_max; mtu_tx_current += 1)
+        for (mtu_tx_current = eth->mtu_test.mtu_tx_min; mtu_tx_current <= eth->mtu_test.mtu_tx_max; mtu_tx_current += 1)
         {
 
             // Get the current time
-            clock_gettime(CLOCK_MONOTONIC_RAW, &test_params->elapsed_time);
+            clock_gettime(CLOCK_MONOTONIC_RAW, &eth->params.elapsed_time);
 
-            build_sub_tlv(frame_headers, htons(TYPE_FRAMEINDEX), htonll(mtu_tx_current));
+            build_sub_tlv(&eth->frm, htons(TYPE_FRAMEINDEX), htonll(mtu_tx_current));
 
-            tx_ret = sendto(test_interface->sock_fd,
-                            frame_headers->tx_buffer,
-                            frame_headers->length+mtu_tx_current,
-                            0, 
-                            (struct sockaddr*)&test_interface->sock_addr,
-                            sizeof(test_interface->sock_addr));
+            tx_ret = send(eth->intf.sock_fd,
+                          eth->frm.tx_buffer,
+                          eth->frm.length + mtu_tx_current,
+                          0);
 
             if (tx_ret <=0)
             {
                 perror("MTU test Tx error ");
                 return;
+
             } else {
-                test_params->f_tx_count += 1;
+                eth->params.f_tx_count += 1;
             }
+
 
             WAITING = true;
 
@@ -354,71 +343,78 @@ void mtu_sweep_test(struct app_params *app_params,
             {
 
                 // Get the current time
-                clock_gettime(CLOCK_MONOTONIC_RAW, &test_params->current_time);
+                clock_gettime(CLOCK_MONOTONIC_RAW, &eth->params.current_time);
 
-                // Poll has been disabled in favour of a non-blocking recvfrom (for now)
-                rx_len = recvfrom(test_interface->sock_fd,
-                                  frame_headers->rx_buffer,
-                                  mtu_test->mtu_tx_max,
-                                  MSG_DONTWAIT, NULL, NULL);
+                // Poll has been disabled in favour of a non-blocking recv (for now)
+                rx_len = recv(eth->intf.sock_fd,
+                              eth->frm.rx_buffer,
+                              eth->mtu_test.mtu_tx_max,
+                              MSG_DONTWAIT);
 
                 if (rx_len > 0) {
 
 
-                    if (ntohl(*frame_headers->rx_tlv_value) == VALUE_TEST_SUB_TLV &&
-                        ntohs(*frame_headers->rx_sub_tlv_type) == TYPE_ACKINDEX)
+                    if (ntohl(*eth->frm.rx_tlv_value) == VALUE_TEST_SUB_TLV &&
+                        ntohs(*eth->frm.rx_sub_tlv_type) == TYPE_ACKINDEX)
                     {
 
-                        test_params->f_rx_count += 1;
+                        eth->params.f_rx_count += 1;
 
                         // Get the MTU size Rx is ACK'ing
-                        mtu_ack_current = (uint32_t)ntohll(*frame_headers->rx_sub_tlv_value);
-                        if (mtu_ack_current > mtu_test->largest) 
+                        mtu_ack_current = (uint32_t)ntohll(*eth->frm.rx_sub_tlv_value);
+                        if (mtu_ack_current > eth->mtu_test.largest) 
                         {
-                            mtu_test->largest = mtu_ack_current;
+                            eth->mtu_test.largest = mtu_ack_current;
                         }
 
 
                         if (mtu_ack_current < mtu_ack_previous)
                         {
                             // Frame received out of order, later than expected
-                            test_params->f_rx_late += 1;
+                            eth->params.f_rx_late += 1;
                         } else if (mtu_ack_previous == 0) {
                             // First frame
-                            test_params->f_rx_ontime += 1;
+                            eth->params.f_rx_ontime += 1;
                             mtu_ack_previous = mtu_ack_current;
                         } else if (mtu_ack_current > (mtu_ack_previous + 2)) {
                             // Frame received out of order, earlier than expected
-                            test_params->f_rx_early += 1;
+                            eth->params.f_rx_early += 1;
                             mtu_ack_previous = mtu_ack_current;
-                        } else if (mtu_ack_current == (mtu_ack_previous + 1) && mtu_ack_current < mtu_test->mtu_tx_max) {
+                        } else if (mtu_ack_current == (mtu_ack_previous + 1) &&
+                                   mtu_ack_current < eth->mtu_test.mtu_tx_max) {
                             // Fame received in order
-                            test_params->f_rx_ontime += 1;
+                            eth->params.f_rx_ontime += 1;
                             mtu_ack_previous = mtu_ack_current;
                             WAITING = false;
                         } else if (mtu_ack_current == (mtu_ack_previous + 1)) {
                             // Frame received in order
-                            test_params->f_rx_ontime += 1;
+                            eth->params.f_rx_ontime += 1;
                         } else if (mtu_ack_current == mtu_ack_previous) {
                             // Frame received in order
-                            test_params->f_rx_ontime += 1;
+                            eth->params.f_rx_ontime += 1;
                         }
 
 
                     // A non-test frame was received
                     } else {
 
-                        test_params->f_rx_other += 1;
+                        eth->params.f_rx_other += 1;
 
                     }
 
 
-                } // Rx_LEN > 0
+                } else { // rx_len > 0
+                    if (errno != EAGAIN || errno != EWOULDBLOCK)
+                    {
+                        perror("Speed test Tx error ");
+                        return;
+                    }
+                }
 
                 // If 1 second has passed inside this loop,
                 // Assume the ACK is lost/dropped
-                if ((test_params->current_time.tv_sec - 
-                     test_params->elapsed_time.tv_sec) >= 1) WAITING = false;
+                if ((eth->params.current_time.tv_sec - 
+                     eth->params.elapsed_time.tv_sec) >= 1) WAITING = false;
 
             } // End of WAITING
 
@@ -426,7 +422,7 @@ void mtu_sweep_test(struct app_params *app_params,
         } // End of Tx transmit
 
         printf("MTU sweep test complete\n");
-        mtu_sweep_test_results(mtu_test->largest, test_params, app_params->tx_mode);
+        mtu_sweep_test_results(eth);
 
 
     // Running in Rx mode
@@ -440,107 +436,112 @@ void mtu_sweep_test(struct app_params *app_params,
         while(true)
         {
         
-            clock_gettime(CLOCK_MONOTONIC_RAW, &test_params->elapsed_time);
+            clock_gettime(CLOCK_MONOTONIC_RAW, &eth->params.elapsed_time);
 
-            WAITING    = true;
+            WAITING = true;
 
             while (WAITING)
             {
 
                 // Get the current time
-                clock_gettime(CLOCK_MONOTONIC_RAW, &test_params->current_time);
+                clock_gettime(CLOCK_MONOTONIC_RAW, &eth->params.current_time);
 
                 // Check for test frame from Tx
-                rx_len = recvfrom(test_interface->sock_fd,
-                                  frame_headers->rx_buffer,
-                                  mtu_test->mtu_tx_max,
-                                  MSG_DONTWAIT, NULL, NULL);
+                rx_len = recv(eth->intf.sock_fd,
+                              eth->frm.rx_buffer,
+                              eth->mtu_test.mtu_tx_max,
+                              MSG_DONTWAIT);
 
                 if (rx_len > 0) {
 
-                    if (ntohl(*frame_headers->rx_tlv_value) == VALUE_TEST_SUB_TLV &&
-                        ntohs(*frame_headers->rx_sub_tlv_type) == TYPE_FRAMEINDEX)
+                    if (ntohl(*eth->frm.rx_tlv_value) == VALUE_TEST_SUB_TLV &&
+                        ntohs(*eth->frm.rx_sub_tlv_type) == TYPE_FRAMEINDEX)
                     {
 
-                        test_params->f_rx_count += 1;
+                        eth->params.f_rx_count += 1;
 
                         // Get the MTU size Tx is sending
-                        mtu_rx_current = (uint32_t)ntohll(*frame_headers->rx_sub_tlv_value);
+                        mtu_rx_current = (uint32_t)ntohll(*eth->frm.rx_sub_tlv_value);
 
-                        if (mtu_rx_current > mtu_test->largest)
+                        if (mtu_rx_current > eth->mtu_test.largest)
                         {
 
-                            mtu_test->largest = mtu_rx_current;
+                            eth->mtu_test.largest = mtu_rx_current;
 
                             // ACK that back to Tx as new largest MTU received
-                            build_sub_tlv(frame_headers, htons(TYPE_ACKINDEX),
+                            build_sub_tlv(&eth->frm, htons(TYPE_ACKINDEX),
                                           htonll(mtu_rx_current));
 
-                            tx_ret = sendto(test_interface->sock_fd,
-                                            frame_headers->tx_buffer,
-                                            frame_headers->length+frame_headers->sub_tlv_size,
-                                            0, 
-                                            (struct sockaddr*)&test_interface->sock_addr,
-                                            sizeof(test_interface->sock_addr));
+                            tx_ret = send(eth->intf.sock_fd,
+                                          eth->frm.tx_buffer,
+                                          eth->frm.length + eth->frm.sub_tlv_size,
+                                          0);
 
                             if (tx_ret <=0)
                             {
-                                perror("MTU test Rx error ");
+                                perror("MTU test Tx error ");
                                 return;
                             } else {
-                                test_params->f_tx_count += 1;
+                                eth->params.f_tx_count += 1;
                             }
 
 
-                        } // mtu_rx_current > mtu_test->largest
+                        } // mtu_rx_current > eth->mtu_test.largest
 
 
                         if (mtu_rx_current < mtu_rx_previous)
                         {
                             // Frame received out of order, later than expected
-                            test_params->f_rx_late += 1;
+                            eth->params.f_rx_late += 1;
                         } else if (mtu_rx_previous == 0) {
                             // First frame
-                            test_params->f_rx_ontime += 1;
+                            eth->params.f_rx_ontime += 1;
                             mtu_rx_previous = mtu_rx_current;
                         } else if (mtu_rx_current > (mtu_rx_previous + 2)) {
                             // Frame received out of order, earlier than expected
-                            test_params->f_rx_early += 1;
+                            eth->params.f_rx_early += 1;
                             mtu_rx_previous = mtu_rx_current;
-                        } else if (mtu_rx_current == (mtu_rx_previous + 1) && mtu_rx_current < mtu_test->mtu_tx_max) {
+                        } else if (mtu_rx_current == (mtu_rx_previous + 1) &&
+                                   mtu_rx_current < eth->mtu_test.mtu_tx_max) {
                             // Frame received in order
-                            test_params->f_rx_ontime += 1;
+                            eth->params.f_rx_ontime += 1;
                             mtu_rx_previous = mtu_rx_current;
                             WAITING = false;
                         } else if (mtu_rx_current == (mtu_rx_previous + 1)) {
                             // Frame received in order
                             mtu_rx_previous = mtu_rx_current;
-                            test_params->f_rx_ontime += 1;
+                            eth->params.f_rx_ontime += 1;
                         } else if (mtu_rx_current == mtu_rx_previous) {
                             // Frame received in order
                             mtu_rx_previous = mtu_rx_current;
-                            test_params->f_rx_ontime += 1;
+                            eth->params.f_rx_ontime += 1;
                         }
 
 
                     // A non-test frame was recieved
                     } else {
 
-                        test_params->f_rx_other += 1;
+                        eth->params.f_rx_other += 1;
 
                     } //End of TEST_FRAME
 
 
-                } // rx_len > 0
+                } else { // rx_len > 0
+                    if (errno != EAGAIN || errno != EWOULDBLOCK)
+                    {
+                        perror("Speed test Tx error ");
+                        return;
+                    }
+                }
 
 
                 // If Rx has received the largest MTU Tx hoped to send,
                 // the MTU sweep test is over
-                if (mtu_test->largest == mtu_test->mtu_tx_max)
+                if (eth->mtu_test.largest == eth->mtu_test.mtu_tx_max)
                 {
 
                     printf("MTU sweep test complete\n");
-                    mtu_sweep_test_results(mtu_test->largest, test_params, app_params->tx_mode);
+                    mtu_sweep_test_results(eth);
 
                     return;
 
@@ -548,13 +549,13 @@ void mtu_sweep_test(struct app_params *app_params,
 
                 // 5 seconds have passed without any MTU sweep frames being receeved,
                 // assume the max MTU has been exceeded
-                if ((test_params->current_time.tv_sec-test_params->elapsed_time.tv_sec) >= 5)  ///// Document this timeout
+                if ((eth->params.current_time.tv_sec-eth->params.elapsed_time.tv_sec) >= 5)  ///// Document this timeout
                 {
 
                     printf("Timeout waiting for MTU sweep frames from Tx, "
                            "ending the test.\nEnding test.\n");
 
-                    mtu_sweep_test_results(mtu_test->largest, test_params, app_params->tx_mode);
+                    mtu_sweep_test_results(eth);
                     return;
 
                 }
@@ -572,14 +573,10 @@ void mtu_sweep_test(struct app_params *app_params,
 
 
 
-void latency_test(struct app_params *app_params,
-                  struct frame_headers *frame_headers,
-                  struct test_interface *test_interface,
-                  struct test_params *test_params,
-                  struct qm_test *qm_test)
+void latency_test(struct etherate *eth)
 {
 
-    build_tlv(frame_headers, htons(TYPE_TESTFRAME), htonl(VALUE_TEST_SUB_TLV));
+    build_tlv(&eth->frm, htons(TYPE_TESTFRAME), htonl(VALUE_TEST_SUB_TLV));
 
     int16_t     tx_ret       = 0;
     int16_t     rx_len       = 0;
@@ -603,42 +600,39 @@ void latency_test(struct app_params *app_params,
     uint64_t *testBase, *testMax;
 
 
-    if (app_params->tx_mode == true)
+    if (eth->app.tx_mode == true)
     {
 
-        if (test_params->f_count > 0) {   
+        if (eth->params.f_count > 0) {   
             // Testing until N rtt measurements
-            testMax  = &test_params->f_count;
-            testBase = &test_params->f_tx_count;
+            testMax  = &eth->params.f_count;
+            testBase = &eth->params.f_tx_count;
 
         } else {
             // Testing until N seconds have passed
-            if (test_params->f_duration > 0) test_params->f_duration -= 1;
-            testMax  = (uint64_t*)&test_params->f_duration;
-            testBase = (uint64_t*)&test_params->s_elapsed;
+            if (eth->params.f_duration > 0) eth->params.f_duration -= 1;
+            testMax  = (uint64_t*)&eth->params.f_duration;
+            testBase = (uint64_t*)&eth->params.s_elapsed;
         }
 
 
-        clock_gettime(CLOCK_MONOTONIC_RAW, &qm_test->ts_start);
+        clock_gettime(CLOCK_MONOTONIC_RAW, &eth->qm_test.ts_start);
 
         printf("No.\trtt\t\tJitter\n");
 
         while (*testBase<=*testMax)
         {
             
-            clock_gettime(CLOCK_MONOTONIC_RAW, &test_params->current_time);
+            clock_gettime(CLOCK_MONOTONIC_RAW, &eth->params.current_time);
 
-            uptime_1 = test_params->current_time.tv_sec + ((double)test_params->current_time.tv_nsec * 1e-9);
+            uptime_1 = eth->params.current_time.tv_sec + ((double)eth->params.current_time.tv_nsec * 1e-9);
             tx_uptime = roundl(uptime_1 * 1000000000.0);
 
-            build_sub_tlv(frame_headers, htons(TYPE_PING), htonll(tx_uptime));
+            build_sub_tlv(&eth->frm, htons(TYPE_PING), htonll(tx_uptime));
 
-            tx_ret = sendto(test_interface->sock_fd,
-                            frame_headers->tx_buffer,
-                            frame_headers->length+frame_headers->sub_tlv_size,
-                            0, 
-                            (struct sockaddr*)&test_interface->sock_addr,
-                            sizeof(test_interface->sock_addr));
+            tx_ret = send(eth->intf.sock_fd,
+                          eth->frm.tx_buffer,
+                          eth->frm.length + eth->frm.sub_tlv_size, 0);
 
             if (tx_ret <=0 )
             {
@@ -647,10 +641,10 @@ void latency_test(struct app_params *app_params,
             }
 
 
-            test_params->f_tx_count += 1;
-            qm_test->test_count     += 1;
+            eth->params.f_tx_count += 1;
+            eth->qm_test.test_count     += 1;
 
-            printf("%" PRIu32 ":", qm_test->test_count);
+            printf("%" PRIu32 ":", eth->qm_test.test_count);
 
             WAITING      = true;
             echo_waiting = true;
@@ -660,58 +654,58 @@ void latency_test(struct app_params *app_params,
             {
 
                 // Get the current time
-                clock_gettime(CLOCK_MONOTONIC_RAW, &test_params->elapsed_time);
+                clock_gettime(CLOCK_MONOTONIC_RAW, &eth->params.elapsed_time);
 
 
                 // Check if 1 second has passed to increment test duration
-                if (test_params->elapsed_time.tv_sec-
-                    qm_test->ts_start.tv_sec >= 1) {
+                if (eth->params.elapsed_time.tv_sec-
+                    eth->qm_test.ts_start.tv_sec >= 1) {
 
-                    clock_gettime(CLOCK_MONOTONIC_RAW, &qm_test->ts_start);
+                    clock_gettime(CLOCK_MONOTONIC_RAW, &eth->qm_test.ts_start);
 
-                    test_params->s_elapsed += 1;
+                    eth->params.s_elapsed += 1;
 
                 }
 
 
-                // Poll has been disabled in favour of a non-blocking recvfrom (for now)
-                rx_len = recvfrom(test_interface->sock_fd,
-                                  frame_headers->rx_buffer,
-                                  test_params->f_size_total,
-                                  MSG_DONTWAIT, NULL, NULL);
+                // Poll has been disabled in favour of a non-blocking recv (for now)
+                rx_len = recv(eth->intf.sock_fd,
+                              eth->frm.rx_buffer,
+                              eth->params.f_size_total,
+                              MSG_DONTWAIT);
 
                 if (rx_len > 0) {
 
                     // Received an echo reply/pong
-                    if (ntohl(*frame_headers->rx_tlv_value) == VALUE_TEST_SUB_TLV &&
-                        ntohs(*frame_headers->rx_sub_tlv_type) == TYPE_PONG)
+                    if (ntohl(*eth->frm.rx_tlv_value) == VALUE_TEST_SUB_TLV &&
+                        ntohs(*eth->frm.rx_sub_tlv_type) == TYPE_PONG)
                     {
 
-                        uptime_2 = test_params->elapsed_time.tv_sec + 
-                                   ((double)test_params->elapsed_time.tv_nsec * 1e-9);
+                        uptime_2 = eth->params.elapsed_time.tv_sec + 
+                                   ((double)eth->params.elapsed_time.tv_nsec * 1e-9);
 
                         // Check it's the time value originally sent
-                        uptime_rx = (double)ntohll(*frame_headers->rx_sub_tlv_value) / 1000000000.0;
+                        uptime_rx = (double)ntohll(*eth->frm.rx_sub_tlv_value) / 1000000000.0;
 
                         if (uptime_rx == uptime_1)
                         {
 
                             rtt = uptime_2-uptime_1;
 
-                            if (rtt < qm_test->rtt_min)
+                            if (rtt < eth->qm_test.rtt_min)
                             {
-                                qm_test->rtt_min = rtt;
-                            } else if (rtt > qm_test->rtt_max) {
-                                qm_test->rtt_max = rtt;
+                                eth->qm_test.rtt_min = rtt;
+                            } else if (rtt > eth->qm_test.rtt_max) {
+                                eth->qm_test.rtt_max = rtt;
                             }
 
                             jitter = fabsl(rtt-rtt_prev);
 
-                            if (jitter < qm_test->jitter_min)
+                            if (jitter < eth->qm_test.jitter_min)
                             {
-                                qm_test->jitter_min = jitter;
-                            } else if (jitter > qm_test->jitter_max) {
-                                qm_test->jitter_max = jitter;
+                                eth->qm_test.jitter_min = jitter;
+                            } else if (jitter > eth->qm_test.jitter_max) {
+                                eth->qm_test.jitter_max = jitter;
                             }
 
                             printf ("\t%.9Lfs\t%.9Lfs\n", rtt, jitter);
@@ -720,24 +714,24 @@ void latency_test(struct app_params *app_params,
 
                             echo_waiting = false;
 
-                            test_params->f_rx_count += 1;
+                            eth->params.f_rx_count += 1;
 
                         // We may have received a frame with "the right bits in the right place"
                         } else {
-                            test_params->f_rx_other += 1;
+                            eth->params.f_rx_other += 1;
                         }
 
 
                     // Check if Rx host has quit/died
-                    } else if (ntohl(*frame_headers->rx_tlv_value) == VALUE_DYINGGASP) {
+                    } else if (ntohl(*eth->frm.rx_tlv_value) == VALUE_DYINGGASP) {
 
                         printf("\nRx host has quit\n");
-                        latency_test_results(qm_test, test_params, app_params->tx_mode);
+                        latency_test_results(eth);
                         return;
 
                     } else {
 
-                        test_params->f_rx_other += 1;
+                        eth->params.f_rx_other += 1;
 
                     }
 
@@ -746,9 +740,9 @@ void latency_test(struct app_params *app_params,
 
                 // Convert the timespec values into a double. The tv_nsec
                 // value loops around, it is not linearly incrementing indefinitely
-                elapsed_time = test_params->elapsed_time.tv_sec + ((double)test_params->elapsed_time.tv_nsec * 1e-9);
-                current_time = test_params->current_time.tv_sec + ((double)test_params->current_time.tv_nsec * 1e-9);
-                max_time = qm_test->timeout_sec + ((double)qm_test->timeout_nsec * 1e-9);
+                elapsed_time = eth->params.elapsed_time.tv_sec + ((double)eth->params.elapsed_time.tv_nsec * 1e-9);
+                current_time = eth->params.current_time.tv_sec + ((double)eth->params.current_time.tv_nsec * 1e-9);
+                max_time = eth->qm_test.timeout_sec + ((double)eth->qm_test.timeout_nsec * 1e-9);
 
                 // If Tx is waiting for echo reply, check if the echo reply has timed out
                 if (echo_waiting) {
@@ -756,14 +750,14 @@ void latency_test(struct app_params *app_params,
 
                         printf("\t*\n");
                         echo_waiting = false;
-                        qm_test->timeout_count += 1;
+                        eth->qm_test.timeout_count += 1;
 
                     }
                 }
 
 
                 // Check if the echo interval has passed (time to send another ping)
-                max_time = qm_test->interval_sec + ((double)qm_test->interval_nsec * 1e-9);
+                max_time = eth->qm_test.interval_sec + ((double)eth->qm_test.interval_nsec * 1e-9);
 
                 if ((elapsed_time - current_time) > max_time) {
                     WAITING  = false;
@@ -776,27 +770,27 @@ void latency_test(struct app_params *app_params,
         } // testBase<=testMax
 
         printf("Link quality test complete\n");
-        latency_test_results(qm_test, test_params, app_params->tx_mode);
+        latency_test_results(eth);
 
 
     // Else, Rx mode
     } else {
 
 
-        if (test_params->f_count > 0) {   
+        if (eth->params.f_count > 0) {   
             // Testing until N rtt measurements
-            testMax  = &test_params->f_count;
-            testBase = &test_params->f_rx_count;
+            testMax  = &eth->params.f_count;
+            testBase = &eth->params.f_rx_count;
 
         } else {
             // Testing until N seconds have passed
-            if (test_params->f_duration > 0) test_params->f_duration -= 1;
-            testMax  = (uint64_t*)&test_params->f_duration;
-            testBase = (uint64_t*)&test_params->s_elapsed;
+            if (eth->params.f_duration > 0) eth->params.f_duration -= 1;
+            testMax  = (uint64_t*)&eth->params.f_duration;
+            testBase = (uint64_t*)&eth->params.s_elapsed;
         }
 
 
-        clock_gettime(CLOCK_MONOTONIC_RAW, &qm_test->ts_start);
+        clock_gettime(CLOCK_MONOTONIC_RAW, &eth->qm_test.ts_start);
 
         printf("No.\tEcho Interval\n");
 
@@ -806,26 +800,28 @@ void latency_test(struct app_params *app_params,
         while (!first_frame)
         {
 
-            rx_len = recvfrom(test_interface->sock_fd, frame_headers->rx_buffer,
-                              test_params->f_size_total, MSG_PEEK, NULL, NULL);
+            rx_len = recv(eth->intf.sock_fd, eth->frm.rx_buffer,
+                          eth->params.f_size_total, MSG_PEEK);
 
             // Check if this is an Etherate test frame
-            if (ntohl(*frame_headers->rx_tlv_value) == VALUE_TEST_SUB_TLV &&
-                ntohs(*frame_headers->rx_sub_tlv_type) == TYPE_PING)
+            if (ntohl(*eth->frm.rx_tlv_value) == VALUE_TEST_SUB_TLV &&
+                ntohs(*eth->frm.rx_sub_tlv_type) == TYPE_PING)
             {
 
                 first_frame = true;
-                qm_test->test_count += 1;
-                printf("%" PRIu32 ":\t", qm_test->test_count);
+                eth->qm_test.test_count += 1;
+                printf("%" PRIu32 ":\t", eth->qm_test.test_count);
 
             } else {
 
                // If the frame is not an Etherate frame it needs to be
                // "consumed" otherwise the next MSG_PEEK will show the
                // same frame:
-               rx_len = recvfrom(test_interface->sock_fd, frame_headers->rx_buffer,
-                                 test_params->f_size_total, MSG_DONTWAIT, NULL,
-                                 NULL);
+               rx_len = read(eth->intf.sock_fd, eth->frm.rx_buffer,
+                             eth->params.f_size_total);
+
+               if (rx_len < 0)
+                   perror("Latency test Rx error ");
 
             }
 
@@ -836,7 +832,7 @@ void latency_test(struct app_params *app_params,
         while (*testBase<=*testMax)
         {
 
-            clock_gettime(CLOCK_MONOTONIC_RAW, &test_params->current_time);
+            clock_gettime(CLOCK_MONOTONIC_RAW, &eth->params.current_time);
 
             WAITING      = true;
             echo_waiting = true;
@@ -846,47 +842,43 @@ void latency_test(struct app_params *app_params,
             {
 
                 // Get the current time
-                clock_gettime(CLOCK_MONOTONIC_RAW, &test_params->elapsed_time);
+                clock_gettime(CLOCK_MONOTONIC_RAW, &eth->params.elapsed_time);
 
                 // Check if 1 second has passed to increment test duration
-                if (test_params->elapsed_time.tv_sec-
-                    qm_test->ts_start.tv_sec >= 1) {
+                if (eth->params.elapsed_time.tv_sec-
+                    eth->qm_test.ts_start.tv_sec >= 1) {
 
-                    clock_gettime(CLOCK_MONOTONIC_RAW, &qm_test->ts_start);
+                    clock_gettime(CLOCK_MONOTONIC_RAW, &eth->qm_test.ts_start);
 
-                    test_params->s_elapsed += 1;
+                    eth->params.s_elapsed += 1;
 
                 }
 
 
-                // Poll has been disabled in favour of a non-blocking
-                // recvfrom (for now)
-                rx_len = recvfrom(test_interface->sock_fd,
-                                  frame_headers->rx_buffer,
-                                  test_params->f_size_total,
-                                  MSG_DONTWAIT, NULL, NULL);
+                rx_len = recv(eth->intf.sock_fd,
+                              eth->frm.rx_buffer,
+                              eth->params.f_size_total,
+                              MSG_DONTWAIT);
 
 
                 if (rx_len > 0) {
 
-                    if ( ntohl(*frame_headers->rx_tlv_value) == VALUE_TEST_SUB_TLV &&
-                         ntohs(*frame_headers->rx_sub_tlv_type) == TYPE_PING )
+                    if ( ntohl(*eth->frm.rx_tlv_value) == VALUE_TEST_SUB_TLV &&
+                         ntohs(*eth->frm.rx_sub_tlv_type) == TYPE_PING )
                     {
 
                         // Time Rx received this value
-                        uptime_2 = test_params->elapsed_time.tv_sec + 
-                                   ((double)test_params->elapsed_time.tv_nsec * 1e-9);
+                        uptime_2 = eth->params.elapsed_time.tv_sec + 
+                                   ((double)eth->params.elapsed_time.tv_nsec * 1e-9);
 
                         // Send the Tx uptime value back to the Tx host
-                        build_sub_tlv(frame_headers, htons(TYPE_PONG),
-                                      *frame_headers->rx_sub_tlv_value);
+                        build_sub_tlv(&eth->frm, htons(TYPE_PONG),
+                                      *eth->frm.rx_sub_tlv_value);
 
-                        tx_ret = sendto(test_interface->sock_fd,
-                                        frame_headers->tx_buffer,
-                                        frame_headers->length+frame_headers->sub_tlv_size,
-                                        0, 
-                                        (struct sockaddr*)&test_interface->sock_addr,
-                                        sizeof(test_interface->sock_addr));
+                        tx_ret = send(eth->intf.sock_fd,
+                                      eth->frm.tx_buffer,
+                                      eth->frm.length + eth->frm.sub_tlv_size,
+                                      0);
 
                         if (tx_ret <= 0)
                         {
@@ -895,8 +887,8 @@ void latency_test(struct app_params *app_params,
                         }
 
 
-                        test_params->f_rx_count += 1;
-                        test_params->f_tx_count += 1;
+                        eth->params.f_rx_count += 1;
+                        eth->params.f_tx_count += 1;
 
                         interval = fabsl(uptime_2-uptime_1);
 
@@ -910,21 +902,21 @@ void latency_test(struct app_params *app_params,
                         }
                         uptime_1 = uptime_2;
 
-                        if (interval < qm_test->interval_min)
+                        if (interval < eth->qm_test.interval_min)
                         {
-                            qm_test->interval_min = interval;
-                        } else if (interval > qm_test->interval_max) {
-                            qm_test->interval_max = interval;
+                            eth->qm_test.interval_min = interval;
+                        } else if (interval > eth->qm_test.interval_max) {
+                            eth->qm_test.interval_max = interval;
                         }
 
                         echo_waiting = false;
-                        qm_test->test_count += 1;
-                        printf("%" PRIu32 ":\t", qm_test->test_count);
+                        eth->qm_test.test_count += 1;
+                        printf("%" PRIu32 ":\t", eth->qm_test.test_count);
 
 
                     } else {
 
-                        test_params->f_rx_other += 1;
+                        eth->params.f_rx_other += 1;
 
                     }
 
@@ -932,15 +924,15 @@ void latency_test(struct app_params *app_params,
 
 
                 // Check if the echo request has timed out
-                elapsed_time = test_params->elapsed_time.tv_sec + ((double)test_params->elapsed_time.tv_nsec * 1e-9);
-                current_time = test_params->current_time.tv_sec + ((double)test_params->current_time.tv_nsec * 1e-9);
-                max_time = qm_test->timeout_sec + ((double)qm_test->timeout_nsec * 1e-9);
+                elapsed_time = eth->params.elapsed_time.tv_sec + ((double)eth->params.elapsed_time.tv_nsec * 1e-9);
+                current_time = eth->params.current_time.tv_sec + ((double)eth->params.current_time.tv_nsec * 1e-9);
+                max_time = eth->qm_test.timeout_sec + ((double)eth->qm_test.timeout_nsec * 1e-9);
                 
                 if (echo_waiting == true) {
                     if ((elapsed_time - current_time) > max_time) {
 
                         printf("*\n");
-                        qm_test->timeout_count += 1;
+                        eth->qm_test.timeout_count += 1;
                         echo_waiting = false;
 
                     }
@@ -949,9 +941,9 @@ void latency_test(struct app_params *app_params,
 
 
                 // Check if the echo interval has passed (time to receive another ping)
-                elapsed_time = test_params->elapsed_time.tv_sec + ((double)test_params->elapsed_time.tv_nsec * 1e-9);
-                current_time = test_params->current_time.tv_sec + ((double)test_params->current_time.tv_nsec * 1e-9);
-                max_time = qm_test->interval_sec + ((double)qm_test->interval_nsec * 1e-9);
+                elapsed_time = eth->params.elapsed_time.tv_sec + ((double)eth->params.elapsed_time.tv_nsec * 1e-9);
+                current_time = eth->params.current_time.tv_sec + ((double)eth->params.current_time.tv_nsec * 1e-9);
+                max_time = eth->qm_test.interval_sec + ((double)eth->qm_test.interval_nsec * 1e-9);
 
                 if ((elapsed_time - current_time) > max_time) {
                     WAITING = false;
@@ -959,11 +951,11 @@ void latency_test(struct app_params *app_params,
 
 
                 // Check if Tx host has quit/died;
-                if (ntohl(*frame_headers->rx_tlv_value) == VALUE_DYINGGASP)
+                if (ntohl(*eth->frm.rx_tlv_value) == VALUE_DYINGGASP)
                 {
 
                     printf("\nTx host has quit\n");
-                    latency_test_results(qm_test, test_params, app_params->tx_mode);
+                    latency_test_results(eth);
                     return;
 
                 }
@@ -975,7 +967,7 @@ void latency_test(struct app_params *app_params,
         } // testBase<=testMax
 
         printf("Link quality test complete\n");
-        latency_test_results(qm_test, test_params, app_params->tx_mode);
+        latency_test_results(eth);
 
     } // End of Tx/Rx
 
@@ -984,11 +976,7 @@ void latency_test(struct app_params *app_params,
 
 
 ///// Merge into other speed test functionm
-void send_custom_frame(struct app_params *app_params,
-                       struct frame_headers *frame_headers,
-                       struct speed_test *speed_test,
-                       struct test_interface *test_interface,
-                       struct test_params *test_params)
+void send_custom_frame(struct etherate *eth)
 {
 
     int16_t tx_ret = 0;
@@ -997,161 +985,181 @@ void send_custom_frame(struct app_params *app_params,
     printf("Seconds\t\tMbps Tx\t\tMBs Tx\t\tFrmTx/s\t\tFrames Tx\n");
 
     // By default test until f_duration_DEF has passed
-    uint64_t *testMax = (uint64_t*)&test_params->f_duration;
-    uint64_t *testBase = (uint64_t*)&test_params->s_elapsed;
+    uint64_t *testMax = (uint64_t*)&eth->params.f_duration;
+    uint64_t *testBase = (uint64_t*)&eth->params.s_elapsed;
 
-    if (test_params->f_bytes > 0)
+    if (eth->params.f_bytes > 0)
     {    
         // Testing until N bytes sent
-        testMax  = &test_params->f_bytes;
-        testBase = &speed_test->b_tx;
+        testMax  = &eth->params.f_bytes;
+        testBase = &eth->speed_test.b_tx;
 
-    } else if (test_params->f_count > 0) {   
+    } else if (eth->params.f_count > 0) {   
         // Testing until N frames sent
-        testMax  = &test_params->f_count;
-        testBase = &test_params->f_tx_count;
+        testMax  = &eth->params.f_count;
+        testBase = &eth->params.f_tx_count;
 
-    } else if (test_params->f_duration > 0) {
+    } else if (eth->params.f_duration > 0) {
         // Testing until N seconds have passed
-        test_params->f_duration -= 1;
+        eth->params.f_duration -= 1;
     }
 
 
     // Get clock times for the speed limit restriction and starting time
-    clock_gettime(CLOCK_MONOTONIC_RAW, &test_params->elapsed_time);
+    clock_gettime(CLOCK_MONOTONIC_RAW, &eth->params.elapsed_time);
 
     // Tx test loop
     while (*testBase<=*testMax)
     {
 
-        clock_gettime(CLOCK_MONOTONIC_RAW, &test_params->current_time);
+        clock_gettime(CLOCK_MONOTONIC_RAW, &eth->params.current_time);
 
         // One second has passed
-        if ((test_params->current_time.tv_sec - test_params->elapsed_time.tv_sec) >= 1)
+        if ((eth->params.current_time.tv_sec - eth->params.elapsed_time.tv_sec) >= 1)
         {
-            test_params->s_elapsed += 1;
-            speed_test->b_speed   = ((double)(speed_test->b_tx - speed_test->b_tx_prev) * 8) / 1000 / 1000;
-            speed_test->b_tx_prev = speed_test->b_tx;
-            speed_test->f_speed   = (test_params->f_tx_count - test_params->f_tx_count_prev);
-            test_params->f_tx_count_prev = test_params->f_tx_count;
+            eth->params.s_elapsed += 1;
+            eth->speed_test.b_speed   = ((double)(eth->speed_test.b_tx - eth->speed_test.b_tx_prev) * 8) / 1000 / 1000;
+            eth->speed_test.b_tx_prev = eth->speed_test.b_tx;
+            eth->speed_test.f_speed   = (eth->params.f_tx_count - eth->params.f_tx_count_prev);
+            eth->params.f_tx_count_prev = eth->params.f_tx_count;
 
             printf("%" PRIu64 "\t\t%.2f\t\t%" PRIu64 "\t\t%" PRIu64"\t\t%" PRIu64 "\n",
-                   test_params->s_elapsed,
-                   speed_test->b_speed,
-                   (speed_test->b_tx / 1024) / 1024,
-                   (speed_test->f_speed),
-                   test_params->f_tx_count);
+                   eth->params.s_elapsed,
+                   eth->speed_test.b_speed,
+                   (eth->speed_test.b_tx / 1024) / 1024,
+                   (eth->speed_test.f_speed),
+                   eth->params.f_tx_count);
 
-            if (speed_test->b_speed > speed_test->b_speed_max)
-                speed_test->b_speed_max = speed_test->b_speed;
+            if (eth->speed_test.b_speed > eth->speed_test.b_speed_max)
+                eth->speed_test.b_speed_max = eth->speed_test.b_speed;
 
-            if (speed_test->f_speed > speed_test->f_speed_max)
-                speed_test->f_speed_max = speed_test->f_speed;
+            if (eth->speed_test.f_speed > eth->speed_test.f_speed_max)
+                eth->speed_test.f_speed_max = eth->speed_test.f_speed;
 
-            speed_test->b_speed_avg += speed_test->b_speed;
-            speed_test->f_speed_avg += speed_test->f_speed;
-            test_params->elapsed_time.tv_sec  = test_params->current_time.tv_sec;
-            test_params->elapsed_time.tv_nsec = test_params->current_time.tv_nsec;
+            eth->speed_test.b_speed_avg += eth->speed_test.b_speed;
+            eth->speed_test.f_speed_avg += eth->speed_test.f_speed;
+            eth->params.elapsed_time.tv_sec  = eth->params.current_time.tv_sec;
+            eth->params.elapsed_time.tv_nsec = eth->params.current_time.tv_nsec;
 
-            speed_test->b_tx_speed_prev = 0;
+            eth->speed_test.b_tx_speed_prev = 0;
 
         } else {
 
-            // Poll has been disabled in favour of a non-blocking recvfrom (for now)
-            rx_len = recvfrom(test_interface->sock_fd, frame_headers->rx_buffer,
-                              test_params->f_size_total, MSG_DONTWAIT, NULL, NULL);
+            // Poll has been disabled in favour of a non-blocking recv (for now)
+            rx_len = recv(eth->intf.sock_fd, eth->frm.rx_buffer,
+                          eth->params.f_size_total, MSG_DONTWAIT);
 
             if (rx_len > 0) {
 
                 // Check for dying gasp from Rx host
-                if (ntohs(*frame_headers->rx_tlv_type) == TYPE_APPLICATION &&
-                    ntohll(*frame_headers->rx_tlv_value) == VALUE_DYINGGASP) {
+                if (ntohs(*eth->frm.rx_tlv_type) == TYPE_APPLICATION &&
+                    ntohll(*eth->frm.rx_tlv_value) == VALUE_DYINGGASP) {
 
                     printf("\nRx host has quit\n");
-                    speed_test_results(speed_test, test_params, app_params->tx_mode);
+                    speed_test_results(eth);
                     return;
 
                 // Received a non-test frame
                 } else {
-                    test_params->f_rx_other += 1;
+                    eth->params.f_rx_other += 1;
                 }
 
+            } else { // rx_len <= 0
+                if (errno != EAGAIN || errno != EWOULDBLOCK)
+                    perror("Speed test Rx error ");
             }
 
 
             // Check if a max speed has been configured
-            if (speed_test->b_tx_speed_max != B_TX_SPEED_MAX_DEF)
+            if (eth->speed_test.b_tx_speed_max != B_TX_SPEED_MAX_DEF)
             {
 
                 // Check if sending another frame exceeds the max speed configured
-                if ((speed_test->b_tx_speed_prev + speed_test->f_payload_size) <= speed_test->b_tx_speed_max)
+                if ((eth->speed_test.b_tx_speed_prev + eth->speed_test.f_payload_size)
+                    <= eth->speed_test.b_tx_speed_max)
                 {
 
 
-                    tx_ret = sendto(test_interface->sock_fd,
-                                    speed_test->f_payload,
-                                    speed_test->f_payload_size, 0, 
-                                    (struct sockaddr*)&test_interface->sock_addr,
-                                    sizeof(test_interface->sock_addr));
+                    tx_ret = send(eth->intf.sock_fd,
+                                  eth->speed_test.f_payload,
+                                  eth->speed_test.f_payload_size,
+                                  MSG_DONTWAIT);
 
-                    if (tx_ret <= 0)
+
+                    if (tx_ret > 0)
                     {
-                        perror("Frame sending Tx error ");
-                        return;
+                        eth->params.f_tx_count += 1;
+                        eth->speed_test.b_tx += eth->speed_test.f_payload_size;
+                        eth->speed_test.b_tx_speed_prev += eth->speed_test.f_payload_size;
+
+                    } else {
+
+                        if (errno != EAGAIN || errno != EWOULDBLOCK)
+                        {
+                            perror("Speed test Tx error ");
+                            return;
+                        }
+                        
                     }
-
-
-                    test_params->f_tx_count += 1;
-                    speed_test->b_tx += speed_test->f_payload_size;
-                    speed_test->b_tx_speed_prev += speed_test->f_payload_size;
 
                 }
 
             // Check if a max frames per second limit is configured
-            } else if (test_params->f_tx_count_max != F_TX_COUNT_MAX_DEF) {
+            } else if (eth->params.f_tx_count_max != F_TX_COUNT_MAX_DEF) {
 
                 // Check if sending another frame exceeds the max frame rate configured
-                if (test_params->f_tx_count - test_params->f_tx_count_prev < test_params->f_tx_count_max)
+                if ((eth->params.f_tx_count - eth->params.f_tx_count_prev) <
+                    eth->params.f_tx_count_max)
                 {
 
-                    tx_ret = sendto(test_interface->sock_fd,
-                                    speed_test->f_payload,
-                                    speed_test->f_payload_size, 0, 
-                                    (struct sockaddr*)&test_interface->sock_addr,
-                                    sizeof(test_interface->sock_addr));
+                    tx_ret = send(eth->intf.sock_fd,
+                                  eth->speed_test.f_payload,
+                                  eth->speed_test.f_payload_size,
+                                  MSG_DONTWAIT);
 
-                    if (tx_ret <= 0)
+                    if (tx_ret > 0)
                     {
-                        perror("Frame sending Tx error ");
-                        return;
+                        eth->params.f_tx_count += 1;
+                        eth->speed_test.b_tx += eth->speed_test.f_payload_size;
+                        eth->speed_test.b_tx_speed_prev += eth->speed_test.f_payload_size;
+
+                    } else {
+
+                        if (errno != EAGAIN || errno != EWOULDBLOCK)
+                        {
+                            perror("Speed test Tx error ");
+                            return;
+                        }
+                        
                     }
 
-
-                    test_params->f_tx_count += 1;
-                    speed_test->b_tx += speed_test->f_payload_size;
-                    speed_test->b_tx_speed_prev += speed_test->f_payload_size;
 
                 }
 
             // Else there are no speed restrictions
             } else {
 
-                tx_ret = sendto(test_interface->sock_fd,
-                                speed_test->f_payload,
-                                speed_test->f_payload_size, 0, 
-                                (struct sockaddr*)&test_interface->sock_addr,
-                                sizeof(test_interface->sock_addr));
+                tx_ret = send(eth->intf.sock_fd,
+                              eth->speed_test.f_payload,
+                              eth->speed_test.f_payload_size,
+                              MSG_DONTWAIT);
 
-                if (tx_ret <= 0)
+                if (tx_ret > 0)
                 {
-                    perror("Frame sending Tx error ");
-                    return;
+                    eth->params.f_tx_count += 1;
+                    eth->speed_test.b_tx += eth->speed_test.f_payload_size;
+                    eth->speed_test.b_tx_speed_prev += eth->speed_test.f_payload_size;
+
+                } else {
+
+                    if (errno != EAGAIN || errno != EWOULDBLOCK)
+                    {
+                        perror("Speed test Tx error ");
+                        return;
+                    }
+                    
                 }
 
-
-                test_params->f_tx_count += 1;
-                speed_test->b_tx += speed_test->f_payload_size;
-                speed_test->b_tx_speed_prev += speed_test->f_payload_size;
             }
 
         } // End of current_time.tv_sec - elapsed_time.tv_sec
@@ -1159,13 +1167,13 @@ void send_custom_frame(struct app_params *app_params,
     }
 
 
-    if (test_params->s_elapsed > 0)
+    if (eth->params.s_elapsed > 0)
     {
-        speed_test->b_speed_avg = (speed_test->b_speed_avg/test_params->s_elapsed);
-        speed_test->f_speed_avg = (speed_test->f_speed_avg/test_params->s_elapsed);
+        eth->speed_test.b_speed_avg = (eth->speed_test.b_speed_avg/eth->params.s_elapsed);
+        eth->speed_test.f_speed_avg = (eth->speed_test.f_speed_avg/eth->params.s_elapsed);
     }
 
     printf("Speed test complete\n");
-    speed_test_results(speed_test, test_params, app_params->tx_mode);
+    speed_test_results(eth);
 
  }

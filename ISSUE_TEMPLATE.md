@@ -14,14 +14,15 @@ Please also test with any OS updates applied if they are available.
 <!---
 Paste verbatim output from the following commands between the back ticks below:
 
-"uname -a"
-"cat /etc/redhat-release || lsb_release -a || cat /etc/issue"
-"lspci | grep -i eth"
-"ip link"
-"etherate -v"
-"etherate -l"
+uname -a
+cat /etc/redhat-release || lsb_release -a || cat /etc/issue
+lspci | grep -i eth
+ip link"
+sudo ./etherate -V
+sudo ./etherate -l
 
 -->
+
 ```
 
 ```

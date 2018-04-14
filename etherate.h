@@ -23,12 +23,7 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  *
- * File: Etherate Global Code
- *
- * File Contents:
- * GLOBAL MACROS
- * GLOBAL CONSTANTS
- * GLOBAL DEFINITIONS
+ * File: Etherate Global Vars
  *
  */
 
@@ -61,25 +56,25 @@
  ************************************************************* GLOBAL CONSTANTS
  */
 
-#define APP_VERSION        "1.16 2018-01"
-#define F_SIZE_MAX         10000 // Max frame size on the wire (payload+headers)
-#define F_SIZE_DEF         1500  // Default frame payload size in bytes
-#define F_DURATION_DEF     30    // Default test duration in seconds
-#define F_COUNT_DEF        0     // Default total number of frames to transmit
-#define F_BYTES_DEF        0     // Default amount of data to transmit in bytes
-#define B_TX_SPEED_MAX_DEF 0     // Default max speed in bytes, 0 == no limit
-#define F_TX_COUNT_MAX_DEF 0     // Default max frames per second, 0 == no limit
+#define APP_VERSION        "1.17 2018-04"
+#define F_SIZE_MAX         10000U // Max frame size on the wire (payload+headers)
+#define F_SIZE_DEF         1500U  // Default frame payload size in bytes
+#define F_DURATION_DEF     30U    // Default test duration in seconds
+#define F_COUNT_DEF        0U     // Default total number of frames to transmit
+#define F_BYTES_DEF        0U     // Default amount of data to transmit in bytes
+#define B_TX_SPEED_MAX_DEF 0U     // Default max speed in bytes, 0 == no limit
+#define F_TX_COUNT_MAX_DEF 0U     // Default max frames per second, 0 == no limit
 #define F_TX_DLY_DEF       0.0   // Default frame tx interval, 0 == no delay
-#define PCP_DEF            0     // Default pcp value
-#define VLAN_ID_DEF        0     // Default VLAN ID
-#define QINQ_ID_DEF        0     // Default QinQ VLAN ID
-#define QINQ_PCP_DEF       0     // Default QinQ pcp value
-#define MPLS_LABELS_MAX    10    // Max number of MPLS labels
-#define HEADERS_LEN_DEF    14    // Default frame headers length
-#define ETYPE_DEF          13107 // Default Ethertype (0x3333)
+#define PCP_DEF            0U     // Default pcp value
+#define VLAN_ID_DEF        0U     // Default VLAN ID
+#define QINQ_ID_DEF        0U     // Default QinQ VLAN ID
+#define QINQ_PCP_DEF       0U     // Default QinQ pcp value
+#define MPLS_LABELS_MAX    10U    // Max number of MPLS labels
+#define HEADERS_LEN_DEF    14U    // Default frame headers length
+#define ETYPE_DEF          13107U // Default Ethertype (0x3333)
 #define IF_INDEX_DEF       -1    // Default interface index number
 #define SOCK_FD_DEF        -1    // Default socket fd
-#define TX_DELAY_DEF       1     // Default TX to RX delay check
+#define TX_DELAY_DEF       1U     // Default TX to RX delay check
 #define RET_EXIT_APP       -2    // Used to exit the app even though success
 #define RET_EXIT_FAILURE   -1    // EXIT_FAILURE but a negative value
 
@@ -89,49 +84,49 @@
  */
 
 // TLV and sub-TLV types/values
-#define TYPE_APPLICATION         1
-#define TYPE_APPLICATION_SUB_TLV 11
-#define VALUE_DYINGGASP          101
-#define VALUE_DUMMY              102
+#define TYPE_APPLICATION         1U
+#define TYPE_APPLICATION_SUB_TLV 11U
+#define VALUE_DYINGGASP          101U
+#define VALUE_DUMMY              102U
 
-#define TYPE_BROADCAST           2
-#define VALUE_PRESENCE           21
+#define TYPE_BROADCAST           2U
+#define VALUE_PRESENCE           21U
 
-#define TYPE_SETTING             3
-#define VALUE_SETTING_SUB_TLV    30
-#define VALUE_SETTING_END        31
-#define TYPE_ETYPE               301
-#define TYPE_FRAMESIZE           302
-#define TYPE_DURATION            303
-#define TYPE_FRAMECOUNT          304
-#define TYPE_BYTECOUNT           305
-#define TYPE_MAXSPEED            306
-#define TYPE_VLANPCP             307
-#define TYPE_QINQPCP             308
-#define TYPE_ACKMODE             309
-#define TYPE_ACKTIMEOUT          310
-#define TYPE_ACKCOUNT            311
-#define TYPE_MTUTEST             312
-#define TYPE_MTUMIN              313
-#define TYPE_MTUMAX              314
-#define TYPE_QMTEST              315
-#define TYPE_QMINTERVAL          316
-#define TYPE_QMTIMEOUT           317
-#define TYPE_TXDELAY             318
+#define TYPE_SETTING             3U
+#define VALUE_SETTING_SUB_TLV    30U
+#define VALUE_SETTING_END        31U
+#define TYPE_ETYPE               301U
+#define TYPE_FRAMESIZE           302U
+#define TYPE_DURATION            303U
+#define TYPE_FRAMECOUNT          304U
+#define TYPE_BYTECOUNT           305U
+#define TYPE_MAXSPEED            306U
+#define TYPE_VLANPCP             307U
+#define TYPE_QINQPCP             308U
+#define TYPE_ACKMODE             309U
+#define TYPE_ACKTIMEOUT          310U
+#define TYPE_ACKCOUNT            311U
+#define TYPE_MTUTEST             312U
+#define TYPE_MTUMIN              313U
+#define TYPE_MTUMAX              314U
+#define TYPE_QMTEST              315U
+#define TYPE_QMINTERVAL          316U
+#define TYPE_QMTIMEOUT           317U
+#define TYPE_TXDELAY             318U
 
-#define TYPE_TESTFRAME           4
-#define VALUE_TEST_SUB_TLV       40
-#define VALUE_DELAY_END          41
-#define TYPE_FRAMEINDEX          401
-#define TYPE_ACKINDEX            402
-#define TYPE_DELAY               403
-#define TYPE_DELAY1              404
-#define TYPE_DELAY2              405
-#define TYPE_PING                406
-#define TYPE_PONG                407
+#define TYPE_TESTFRAME           4U
+#define VALUE_TEST_SUB_TLV       40U
+#define VALUE_DELAY_END          41U
+#define TYPE_FRAMEINDEX          401U
+#define TYPE_ACKINDEX            402U
+#define TYPE_DELAY               403U
+#define TYPE_DELAY1              404U
+#define TYPE_DELAY2              405U
+#define TYPE_PING                406U
+#define TYPE_PONG                407U
 
 
-struct app_params              // General application parameters
+struct app              // General application parameters
 {
 
     uint8_t broadcast;               // Default, broadcast local source MAC before start
@@ -139,12 +134,12 @@ struct app_params              // General application parameters
     uint8_t tx_sync;                 // Default, sync settings between hosts
     uint8_t tx_delay;                // Default, measure one way delay TX > RX
     time_t  ts_now;                  // Current date and time
-    struct  tm* tm_local;            // For breaking down the above
+    struct  tm *tm_local;            // For breaking down the above
 
 };
 
 
-struct frame_headers           // Frame header settings
+struct frm           // Frame header settings
 {
 
     uint8_t   src_mac[6];
@@ -164,7 +159,6 @@ struct frame_headers           // Frame header settings
     uint16_t  mpls_exp[MPLS_LABELS_MAX];
     uint16_t  mpls_ttl[MPLS_LABELS_MAX];
     uint8_t   pwe_ctrl_word;
-    
     uint8_t*  rx_buffer;             // Full frame including headers
     uint8_t*  rx_data;               // Pointer to frame payload after the headers
     uint8_t*  tx_buffer;             // Full frame including headers
@@ -173,6 +167,7 @@ struct frame_headers           // Frame header settings
     uint16_t* rx_tlv_type;           // TLV type within frame headers
     uint32_t* rx_tlv_value;          // TLV value within the frame header
     uint32_t  sub_tlv_size;          // Sub-TLV size is also currently fixed!
+    uint64_t  *sub_tlv_val;          // Pointer to frame tx count in the subTLV /////
     uint16_t* rx_sub_tlv_type;
     uint64_t* rx_sub_tlv_value;
 
@@ -220,17 +215,6 @@ struct qm_test {               // Settings specific to the quality measurement t
 };
 
 
-struct test_interface          // Settings for the physical test interface
-{
-
-    int     if_index;
-    uint8_t if_name[IFNAMSIZ];
-    struct  sockaddr_ll sock_addr;   // Link-layer details
-    int     sock_fd;                 // Socket file descriptor
-
-};
-
-
 struct speed_test             // Speed test parameters
 {
 
@@ -256,7 +240,18 @@ struct speed_test             // Speed test parameters
 };
 
 
-struct test_params             // Gerneral testing parameters
+struct intf          // Settings for the physical test interface
+{
+
+    int32_t     if_index;
+    uint8_t if_name[IFNAMSIZ];
+    struct  sockaddr_ll sock_addr;   // Link-layer details
+    int     sock_fd;                 // Socket file descriptor
+
+};
+
+
+struct params             // Gerneral testing parameters
 {
 
     uint64_t    f_bytes;             // Max amount of data to transmit in bytes
@@ -287,13 +282,17 @@ struct test_params             // Gerneral testing parameters
 };
 
 
-// These need to be global so that signal_handler() can send a dying gasp
-// and the allocated buffers can be free()'d
-struct ifreq ethreq;
-struct app_params *papp_params;
-struct mtu_test *pmtu_test;
-struct qm_test *pqm_test;
-struct speed_test *pspeed_test;
-struct test_interface *ptest_interface;
-struct test_params *ptest_params;
-struct frame_headers *pframe_headers;
+struct etherate {
+    struct app app;
+    struct frm frm;
+    struct mtu_test mtu_test;
+    struct qm_test qm_test;
+    struct speed_test speed_test;
+    struct intf intf;
+    struct params params;
+};
+
+
+// This needs to be global so that signal_handler() can send a dying gasp
+// and the allocated buffers can be free()'d:
+struct etherate *eth_p;

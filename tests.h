@@ -25,37 +25,18 @@
  * 
  * File: Etherate Test Functions
  *
- * File Contents:
- * tests.c prototypes
- *
  */
 
 
 
 // Calculate the one-way delay from Tx to Rx
-void delay_test(struct app_params *app_params,
-                struct frame_headers *frame_headers,
-                struct test_interface *test_interface,
-                struct test_params * test_params,
-                struct qm_test *qm_test);
+void delay_test(struct etherate *eth);
 
 // Run an MTU sweep test from Tx to Rx
-void mtu_sweep_test(struct app_params *app_params,
-                    struct frame_headers *frame_headers,
-                    struct test_interface *test_interface,
-                    struct test_params *test_params,
-                    struct mtu_test *mtu_test);
+void mtu_sweep_test(struct etherate *eth);
 
 // Run some quality measurements from Tx to Rx
-void latency_test(struct app_params *app_params,
-                  struct frame_headers *frame_headers,
-                  struct test_interface *test_interface,
-                  struct test_params *test_params,
-                  struct qm_test *qm_test);
+void latency_test(struct etherate *eth);
 
 // Tx a custom frame loaded from file
-void send_custom_frame(struct app_params *app_params,
-                       struct frame_headers *frame_headers,
-                       struct speed_test *speed_test,
-                       struct test_interface *test_interface,
-                       struct test_params *test_params);
+void send_custom_frame(struct etherate *eth);

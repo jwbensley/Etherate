@@ -46,9 +46,8 @@
 #include <linux/if_ether.h>  // ETH_P_ALL (0x003)
                              // ETH_FRAME_LEN (default 1514)
                              // ETH_ALEN (default 6)
-#include <linux/version.h>   // KERNEL_VERSION(), LINUX_VERSION_CODE
 #include <linux/net.h>       // SOCK_RAW
-#include <math.h>            // fabsl(), roundl()
+#include <math.h>            // fabsl(), floorl(), roundl()
 #include <netinet/in.h>      // htonl(), htons(), ntohl(), ntohs()
 #include <signal.h>          // signal()
 #include <stdbool.h>         // false, true
@@ -63,11 +62,13 @@
 #include <time.h>            // clock_gettime(), struct timeval, time_t,
                              // struct tm
 #include "unistd.h"          // getuid(), sleep()
+
 #ifndef CLOCK_MONOTONIC_RAW
 #define CLOCK_MONOTONIC_RAW 4
 #endif
 
 #include "etherate.h"
+#include "test_functions.c"
 #include "functions.c"
 #include "defaults.c"
 #include "speed_tests.c"
@@ -77,39 +78,34 @@
 
 int main(int argc, char *argv[]) {
 
-    struct app_params app_params;
-    struct frame_headers frame_headers;
-    struct mtu_test mtu_test;
-    struct qm_test qm_test;
-    struct speed_test speed_test;
-    struct test_interface test_interface;
-    struct test_params test_params;
+    struct etherate eth;
+
+    // Global pointer used by signal handler function
+    eth_p = &eth;
 
     uint8_t testing = true;
     while(testing == true)
     {
 
+        // Setup default application settings
+        int16_t def_ret = default_app(&eth);
+        if (def_ret != EXIT_SUCCESS)
+            return def_ret;
 
 
-        /*
-         ******************************************************* DEFAULT VALUES
-         */
+        // Check for root privs, low level socket access is required
+        if (getuid() != 0) {
+            printf("Must be root to use this program!\n");
+            reset_app(&eth);
+            return EX_NOPERM;
+        }
 
-        set_default_values(&app_params, &frame_headers, &mtu_test, &qm_test,
-                           &speed_test, &test_interface, &test_params);
 
-
-
-        /*
-         ************************************************************* CLI ARGS
-         */
-
-        int16_t cli_ret = cli_args(argc, argv, &app_params, &frame_headers,
-                                   &mtu_test, &qm_test, &speed_test,
-                                   &test_interface, &test_params);
+        // Parse CLI arguments
+        int16_t cli_ret = cli_args(argc, argv, &eth);
 
         if (cli_ret != EXIT_SUCCESS) {
-            reset_app(&frame_headers, &qm_test, &speed_test, &test_interface);
+            reset_app(&eth);
         
             if (cli_ret == RET_EXIT_APP) {
                 return EXIT_SUCCESS;
@@ -118,136 +114,112 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        // Check for root privs, low level socket access is required
-        if (getuid() != 0) {
-            printf("Must be root to use this program!\n");
-            reset_app(&frame_headers, &qm_test, &speed_test, &test_interface);
-            return EX_NOPERM;
-        }
 
-
-
-        /*
-         ****************************************************** INTERFACE SETUP
-         */
-
-        if (setup_socket(&test_interface) != EXIT_SUCCESS) {
+        // Set up a new socket bind to an interface
+        if (setup_sock(&eth.intf) != EXIT_SUCCESS) {
             int32_t errnum = errno;
-            reset_app(&frame_headers, &qm_test, &speed_test, &test_interface);
+            reset_app(&eth);
             return errnum;
         }
 
-        if (setup_socket_interface(&frame_headers, &test_interface, &test_params) != EXIT_SUCCESS)                                             
+        if (set_sock_int(&eth) != EXIT_SUCCESS)
         {
             int32_t errnum = errno;
-            reset_app(&frame_headers, &qm_test, &speed_test, &test_interface);
+            reset_app(&eth);
             return errnum;
         }
 
-        update_frame_size(&frame_headers, &test_interface, &test_params);
+        update_frame_size(&eth);
+
 
         // Set the network interface to promiscuos mode
-        if (set_interface_promisc(&test_interface) != EXIT_SUCCESS)
+        if (set_int_promisc(&eth.intf) != EXIT_SUCCESS)
         {
             int32_t errnum = errno;
-            reset_app(&frame_headers, &qm_test, &speed_test, &test_interface);
+            reset_app(&eth);
             return errnum;
         }
+
 
         // Declare sigint handler, TX will signal RX to reset when it quits.
         // This can not be declared until now because the interfaces must be
         // set up so that a dying gasp can be sent.
         signal (SIGINT, signal_handler);
 
-        if (setup_frame(&app_params, &frame_headers, &test_interface, &test_params) != EXIT_SUCCESS)
+
+        // Set up the frame data and send broadcasts
+        if (setup_frame(&eth) != EXIT_SUCCESS)
         {
             int32_t errnum = errno;
-            reset_app(&frame_headers, &qm_test, &speed_test, &test_interface);
+            reset_app(&eth);
             return errnum;
         }
 
 
-
-        /*
-         ******************************************************** SETTINGS SYNC
-         */
-
-        if (app_params.tx_sync == true)
-            sync_settings(&app_params, &frame_headers, &mtu_test, &qm_test,
-                          &speed_test, &test_interface, &test_params);
+        if (eth.app.tx_sync == true)
+            sync_settings(&eth);
 
         // Pause to allow the RX host to process the sent settings
         sleep(2);
 
-        // Rebuild the test frame headers in case any settings have been for
-        // the RX host by the TX host
-        if (app_params.tx_mode != true) build_headers(&frame_headers);
-        printf("Frame size is %" PRId16 " bytes\n", test_params.f_size_total);
+
+        // If this is the RX host, rebuild the test frame headers incase any
+        // settings have been changed by the TX host
+        if (eth.app.tx_mode != true) build_headers(&eth.frm);
+
 
         // If using frame pacing, calculate the inter-frame delay now that the
         // frame size is no longer subject to change
-        if (test_params.f_tx_dly != F_TX_DLY_DEF) {
-            uint32_t f_tx_max  = (uint32_t)((test_params.f_size_total * 8) / test_params.f_tx_dly);
-            test_params.f_tx_dly = (1000000000 / f_tx_max) * 1e-9;
-            printf("Pacing to a maximum rate of %" PRIu32 " fps (%.9Lfs spacing)\n",
-                   f_tx_max, test_params.f_tx_dly);
+        if (eth.params.f_tx_dly != F_TX_DLY_DEF) {
+            long double f_tx_max  = floor((eth.params.f_tx_dly / (eth.params.f_size_total * 8)));
+            
+            eth.params.f_tx_dly = (1000000000 / f_tx_max) * 1e-9;
+
+            printf("Pacing to a maximum rate of %.0Lffps (%.9Lfs spacing)\n",
+                   f_tx_max, eth.params.f_tx_dly);
         }
+
 
         // Try to measure the TX to RX one way delay
-        if (app_params.tx_delay == true)
-            delay_test(&app_params, &frame_headers, &test_interface, 
-                       &test_params, &qm_test);
+        if (eth.app.tx_delay == true)
+            delay_test(&eth);
 
 
+        // Start the chosen test
+        eth.app.ts_now =   time(0);
+        eth.app.tm_local = localtime(&eth.app.ts_now);
+        printf("Starting test on %s\n", asctime(eth.app.tm_local));   
 
-        /*
-         ****************************************************** MAIN TEST PHASE
-         */
+        if (eth.mtu_test.enabled) {
+            mtu_sweep_test(&eth);
 
-        app_params.ts_now =   time(0);
-        app_params.tm_local = localtime(&app_params.ts_now);
-        printf("Starting test on %s\n", asctime(app_params.tm_local));   
+        } else if (eth.qm_test.enabled) {
+            latency_test(&eth);
 
-
-        if (mtu_test.enabled) {
-
-            mtu_sweep_test(&app_params, &frame_headers, &test_interface,
-                           &test_params, &mtu_test);
-
-        } else if (qm_test.enabled) {
-
-            latency_test(&app_params, &frame_headers, &test_interface,
-                         &test_params, &qm_test);
-
-        } else if (speed_test.f_payload_size > 0) {
-
-            speed_test.enabled = true;
-            send_custom_frame(&app_params, &frame_headers, &speed_test,
-                              &test_interface, &test_params);
+        } else if (eth.speed_test.f_payload_size > 0) {
+            eth.speed_test.enabled = true;
+            printf("Frame size is %" PRId16 " bytes\n", eth.params.f_size_total);
+            send_custom_frame(&eth);
 
         } else {
-
-            speed_test.enabled = true;
-            speed_test_prep(&app_params, &frame_headers, &speed_test,
-                       &test_interface, &test_params);
+            eth.speed_test.enabled = true;
+            printf("Frame size is %" PRId16 " bytes\n", eth.params.f_size_total);
+            speed_test_prep(&eth);
 
         }
 
+        eth.app.ts_now = time(0);
+        eth.app.tm_local = localtime(&eth.app.ts_now);
+        printf("Ending test on %s\n\n", asctime(eth.app.tm_local));
 
 
-        app_params.ts_now = time(0);
-        app_params.tm_local = localtime(&app_params.ts_now);
-        printf("Ending test on %s\n\n", asctime(app_params.tm_local));
-
-        if (remove_interface_promisc(&test_interface) != EXIT_SUCCESS)
-        {
+        if (remove_interface_promisc(&eth.intf) != EXIT_SUCCESS)
             printf("Error leaving promiscuous mode\n");
-        }
 
-        reset_app(&frame_headers, &qm_test, &speed_test, &test_interface);
+        reset_app(&eth);
 
         // End the testing loop if TX host
-        if (app_params.tx_mode == true) testing = false;
+        if (eth.app.tx_mode == true) testing = false;
 
 
     }

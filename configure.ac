@@ -1,4 +1,4 @@
-AC_INIT([etherate],[1.16.0],[jwbensley@gmail.com],,[https://null.53bits.co.uk/index.php?page=etherate])
+AC_INIT([etherate],[1.17.0],[jwbensley@gmail.com],,[https://null.53bits.co.uk/index.php?page=etherate])
 
 AM_INIT_AUTOMAKE([1.9 tar-pax])
 
@@ -10,7 +10,7 @@ AC_SYS_LARGEFILE
 AC_PROG_LIBTOOL
 
 #CFLAGS="-Wall -D_FILE_OFFSET_BITS=$ac_cv_sys_file_offset_bits"
-CFLAGS="-Wall -ftrapv -lrt -lm -std=gnu1x -D _GNU_SOURCE -DPACKAGE=\\\"\$(PACKAGE)\\\" -DSYSCONFDIR=\\\"\$(sysconfdir)\\\" -DLOCALSTATEDIR=\\\"\$(localstatedir)\\\" -DLIBEXECDIR=\\\"\$(libexecdir)\\\" -DLIBDIR=\\\"\$(libdir)\\\" -DPACKAGE_VERSION=\\\"\$(PACKAGE_VERSION)\\\"" 
+CFLAGS="-lm -Wall -std=gnu1x -D _GNU_SOURCE -DPACKAGE=\\\"\$(PACKAGE)\\\" -DSYSCONFDIR=\\\"\$(sysconfdir)\\\" -DLOCALSTATEDIR=\\\"\$(localstatedir)\\\" -DLIBEXECDIR=\\\"\$(libexecdir)\\\" -DLIBDIR=\\\"\$(libdir)\\\" -DPACKAGE_VERSION=\\\"\$(PACKAGE_VERSION)\\\"" 
 CXXFLAGS=$CFLAGS
 
 AC_MSG_CHECKING(whether to enable debugging)

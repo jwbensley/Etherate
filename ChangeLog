@@ -1,3 +1,31 @@
+-----Etherate 1.17 2018-04
+
+[MINOR] Fixed issue #50; Frame order detection is wrong
+
+[FEATURE] Added enhancement #49; Update compile checks
+
+[MAJOR] Fixed issue #48; Rx loop for speed test is missing pointer reference
+
+[MAJOR] Fixed issue #47; Unsafe reference
+
+[MAJOR] Fixed issue #46; "Message too long" when running test
+
+[MINOR] Fixed issue #44; The average FPS and max FPS are always the same
+
+[MINOR] Fixed issue #42; -h option says "on the wire"
+
+[MINOR] Fixed issue #39; -l option requires sudo
+
+[MINOR] Fixed issue #36; Kernel version checks on CentOS
+
+[MINOR] Fixed issue #9; fail to compile on AlpineLinux
+
+[MINOR] Various calloc() calls were missing a return value check
+
+[MINOR] Correct some typos in the code and more cody tidying
+
+
+
 -----Etherate 1.16 2018-01
 
 [FEATURE] Added enhancement #38; Remove -fstack-protector-all compile flag

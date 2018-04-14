@@ -25,32 +25,18 @@
  *
  * File: Etherate Setup Functions
  *
- * File Contents:
- * defaults.c prototypes
- *
  */
 
 
 
 // Restore all test and interface values to default at the start of each RX loop
-void set_default_values(struct app_params *app_params,
-                        struct frame_headers *frame_headers,
-                        struct mtu_test *mtu_test,
-                        struct qm_test *qm_test,
-                        struct speed_test *speed_test,
-                        struct test_interface *test_interface,
-                        struct test_params * test_params);
+int16_t default_app(struct etherate *eth);
 
 // Set up Etherate test frame
-int16_t setup_frame(struct app_params * app_params,
-                    struct frame_headers *frame_headers,
-                    struct test_interface *test_interface,
-                    struct test_params *test_params);
+int16_t setup_frame(struct etherate *eth);
 
-// Set up an OS socket
-int16_t setup_socket(struct test_interface *test_interface);
+// Set up a raw socket
+int16_t setup_sock(struct intf *intf);
 
 // Set up the physical interface and bind to socket
-int16_t setup_socket_interface(struct frame_headers *frame_headers,
-                               struct test_interface *test_interface,
-                               struct test_params *test_params);
+int16_t set_sock_int(struct etherate *eth);
