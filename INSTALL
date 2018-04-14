@@ -2,7 +2,11 @@
 
 For a complete check and compile install, install any missing dependancies with the following (adjust to your OS as required):
 
+# Ubuntu:
 sudo apt-get install automake autoconf libtool
+
+# Alpine:
+apk add gcc automake autoconf libtool m4 alpine-sdk linux-headers
 
 Then run:
 
@@ -10,24 +14,152 @@ Then run:
 make
 sudo make install
 
-The configure.ac file actually contains the -std=gnu1x flag because Travis doesn't support -std=gnu11
+The configure.ac file actually contains the -std=gnu1x GCC flag instead of -std=gnu11 because the later isn't supported by TravisCI.
 
 
 
 2. To create a debugging build (-fsanitize=address won't work with valgrind)
 
-gcc -o etherate etherate.c -Wall -Werror -ftrapv -pedantic -lrt -lm -fstack-protector-all -std=gnu11 -fsanitize=address -Og -g
+gcc -o etherate etherate.c -Wall -lm -std=gnu11 -fstack-protector-all -fsanitize=address -Og -g
 
 
 
 3. Standalone binary compile
 
-To compile the binary in the local directory use the following:
+To compile the standalone binary in the local directory use the following:
 
-gcc -o etherate etherate.c -Wall -Werror -ftrapv -pedantic -lrt -lm -std=gnu11 -O3
+gcc -o etherate etherate.c -Wall -lm -std=gnu11 -O3
 
 
 
-4. Standalone binary compile with minimal checks (only for proper slags)
+4. Standalone binary compile with minimal checks (only for proper slags!)
 
-gcc -o etherate etherate.c -lrt -lm -O1
+gcc -o etherate etherate.c -lm
+
+
+
+5. Strict standalone binary compile used when testing a new release (with loads of checks enabled).  
+This requires a more recent GCC version to check for various code issues.
+
+gcc -o etherate etherate.c -Wall -Werror -ftrapv -pedantic -lm -O3 -std=gnu11 -Wjump-misses-init -Wlogical-op -Wshadow -Wformat=2 -Wformat-signedness -Wextra -Wdouble-promotion -Winit-self -Wtrampolines -Wcast-qual -Wcast-align -Wwrite-strings
+
+GCC flag explenations:
+
+  -Wall
+   Turns on all optional warnings which are desirable for normal code.
+   At present this is -Wcomment, -Wtrigraphs, -Wmultichar and a warning about
+   integer promotion causing a change of sign in "#if" expressions.  Note that
+   many of the preprocessor's warnings are on by default and have no options to
+   control them.
+
+   -Wall turns on the following warning flags:
+   -Waddress -Warray-bounds=1 (only with -O2) -Wc++11-compat  -Wc++14-compat -Wchar-subscripts -Wenum-compare (in C/ObjC; this is on by default in C++)
+   -Wimplicit-int (C and Objective-C only) -Wimplicit-function-declaration (C and Objective-C only) -Wcomment -Wformat -Wmain (only for C/ObjC and unless
+   -ffreestanding) -Wmaybe-uninitialized -Wmissing-braces (only for C/ObjC) -Wnonnull -Wopenmp-simd -Wparentheses -Wpointer-sign -Wreorder -Wreturn-type
+   -Wsequence-point -Wsign-compare (only in C++) -Wstrict-aliasing -Wstrict-overflow=1 -Wswitch -Wtrigraphs -Wuninitialized -Wunknown-pragmas
+   -Wunused-function -Wunused-label -Wunused-value -Wunused-variable -Wvolatile-register-var
+
+  -Werror
+   Make all warnings into hard errors.  Source code which triggers warnings will
+   be rejected.
+
+  -ftrapv
+   This option generates traps for signed overflow on addition, subtraction,
+   multiplication operations.
+
+  -pedantic
+   Issue all the mandatory diagnostics listed in the C standard.  Some of them
+   are left out by default, since they trigger frequently on harmless code.
+
+  -lm
+   Link in the math library (math.h).
+
+  -std=gnu11
+   Enable the GNU dialect of ISO C11.  This is the default for C code.
+
+  -O3
+   With -O, the compiler tries to reduce code size and execution time, without
+   performing any optimizations that take a great deal of compilation time.
+  -O1 Optimize.  Optimizing compilation takes somewhat more time, and a lot
+   more memory for a large function.
+  -O2 Optimize even more.  GCC performs nearly all supported optimizations that
+   do not involve a space-speed tradeoff.  As compared to -O, this option
+   increases both compilation time and the performance of the generated code.
+  -O3 Optimize yet more.
+
+  -Wjump-misses-init
+   Warn if a "goto" statement or a "switch" statement jumps forward across the
+   initialization of a variable, or jumps backward to a label after the
+   variable has been initialized.
+
+  -Wlogical-op
+   Warn about suspicious uses of logical operators in expressions. This
+   includes using logical operators in contexts where a bit-wise operator is
+   likely to be expected.
+
+  -Wshadow
+   Warn whenever a local variable or type declaration shadows another variable,
+   parameter, type, class member (in C++), or instance variable (in
+   Objective-C) or whenever a built-in function is shadowed.
+
+  -Wformat=2
+   -Wformat=1 checks calls to "printf" and "scanf", etc., to make sure that the
+   arguments supplied have types appropriate to the format string specified,
+   and that the conversions specified in the format string make sense. This
+   includes standard functions, and others specified by format attributes, in
+   the "printf", "scanf", "strftime" and "strfmon" families. -Wformat=2 enables
+   -Wformat=1 plus additional format checks, currently equivalent to -Wformat
+   -Wformat-nonliteral -Wformat-security -Wformat-y2k.
+
+  -Wformat-signedness
+   If -Wformat is specified, also warn if the format string requires an
+   unsigned argument and the argument is signed and vice versa.
+
+  -Wextra
+   This enables some extra warning flags that are not enabled by -Wall.
+   -Wclobbered -Wempty-body -Wignored-qualifiers -Wmissing-field-initializers
+   -Wmissing-parameter-type (C only) -Wold-style-declaration (C only)
+   -Woverride-init -Wsign-compare -Wtype-limits -Wuninitialized
+   -Wunused-parameter (only with -Wunused or -Wall) -Wunused-but-set-parameter
+   (only with -Wunused or -Wall).
+
+  -Wdouble-promotion
+   Give a warning when a value of type "float" is implicitly promoted to
+   "double".  CPUs with a 32-bit "single-precision" floating-point unit
+   implement "float" in hardware, but emulate "double" in software. On such a
+   machine, doing computations using "double" values is much more expensive
+   because of the overhead required for software emulation.
+
+  -Winit-self
+   Warn about uninitialized variables that are initialized with themselves.
+   Note this option can only be used with the -Wuninitialized option.
+   -Wuninitialized is included in -Wextra.
+
+  -Wtrampolines
+   Warn about trampolines generated for pointers to nested functions. A
+   trampoline is a small piece of data or code that is created at run time on
+   the stack when the address of a nested function is taken, and is used to
+   call the nested function indirectly. For some targets, it is made up of data
+   only and thus requires no special treatment. But, for most targets, it is
+   made up of code and thus requires the stack to be made executable in order
+   for the program to work properly.
+
+  -Wcast-qual
+   Warn whenever a pointer is cast so as to remove a type qualifier from the
+   target type. For example, warn if a "const char *" is cast to an ordinary
+   "char *". Also warn when making a cast that introduces a type qualifier in
+   an unsafe way. For example, casting "char **" to "const char **" is unsafe.
+
+  -Wcast-align
+   Warn whenever a pointer is cast such that the required alignment of the
+   target is increased. For example, warn if a "char *" is cast to an "int *"
+   on machines where integers can only be accessed at two- or four-byte
+   boundaries.
+
+  -Wwrite-strings
+   When compiling C, give string constants the type "const char[length]" so
+   that copying the address of one into a non-"const" "char *" pointer produces
+   a warning.  These warnings help you find at compile time code that can try
+   to write into a string constant, but only if you have been very careful
+   about using "const" in declarations and prototypes. Otherwise, it is just a
+   nuisance. This is why we did not make -Wall request these warnings.

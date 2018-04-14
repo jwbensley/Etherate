@@ -1,8 +1,8 @@
 Etherate
 ========
 
-[![Build Status](https://travis-ci.org/jwbensley/Etherate.svg?branch=master)](https://travis-ci.org/jwbensley/Etherate)  
-[![PayPal Donate (buy me a pizza!)](https://img.shields.io/badge/paypal-donate-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=james%40bensley%2eme&lc=GB&item_name=Etherate&currency_code=GBP)  
+[![Build Status](https://travis-ci.org/jwbensley/Etherate.svg?branch=master)](https://travis-ci.org/jwbensley/Etherate)
+[![PayPal Donate](https://img.shields.io/badge/paypal-donate-green.svg) < buy me a pizza!](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=james%40bensley%2eme&lc=GB&item_name=Etherate&currency_code=GBP)    
 [![Bitdeli Badge](https://null.53bits.co.uk/uploads/programming/c/etherate/etherate-github-badge.png)](https://bitdeli.com/free "Bitdeli Badge")  
 
 
@@ -43,7 +43,7 @@ Etherate
 
 #### Current version
 
-  1.16 (2018-01)
+  1.17 (2018-04)
 
 
 #### Current features

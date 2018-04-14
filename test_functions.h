@@ -21,22 +21,19 @@
  * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- * 
- * 
- * File: Etherate Test Functions
+ *
+ *
+ * File: Speed Test Functions
  *
  */
 
 
 
-// Calculate the one-way delay from Tx to Rx
-void delay_test(struct etherate *eth);
+// Print the results of the latency test to the screen
+void latency_test_results(struct etherate *eth);
 
-// Run an MTU sweep test from Tx to Rx
-void mtu_sweep_test(struct etherate *eth);
+// Print the results of the MTU sweep test to the screen
+void mtu_sweep_test_results(struct etherate *eth);
 
-// Run some quality measurements from Tx to Rx
-void latency_test(struct etherate *eth);
-
-// Tx a custom frame loaded from file
-void send_custom_frame(struct etherate *eth);
+// Print the results of the speed test to the screen
+void speed_test_results(struct etherate *eth);

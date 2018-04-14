@@ -23,10 +23,7 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  *
- * File: Etherate Setup Functions
- *
- * File Contents:
- * speed_tests.c prototypes
+ * File: Speed Tests
  *
  */
 
@@ -34,40 +31,16 @@
 
 ///// Update protype desctions
 // Run a speedtest (which is the default test operation if none is specified)
-void speed_test_prep(struct app_params *app_params,
-                struct frame_headers *frame_headers,
-                struct speed_test *speed_test,
-                struct test_interface *test_interface,
-                struct test_params *test_params);
+void speed_test_prep(struct etherate *eth);
 
-void speed_test_bps(struct app_params *app_params,
-                    struct frame_headers *frame_headers,
-                    struct speed_test *speed_test,
-                    struct test_interface *test_interface,
-                    struct test_params *test_params);
+void speed_test_bps(struct etherate *eth);
 
-void speed_test_fps(struct app_params *app_params,
-                    struct frame_headers *frame_headers,
-                    struct speed_test *speed_test,
-                    struct test_interface *test_interface,
-                    struct test_params *test_params);
+void speed_test_fps(struct etherate *eth);
 
 ///// Change this name
-void speed_test_full(struct app_params *app_params,
-                struct frame_headers *frame_headers,
-                struct speed_test *speed_test,
-                struct test_interface *test_interface,
-                struct test_params *test_params);
+void speed_test_full(struct etherate *eth);
 
-void speed_test_pacing(struct app_params *app_params,
-                       struct frame_headers *frame_headers,
-                       struct speed_test *speed_test,
-                       struct test_interface *test_interface,
-                       struct test_params *test_params);
+void speed_test_pacing(struct etherate *eth);
 
 ///// Change this name
-void speed_test_rx(struct app_params *app_params,
-                   struct frame_headers *frame_headers,
-                   struct speed_test *speed_test,
-                   struct test_interface *test_interface,
-                   struct test_params *test_params);
+void speed_test_rx(struct etherate *eth);
