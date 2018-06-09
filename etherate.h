@@ -56,7 +56,7 @@
  ************************************************************* GLOBAL CONSTANTS
  */
 
-#define APP_VERSION        "1.17 2018-04"
+#define APP_VERSION        "1.18 2018-06"
 #define F_SIZE_MAX         10000U // Max frame size on the wire (payload+headers)
 #define F_SIZE_DEF         1500U  // Default frame payload size in bytes
 #define F_DURATION_DEF     30U    // Default test duration in seconds

@@ -2,7 +2,7 @@ Etherate
 ========
 
 Build Status:  https://travis-ci.org/jwbensley/Etherate.svg?branch=master  
-PayPal (buy me a pizza!): https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=james%40bensley%2eme&lc=GB&item_name=Etherate&currency_code=GBP  
+PayPal (buy me a coffee!): https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=james%40bensley%2eme&lc=GB&item_name=Etherate&currency_code=GBP  
 
 
 
@@ -43,7 +43,7 @@ Why was it made
 
 Current version
 
-  1.17 (2018-04)
+  1.18 (2018-06)
 
 
 Current features
@@ -131,8 +131,6 @@ Documentation (usage info, examples, FAQs etc.):
 Who made it (where to send your hate mail or nude pics)
 
   James Bensley [jwbensley at gmail dot com]
-  If you like the project you can sponor it's development through my: 
-  [![Amazon Wish-List](http://amzn.eu/0v7YJZw)](http://amzn.eu/0v7YJZw)
 
   Major credit is due for their code review and bug fixing efforts, to;  
   - Bradley Kite  
