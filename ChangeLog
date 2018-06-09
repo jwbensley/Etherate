@@ -1,3 +1,9 @@
+-----Etherate 1.18 2018-06
+
+[MINOR] Fixed issue #51; Max jitter value isn't max jitter in results list
+
+
+
 -----Etherate 1.17 2018-04
 
 [MINOR] Fixed issue #50; Frame order detection is wrong
