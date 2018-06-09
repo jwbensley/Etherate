@@ -695,16 +695,20 @@ void latency_test(struct etherate *eth)
                             if (rtt < eth->qm_test.rtt_min)
                             {
                                 eth->qm_test.rtt_min = rtt;
-                            } else if (rtt > eth->qm_test.rtt_max) {
+                            }
+
+                            if (rtt > eth->qm_test.rtt_max) {
                                 eth->qm_test.rtt_max = rtt;
                             }
 
-                            jitter = fabsl(rtt-rtt_prev);
+                            jitter = rtt_prev ? fabsl(rtt-rtt_prev) : 0.000000000;
 
-                            if (jitter < eth->qm_test.jitter_min)
+                            if (jitter && (jitter < eth->qm_test.jitter_min))
                             {
                                 eth->qm_test.jitter_min = jitter;
-                            } else if (jitter > eth->qm_test.jitter_max) {
+                            }
+
+                            if (jitter && (jitter > eth->qm_test.jitter_max)) {
                                 eth->qm_test.jitter_max = jitter;
                             }
 
