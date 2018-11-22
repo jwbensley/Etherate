@@ -21,3 +21,6 @@ RPVSTP BPUD 001.txt:
 
 TCP SYN 001.txt:
     src MAC 00 00 5e 00 00 01, dst MAC 00 00 5e 00 00 02, src IP 10.0.0.2, dst IP 10.0.0.1, src TCP port 42213, dst TCP port 8080, TCP SYN flag
+
+UDP AF41 001.txt:
+    src MAC 00 00 t3 00 00 01, dst MAC 00 00 5e 00 00 02, src IP 10.0.1.1, dst IP 10.0.1.2, src UDP port 255, dst UDP port 255, DSCP AF41
