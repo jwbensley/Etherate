@@ -31,7 +31,7 @@ Etherate
   any 3rd party libraries or kernel bypass techniques.
 
   The aim is free Ethernet and MPLS testing program that allows for advanced  
-  network analysis. With any modern day CPU and off the self NIC it should  
+  network analysis. With any modern day CPU and off the shelf NIC it should  
   saturate up to a 10GigE link using 1500 byte frames and allow for the  
   testing of various metro and carrier Ethernet features (such tag swapping,  
   802.1p QoS, ethertype parsing, and so on). This should all be achievable  
